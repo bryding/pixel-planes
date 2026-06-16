@@ -27,7 +27,7 @@ function blob(ctx, x, y, r) {
 
 // One puffy cartoon cloud built from several white blobs.
 function drawCloud(ctx, x, y, s, seed) {
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#f9f2e2';                 // warm cream (vintage) white
   const lobes = 3 + Math.floor(sceneRand(seed * 3.1) * 3); // 3..5 puffs in a row
   for (let k = 0; k < lobes; k++) {
     const lx = x + (k - (lobes - 1) / 2) * (16 * s);
@@ -36,8 +36,37 @@ function drawCloud(ctx, x, y, s, seed) {
   }
   blob(ctx, x - 8 * s, y - 10 * s, 11 * s); // a couple of higher puffs
   blob(ctx, x + 9 * s, y - 8 * s, 10 * s);
-  ctx.fillStyle = '#e6f0f7';                 // soft flat bottom shadow
+  ctx.fillStyle = '#e7d9bd';                 // warm soft bottom shadow
   ctx.fillRect(x - 22 * s, y + 7 * s, 44 * s, 4 * s);
+}
+
+// A slow vintage airship drifting far in the background.
+function drawZeppelin(ctx, x, y, s) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.fillStyle = '#c2b196';
+  ctx.beginPath(); ctx.ellipse(0, 0, 46, 15, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#a08c70';                          // shaded underside
+  ctx.beginPath(); ctx.ellipse(0, 5, 46, 9, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#7a5230'; ctx.fillRect(-46, -2, 6, 4); // nose
+  ctx.fillStyle = '#8a7860';                          // tail fins
+  ctx.beginPath(); ctx.moveTo(38, -6); ctx.lineTo(52, -13); ctx.lineTo(45, 0); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(38, 6); ctx.lineTo(52, 13); ctx.lineTo(45, 0); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#5a3b2e'; ctx.fillRect(-8, 14, 16, 6); // gondola
+  ctx.restore();
+}
+
+function drawZeppelins(ctx, camera) {
+  const par = 0.3, spacing = 2600;
+  const camX = camera.x * par, camY = camera.y * par;
+  const start = Math.floor((camX - 300) / spacing);
+  const end = Math.ceil((camX + CONFIG.GAME_W + 300) / spacing);
+  for (let i = start; i <= end; i++) {
+    const sx = i * spacing - camX;
+    const sy = 80 + sceneRand(i * 4.2) * 120 - camY;
+    drawZeppelin(ctx, sx, sy, 0.8 + sceneRand(i * 1.3) * 0.6);
+  }
 }
 
 function drawClouds(ctx, camera) {
@@ -89,6 +118,7 @@ function drawTreeline(ctx, camera) {
 function drawBackgroundScenery(ctx, camera) {
   const C = CONFIG.COLORS;
   drawClouds(ctx, camera);
+  drawZeppelins(ctx, camera);   // vintage airship drifting by
   drawHillLayer(ctx, camera, C.hillFar, 0.65, 55, 80);
   drawTreeline(ctx, camera);
   drawHillLayer(ctx, camera, C.hillNear, 0.85, 80, 120);

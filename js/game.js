@@ -78,6 +78,13 @@ let playerRespawn = 0;   // counts down while dead, then a fresh plane flies in
 let frameCount = 0;      // ticks up every frame (used for blinking warnings)
 let deathMsg = 'SHOT DOWN!'; // what the middle-of-screen death message says
 
+// The "who killed who" kill feed (newest first). Each entry fades out.
+const killFeed = [];
+function pushKill(text, color) {
+  killFeed.unshift({ text: text, color: color, life: 360 });
+  if (killFeed.length > 7) killFeed.pop();
+}
+
 // Start the game sitting on the ground, ready to take off.
 spawnPlane(100);
 
@@ -144,13 +151,18 @@ function rescueAtBarn() {
 // handles your own death (points reset).
 function onPlanePopped(target, shooterTeam) {
   bigExplosion(target.x, target.y);
+  // Figure out the names/colors for the kill feed.
+  const victimName = (target === player) ? '🛩️ YOU' : target.name;
+  let killerName = '🛩️ YOU', killerColor = '#7fbdef';
   // Award the kill to whoever fired (you, or one of the bots).
   if (shooterTeam === 0) {
     score += 1;
   } else {
     const shooter = enemies.find(e => e.team === shooterTeam);
-    if (shooter) shooter.score += 1;
+    if (shooter) { shooter.score += 1; killerName = shooter.name; killerColor = shooter.bodyColor; }
   }
+  pushKill(killerName + '  ›❌  ' + victimName, killerColor);
+
   if (target === player) {
     playerDies(player.x, player.y, 'SHOT DOWN!'); // your points reset
   }
@@ -206,6 +218,7 @@ function update() {
     if (player.hitGround) {
       // Crashed into the ground! Big boom, points reset.
       bigExplosion(player.x, CONFIG.GROUND_Y - 6);
+      pushKill('🛩️ YOU crashed 💥', '#ff8a65');
       playerDies(player.x, CONFIG.GROUND_Y - 6, 'CRASHED!');
     } else {
       if (Input.fire) player.tryShoot(bullets);
@@ -217,7 +230,7 @@ function update() {
     if (pilot.landed) {
       // Did we land at the big barn? Then we're rescued (keep points).
       if (Math.abs(wrapDX(pilot.x - BARN_X)) < CONFIG.BARN_RESCUE_RANGE) rescueAtBarn();
-      else playerDies(pilot.x, pilot.y, 'CRASHED!'); // landed in a field
+      else { pushKill('🛩️ YOU crashed 💥', '#ff8a65'); playerDies(pilot.x, pilot.y, 'CRASHED!'); }
     }
   } else { // 'dead'
     playerRespawn -= 1;
@@ -275,6 +288,10 @@ function update() {
   for (let i = explosions.length - 1; i >= 0; i--) {
     if (explosions[i].dead) explosions.splice(i, 1);
   }
+  for (let i = killFeed.length - 1; i >= 0; i--) {
+    killFeed[i].life -= 1;
+    if (killFeed[i].life <= 0) killFeed.splice(i, 1);
+  }
 
   // The camera follows the plane normally, or the pilot while parachuting.
   const focus = (playerState === 'chute' && pilot) ? pilot : player;
@@ -304,6 +321,17 @@ function draw() {
   sky.addColorStop(1, C.skyBottom);
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
+
+  // --- Soft vintage sun with a warm glow ---
+  const sunX = CONFIG.GAME_W * 0.80, sunY = CONFIG.GAME_H * 0.20;
+  const glow = ctx.createRadialGradient(sunX, sunY, 8, sunX, sunY, 240);
+  glow.addColorStop(0, 'rgba(255,246,214,0.95)');
+  glow.addColorStop(0.25, 'rgba(255,236,178,0.45)');
+  glow.addColorStop(1, 'rgba(255,236,178,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(sunX - 240, sunY - 240, 480, 480);
+  ctx.fillStyle = '#fff4d6';
+  ctx.beginPath(); ctx.arc(sunX, sunY, 28, 0, Math.PI * 2); ctx.fill();
 
   // --- Thin-air darkening: the higher you climb, the darker (and starrier)
   // the sky gets, warning you that you're near the stall zone. ---
@@ -369,9 +397,34 @@ function draw() {
   drawOffscreenIndicators();
   if (playerState === 'chute') drawBarnArrow();
 
+  // --- Vintage sepia vignette: warm, darkened corners like an old photo ---
+  const vg = ctx.createRadialGradient(
+    CONFIG.GAME_W / 2, CONFIG.GAME_H / 2, CONFIG.GAME_H * 0.4,
+    CONFIG.GAME_W / 2, CONFIG.GAME_H / 2, CONFIG.GAME_W * 0.72);
+  vg.addColorStop(0, 'rgba(60,40,15,0)');
+  vg.addColorStop(1, 'rgba(45,28,8,0.34)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
+
   // --- HUD (the info text on top) ---
   drawHud();
   drawLeaderboard();
+  drawKillFeed();
+}
+
+// The "who killed who" feed on the left side (newest on top, fades away).
+function drawKillFeed() {
+  const x = 8, y = 100;
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText('KILL FEED', x, y);
+  killFeed.forEach((k, i) => {
+    ctx.globalAlpha = Math.min(1, k.life / 60); // fade out in the last second
+    ctx.fillStyle = k.color;
+    ctx.fillText(k.text, x, y + 16 + i * 15);
+  });
+  ctx.globalAlpha = 1;
 }
 
 // Draw a little arrow at the edge of the screen for every alive enemy that

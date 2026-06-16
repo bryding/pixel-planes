@@ -17,8 +17,8 @@ const CONFIG = {
   // ---- How the plane flies ----
   // (These are the fun ones to experiment with!)
 
-  THRUST: 0.09,        // How hard the engine pushes. Bigger = faster plane.
-  TURN_SPEED: 0.055,   // How fast the nose turns. Bigger = spins quicker.
+  THRUST: 0.13,        // How hard the engine pushes. Bigger = faster plane.
+  TURN_SPEED: 0.065,   // How fast the nose turns. Bigger = spins quicker.
   GRAVITY: 0.035,      // How hard the ground pulls the plane down.
   DRAG: 0.992,         // Air resistance. Closer to 1 = the plane glides more.
 
@@ -28,14 +28,14 @@ const CONFIG = {
   // the wings STALL -- lift collapses and gravity takes over. WEATHERVANE is
   // how strongly the nose swings to follow the wind, which helps you recover
   // from a stall by dropping the nose into a dive.
-  LIFT: 0.05,          // How strong the wings' lift is.
+  LIFT: 0.045,         // How strong the wings' lift is.
   WEATHERVANE: 0.03,   // How fast the nose swings to follow the airflow.
   DRAG_AOA: 0.03,      // Extra drag when the nose isn't lined up with travel.
 
   THROTTLE_RATE: 0.03, // How quickly the throttle (gas pedal) changes.
   START_THROTTLE: 0.6, // How much gas the plane starts with.
 
-  MAX_SPEED: 6,        // The fastest the plane is allowed to go.
+  MAX_SPEED: 11,       // The fastest the plane is allowed to go.
 
   // ---- The camera (the view that follows the plane) ----
   CAM_SMOOTH: 0.08,    // How smoothly the camera catches up. Smaller = lazier.
@@ -54,13 +54,13 @@ const CONFIG = {
   // stall too. Dive to get your speed (and control) back.
   CEILING: -2200,      // the very top of the sky -- you can't fly past this.
   STALL_ALT: -700,     // above this height the air thins out and lift fades.
-  STALL_SPEED: 3.6,    // slower than this and the wings stall (lose their lift).
-  STALL_DRAG: 0.2,     // how hard a stalled wing brakes you (bigger = drop sooner).
-  TURN_FULL_SPEED: 3.5,// you need at least this much speed for full control.
+  STALL_SPEED: 6.5,    // slower than this and the wings stall (lose their lift).
+  STALL_DRAG: 0.28,    // how hard a stalled wing brakes you (bigger = drop sooner).
+  TURN_FULL_SPEED: 6,  // you need at least this much speed for full control.
 
   // ---- Guns & bullets ----
   // (Press SPACE to shoot. Try changing these!)
-  BULLET_SPEED: 5,     // How fast bullets fly out of the nose.
+  BULLET_SPEED: 15,    // How fast bullets fly out of the nose (faster than planes).
   BULLET_LIFE: 70,     // How many frames a bullet lives before it vanishes.
   FIRE_COOLDOWN: 10,   // Frames to wait between shots. Smaller = faster gun.
   BULLET_SIZE: 3,      // How big each bullet looks (in pixels).
@@ -71,7 +71,7 @@ const CONFIG = {
   // sharp-turning plane can dodge them!
   MISSILE_MAX: 5,            // how many missiles you can hold
   MISSILE_REFILL_SECONDS: 20,// you get one more missile every this many seconds
-  MISSILE_SPEED: 6.6,        // a tiny bit faster than your top speed (MAX_SPEED)
+  MISSILE_SPEED: 12,         // a tiny bit faster than your top speed (MAX_SPEED)
   MISSILE_TURN: 0.05,        // how sharply it can steer (smaller = easier to dodge)
   MISSILE_FUEL: 600,         // it chases for about 10 seconds, then flies straight
   MISSILE_LIFE: 720,         // frames before it fizzles out completely
@@ -94,8 +94,8 @@ const CONFIG = {
   // even fire homing missiles. These numbers are the "average" bot; each one
   // varies a bit around them (see js/enemy.js for the personalities).
   ENEMY_COUNT: 10,        // How many enemy planes are in the sky at once.
-  ENEMY_THRUST: 0.07,     // Engine power for enemies (yours is THRUST above).
-  ENEMY_TURN: 0.038,      // How fast enemies turn their nose. Bigger = nimbler.
+  ENEMY_THRUST: 0.11,     // Engine power for enemies (yours is THRUST above).
+  ENEMY_TURN: 0.045,      // How fast enemies turn their nose. Bigger = nimbler.
   ENEMY_HEALTH: 20,       // 20 bullets (or 2 missiles) to pop a bot, same as you.
   ENEMY_FIRE_RANGE: 175,  // How close an enemy must be before it shoots.
   ENEMY_AIM: 0.26,        // How well-aimed it must be to fire (bigger = sloppier).
@@ -110,8 +110,8 @@ const CONFIG = {
 
   // ---- Colors (you can change these to recolor the game!) ----
   COLORS: {
-    skyTop:    '#3aa0e0', // sky color up high
-    skyBottom: '#bfe6ff', // sky color near the ground
+    skyTop:    '#7aa7c2', // muted vintage sky blue up high
+    skyBottom: '#f2e4c0', // warm, hazy golden horizon (old-photo feel)
     hills:     '#5a8f3a', // far away hills
     ground:    '#6ab04c', // the grassy ground
     groundDark:'#4f8a3a', // a darker stripe on the ground
