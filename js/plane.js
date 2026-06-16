@@ -26,6 +26,27 @@ class Plane {
     // The gun "cooldown": counts down after each shot so the gun can't fire
     // every single frame. When it hits 0, the plane is allowed to shoot again.
     this.fireCooldown = 0;
+
+    // The player is on "team 0". Bullets only hurt planes on a DIFFERENT team.
+    this.team = 0;
+
+    // Health: how many hits left. alive = false means shot down (respawning).
+    this.health = CONFIG.PLAYER_HEALTH;
+    this.alive = true;
+
+    // A quick flash when hit, so taking damage feels real.
+    this.flash = 0;
+  }
+
+  // Called when an enemy bullet hits the player. Returns true if just downed.
+  takeHit() {
+    this.health -= 1;
+    this.flash = 8;
+    if (this.health <= 0) {
+      this.alive = false;
+      return true; // shot down!
+    }
+    return false;
   }
 
   // This runs every frame to move the plane.
@@ -80,6 +101,9 @@ class Plane {
 
     // Count the gun cooldown down toward 0 so we can shoot again soon.
     if (this.fireCooldown > 0) this.fireCooldown -= 1;
+
+    // Count the hit-flash down toward 0.
+    if (this.flash > 0) this.flash -= 1;
   }
 
   // Try to fire the gun. If the cooldown is ready, make a new bullet at the
@@ -91,7 +115,10 @@ class Plane {
     const noseX = this.x + Math.cos(this.angle) * 9;
     const noseY = this.y + Math.sin(this.angle) * 9;
 
-    bullets.push(new Bullet(noseX, noseY, this.angle, this.vx, this.vy));
+    bullets.push(new Bullet(
+      noseX, noseY, this.angle, this.vx, this.vy,
+      this.team, CONFIG.COLORS.bullet
+    ));
 
     // Start the cooldown so the next shot has to wait a bit.
     this.fireCooldown = CONFIG.FIRE_COOLDOWN;
@@ -109,16 +136,20 @@ class Plane {
 
     const C = CONFIG.COLORS;
 
+    // If we were just hit, flash white so the damage is easy to notice.
+    const bodyColor = this.flash > 0 ? '#ffffff' : C.plane;
+    const darkColor = this.flash > 0 ? '#dddddd' : C.planeDark;
+
     // Body (a little rectangle)
-    ctx.fillStyle = C.plane;
+    ctx.fillStyle = bodyColor;
     ctx.fillRect(-8, -3, 16, 6);
 
     // Darker belly stripe
-    ctx.fillStyle = C.planeDark;
+    ctx.fillStyle = darkColor;
     ctx.fillRect(-8, 1, 16, 2);
 
     // Wing (sticking up a bit)
-    ctx.fillStyle = C.plane;
+    ctx.fillStyle = bodyColor;
     ctx.fillRect(-2, -6, 6, 3);
 
     // Tail fin (at the back)

@@ -33,11 +33,28 @@ const camera = { x: 0, y: 0 };
 // The list of bullets that are flying right now. Starts empty.
 const bullets = [];
 
-// One dummy enemy to shoot at (more enemies come in Stage 3).
-const enemy = new Enemy(CONFIG.ENEMY_X, CONFIG.ENEMY_Y);
+// The list of explosions playing right now (just for looks).
+const explosions = [];
+
+// Make a fleet of enemy planes, split between two teams (1 = purple,
+// 2 = orange) so they fight each other AND the player.
+const enemies = [];
+for (let i = 0; i < CONFIG.ENEMY_COUNT; i++) {
+  const team = (i % 2) + 1;                 // 1, 2, 1, 2, ...
+  const ex = 400 + i * 180;                 // spread them out to the right
+  const ey = 60 + (i * 40) % 140;           // at different heights
+  enemies.push(new Enemy(ex, ey, team));
+}
+
+// One list with EVERY plane in it (player first, then enemies). This makes
+// it easy for enemies to pick targets and for bullets to check hits.
+const planes = [player, ...enemies];
 
 // How many enemies the player has popped. Shown in the HUD.
 let score = 0;
+
+// Counts down while the player is shot down, then they fly back in.
+let playerRespawn = 0;
 
 // Some clouds scattered around the world to make flying feel like moving.
 const clouds = [];
@@ -58,34 +75,73 @@ function hits(a, b, radius) {
   return dx * dx + dy * dy < radius * radius;
 }
 
+// Bring the player back to life up high, ready to fly again.
+function respawnPlayer() {
+  player.alive = true;
+  player.health = CONFIG.PLAYER_HEALTH;
+  player.x = camera.x + CONFIG.GAME_W / 2; // back in the middle of the view
+  player.y = 50;
+  player.vx = 2;
+  player.vy = 0;
+  player.angle = 0;
+  player.flash = 0;
+}
+
 // =========================================================================
 //  UPDATE  --  move everything (runs every frame)
 // =========================================================================
 function update() {
-  player.update();
+  // --- The player ---
+  if (player.alive) {
+    player.update();
+    // If SPACE is held, ask the plane to shoot (it checks its own cooldown).
+    if (Input.fire) player.tryShoot(bullets);
+  } else {
+    // The player was shot down: count down, then fly back in.
+    playerRespawn -= 1;
+    if (playerRespawn <= 0) respawnPlayer();
+  }
 
-  // If SPACE is held, ask the plane to shoot (it checks its own cooldown).
-  if (Input.fire) player.tryShoot(bullets);
+  // --- The enemy planes (each one thinks for itself) ---
+  for (const enemy of enemies) {
+    enemy.update(planes, bullets);
+  }
 
-  // Move the enemy (it just bobs for now).
-  enemy.update();
-
-  // Move every bullet, and check if it hit the enemy.
+  // --- Bullets: move them and check if they hit any plane ---
   for (const bullet of bullets) {
     bullet.update();
 
-    // Collision check: is the bullet close to the (alive) enemy?
-    if (enemy.alive && hits(bullet, enemy, 9)) {
-      bullet.dead = true;        // the bullet is used up
-      const popped = enemy.takeHit();
-      if (popped) score += 1;    // score a point when the enemy pops
+    for (const target of planes) {
+      if (!target.alive) continue;             // can't hit a downed plane
+      if (target.team === bullet.team) continue; // bullets don't hit teammates
+      if (hits(bullet, target, 9)) {
+        bullet.dead = true;                    // the bullet is used up
+        const popped = target.takeHit();
+        if (popped) {
+          // Boom! Spark burst in the plane's color.
+          const color = (target === player) ? '#ff5a4a' : target.bodyColor;
+          explosions.push(new Explosion(target.x, target.y, color));
+
+          if (target === player) {
+            playerRespawn = CONFIG.PLAYER_RESPAWN; // start the comeback timer
+          } else if (bullet.team === 0) {
+            score += 1; // only count enemies YOU shoot down
+          }
+        }
+        break; // this bullet is gone, stop checking other planes
+      }
     }
   }
 
-  // Throw away bullets that are dead (off-screen, too old, or hit something).
-  // We keep only the bullets that are NOT dead.
+  // --- Explosions (just animate the sparks) ---
+  for (const boom of explosions) boom.update();
+
+  // --- Clean up: forget dead bullets and finished explosions ---
   for (let i = bullets.length - 1; i >= 0; i--) {
     if (bullets[i].dead) bullets.splice(i, 1);
+  }
+  for (let i = explosions.length - 1; i >= 0; i--) {
+    if (explosions[i].dead) explosions.splice(i, 1);
   }
 
   // Make the camera follow the plane, peeking ahead where it's flying.
@@ -143,16 +199,25 @@ function draw() {
     ctx.fillRect(stripeX, groundScreenY + 14, 30, 3);
   }
 
-  // --- The enemy target ---
-  enemy.draw(ctx, camera.x, camera.y);
+  // --- The enemy planes ---
+  for (const enemy of enemies) {
+    enemy.draw(ctx, camera.x, camera.y);
+  }
 
   // --- Bullets ---
   for (const bullet of bullets) {
     bullet.draw(ctx, camera.x, camera.y);
   }
 
-  // --- The plane ---
-  player.draw(ctx, camera.x, camera.y);
+  // --- Explosions (drawn on top so the sparks pop) ---
+  for (const boom of explosions) {
+    boom.draw(ctx, camera.x, camera.y);
+  }
+
+  // --- The player's plane (only when flying, not while respawning) ---
+  if (player.alive) {
+    player.draw(ctx, camera.x, camera.y);
+  }
 
   // --- HUD (the info text on top) ---
   drawHud();
@@ -160,7 +225,7 @@ function draw() {
 
 function drawHud() {
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.fillRect(6, 6, 110, 34);
+  ctx.fillRect(6, 6, 110, 50);
 
   ctx.fillStyle = '#ffffff';
   ctx.font = '8px monospace';
@@ -172,10 +237,30 @@ function drawHud() {
   ctx.fillStyle = '#f1c40f';
   ctx.fillRect(11, 20, 98 * player.throttle, 4);
 
+  // Health bar (turns from green toward red as it empties)
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('HEALTH', 10, 36);
+  ctx.strokeStyle = '#ffffff';
+  ctx.strokeRect(10, 39, 100, 6);
+  const healthFrac = Math.max(0, player.health) / CONFIG.PLAYER_HEALTH;
+  ctx.fillStyle = healthFrac > 0.5 ? '#2ecc71' : (healthFrac > 0.25 ? '#f39c12' : '#e74c3c');
+  ctx.fillRect(11, 40, 98 * healthFrac, 4);
+
   // Speed
   const speed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
   ctx.fillStyle = '#ffffff';
-  ctx.fillText('SPEED ' + speed.toFixed(1), 10, 36);
+  ctx.fillText('SPEED ' + speed.toFixed(1), 10, 54);
+
+  // Big message in the middle while the player is shot down.
+  if (!player.alive) {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('SHOT DOWN!', CONFIG.GAME_W / 2, CONFIG.GAME_H / 2);
+    ctx.font = '8px monospace';
+    ctx.fillText('flying back in...', CONFIG.GAME_W / 2, CONFIG.GAME_H / 2 + 14);
+    ctx.textAlign = 'left'; // put alignment back to normal
+  }
 
   // Score (how many targets popped)
   ctx.fillStyle = 'rgba(0,0,0,0.4)';

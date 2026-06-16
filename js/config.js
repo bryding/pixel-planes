@@ -39,11 +39,19 @@ const CONFIG = {
   FIRE_COOLDOWN: 10,   // Frames to wait between shots. Smaller = faster gun.
   BULLET_SIZE: 2,      // How big each bullet looks (in pixels).
 
-  // ---- The dummy enemy (a target to shoot at) ----
-  ENEMY_X: 600,        // Where the target plane sits (right of the start).
-  ENEMY_Y: 120,
-  ENEMY_HITS: 3,       // How many bullets it takes to pop the target.
-  ENEMY_RESPAWN: 120,  // Frames before a popped target comes back.
+  // ---- The player's health ----
+  PLAYER_HEALTH: 5,    // How many hits you can take before going down.
+  PLAYER_RESPAWN: 90,  // Frames before you fly back in after being shot down.
+
+  // ---- Enemy planes (they fly, chase, and shoot — at YOU and each other!) ----
+  ENEMY_COUNT: 4,         // How many enemy planes are in the sky at once.
+  ENEMY_THRUST: 0.07,     // Engine power for enemies (yours is THRUST above).
+  ENEMY_TURN: 0.04,       // How fast enemies turn their nose. Bigger = nimbler.
+  ENEMY_HEALTH: 3,        // How many hits an enemy can take before it pops.
+  ENEMY_FIRE_RANGE: 150,  // How close an enemy must be before it shoots.
+  ENEMY_AIM: 0.30,        // How well-aimed it must be to fire (bigger = sloppier).
+  ENEMY_FIRE_COOLDOWN: 35,// Frames between an enemy's shots (bigger = shoots less).
+  ENEMY_RESPAWN: 150,     // Frames before a downed enemy flies back in.
 
   // ---- Colors (you can change these to recolor the game!) ----
   COLORS: {
@@ -56,8 +64,12 @@ const CONFIG = {
     planeDark: '#a83227', // plane shadows
     propeller: '#2c3e50', // the spinning propeller
     cloud:     '#ffffff', // clouds
-    bullet:    '#fff27a', // the glowing bullets
-    enemy:     '#9b59b6', // the dummy enemy plane
-    enemyDark: '#6c3483', // enemy shadows
+    bullet:    '#fff27a', // YOUR bullets (yellow)
+    enemyBullet:'#ff5a4a',// enemy bullets (red = incoming danger!)
+    enemy:     '#9b59b6', // purple enemy team
+    enemyDark: '#6c3483', // purple enemy shadows
+    enemy2:    '#e67e22', // orange enemy team
+    enemy2Dark:'#a85916', // orange enemy shadows
+    explosion: '#ffce54', // explosion sparks
   },
 };

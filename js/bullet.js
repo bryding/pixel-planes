@@ -5,9 +5,13 @@
 
 class Bullet {
   // We make a bullet at the plane's nose, flying in the way the nose points.
-  constructor(x, y, angle, ownerSpeedX, ownerSpeedY) {
+  // "team" says who fired it, so it only hurts planes on OTHER teams.
+  // "color" is just how it looks (your bullets are yellow, enemies' are red).
+  constructor(x, y, angle, ownerSpeedX, ownerSpeedY, team, color) {
     this.x = x;
     this.y = y;
+    this.team = team;
+    this.color = color;
 
     // The bullet flies in the nose direction. We ALSO add a little of the
     // plane's own speed so bullets feel like they really came off the plane.
@@ -34,7 +38,7 @@ class Bullet {
   }
 
   draw(ctx, camX, camY) {
-    ctx.fillStyle = CONFIG.COLORS.bullet;
+    ctx.fillStyle = this.color;
     const s = CONFIG.BULLET_SIZE;
     ctx.fillRect(this.x - camX - s / 2, this.y - camY - s / 2, s, s);
   }
