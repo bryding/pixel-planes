@@ -104,7 +104,7 @@ function update() {
     for (const target of planes) {
       if (!target.alive) continue;             // can't hit a downed plane
       if (target.team === bullet.team) continue; // bullets don't hit teammates
-      if (hits(bullet, target, 12)) {
+      if (hits(bullet, target, 14)) {
         bullet.dead = true;                    // the bullet is used up
         const popped = target.takeHit();
         if (popped) {

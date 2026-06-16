@@ -156,15 +156,9 @@ class Enemy {
   draw(ctx, camX, camY) {
     if (!this.alive) return;
 
-    ctx.save();
-    ctx.translate(this.x - camX, this.y - camY);
-    ctx.rotate(this.angle); // rotate to face flying direction
-
-    // Draw the detailed biplane in this enemy's team colors.
-    const pal = { body: this.bodyColor, dark: this.darkColor };
-    drawBiplane(ctx, pal, this.propSpin, this.flash > 0);
-
-    ctx.restore();
+    // Stamp the detailed biplane sprite for this enemy's team.
+    drawPlaneSprite(ctx, PLANE_SPRITES[this.team], this.x - camX, this.y - camY,
+                    this.angle, this.propSpin, this.flash > 0);
   }
 }
 

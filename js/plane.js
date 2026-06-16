@@ -127,17 +127,8 @@ class Plane {
   // Draw the plane. camX/camY is where the camera is, so we draw the plane
   // in the right spot on the screen.
   draw(ctx, camX, camY) {
-    const screenX = this.x - camX;
-    const screenY = this.y - camY;
-
-    ctx.save();
-    ctx.translate(screenX, screenY); // move the "pen" to the plane
-    ctx.rotate(this.angle);          // rotate so the plane faces its angle
-
-    // Draw the detailed biplane in the player's colors.
-    const pal = { body: CONFIG.COLORS.plane, dark: CONFIG.COLORS.planeDark };
-    drawBiplane(ctx, pal, this.propSpin, this.flash > 0);
-
-    ctx.restore();
+    // Stamp the detailed player biplane, rotated to its flying angle.
+    drawPlaneSprite(ctx, PLANE_SPRITES.player, this.x - camX, this.y - camY,
+                    this.angle, this.propSpin, this.flash > 0);
   }
 }
