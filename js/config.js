@@ -32,6 +32,19 @@ const CONFIG = {
   // ---- The world ----
   GROUND_Y: 250,       // How far down the ground is (in game pixels).
 
+  // ---- Guns & bullets ----
+  // (Press SPACE to shoot. Try changing these!)
+  BULLET_SPEED: 5,     // How fast bullets fly out of the nose.
+  BULLET_LIFE: 70,     // How many frames a bullet lives before it vanishes.
+  FIRE_COOLDOWN: 10,   // Frames to wait between shots. Smaller = faster gun.
+  BULLET_SIZE: 2,      // How big each bullet looks (in pixels).
+
+  // ---- The dummy enemy (a target to shoot at) ----
+  ENEMY_X: 600,        // Where the target plane sits (right of the start).
+  ENEMY_Y: 120,
+  ENEMY_HITS: 3,       // How many bullets it takes to pop the target.
+  ENEMY_RESPAWN: 120,  // Frames before a popped target comes back.
+
   // ---- Colors (you can change these to recolor the game!) ----
   COLORS: {
     skyTop:    '#3aa0e0', // sky color up high
@@ -43,5 +56,8 @@ const CONFIG = {
     planeDark: '#a83227', // plane shadows
     propeller: '#2c3e50', // the spinning propeller
     cloud:     '#ffffff', // clouds
+    bullet:    '#fff27a', // the glowing bullets
+    enemy:     '#9b59b6', // the dummy enemy plane
+    enemyDark: '#6c3483', // enemy shadows
   },
 };

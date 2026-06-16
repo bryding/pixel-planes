@@ -30,6 +30,15 @@ const player = new Plane(100, 120);
 
 const camera = { x: 0, y: 0 };
 
+// The list of bullets that are flying right now. Starts empty.
+const bullets = [];
+
+// One dummy enemy to shoot at (more enemies come in Stage 3).
+const enemy = new Enemy(CONFIG.ENEMY_X, CONFIG.ENEMY_Y);
+
+// How many enemies the player has popped. Shown in the HUD.
+let score = 0;
+
 // Some clouds scattered around the world to make flying feel like moving.
 const clouds = [];
 for (let i = 0; i < 30; i++) {
@@ -40,11 +49,44 @@ for (let i = 0; i < 30; i++) {
   });
 }
 
+// A simple "did these two things touch?" check.
+// We measure the distance between their centers; if it's smaller than
+// "radius", they're close enough to count as a hit.
+function hits(a, b, radius) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return dx * dx + dy * dy < radius * radius;
+}
+
 // =========================================================================
 //  UPDATE  --  move everything (runs every frame)
 // =========================================================================
 function update() {
   player.update();
+
+  // If SPACE is held, ask the plane to shoot (it checks its own cooldown).
+  if (Input.fire) player.tryShoot(bullets);
+
+  // Move the enemy (it just bobs for now).
+  enemy.update();
+
+  // Move every bullet, and check if it hit the enemy.
+  for (const bullet of bullets) {
+    bullet.update();
+
+    // Collision check: is the bullet close to the (alive) enemy?
+    if (enemy.alive && hits(bullet, enemy, 9)) {
+      bullet.dead = true;        // the bullet is used up
+      const popped = enemy.takeHit();
+      if (popped) score += 1;    // score a point when the enemy pops
+    }
+  }
+
+  // Throw away bullets that are dead (off-screen, too old, or hit something).
+  // We keep only the bullets that are NOT dead.
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    if (bullets[i].dead) bullets.splice(i, 1);
+  }
 
   // Make the camera follow the plane, peeking ahead where it's flying.
   const targetX = player.x - CONFIG.GAME_W / 2 + player.vx * CONFIG.CAM_LOOKAHEAD * 0.1;
@@ -101,6 +143,14 @@ function draw() {
     ctx.fillRect(stripeX, groundScreenY + 14, 30, 3);
   }
 
+  // --- The enemy target ---
+  enemy.draw(ctx, camera.x, camera.y);
+
+  // --- Bullets ---
+  for (const bullet of bullets) {
+    bullet.draw(ctx, camera.x, camera.y);
+  }
+
   // --- The plane ---
   player.draw(ctx, camera.x, camera.y);
 
@@ -127,9 +177,15 @@ function drawHud() {
   ctx.fillStyle = '#ffffff';
   ctx.fillText('SPEED ' + speed.toFixed(1), 10, 36);
 
+  // Score (how many targets popped)
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(CONFIG.GAME_W - 70, 6, 64, 14);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('SCORE ' + score, CONFIG.GAME_W - 64, 16);
+
   // Friendly controls reminder in the corner
   ctx.fillStyle = 'rgba(255,255,255,0.8)';
-  ctx.fillText('Arrows: Up/Down = gas   Left/Right = turn', 120, 264);
+  ctx.fillText('Arrows: fly   Space: shoot', 150, 264);
 }
 
 // =========================================================================

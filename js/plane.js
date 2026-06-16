@@ -22,6 +22,10 @@ class Plane {
 
     // A spinning number used to animate the propeller.
     this.propSpin = 0;
+
+    // The gun "cooldown": counts down after each shot so the gun can't fire
+    // every single frame. When it hits 0, the plane is allowed to shoot again.
+    this.fireCooldown = 0;
   }
 
   // This runs every frame to move the plane.
@@ -73,6 +77,24 @@ class Plane {
 
     // Spin the propeller a bit (faster when throttle is higher).
     this.propSpin += 0.5 + this.throttle;
+
+    // Count the gun cooldown down toward 0 so we can shoot again soon.
+    if (this.fireCooldown > 0) this.fireCooldown -= 1;
+  }
+
+  // Try to fire the gun. If the cooldown is ready, make a new bullet at the
+  // nose and add it to the bullets list. (game.js calls this when SPACE held.)
+  tryShoot(bullets) {
+    if (this.fireCooldown > 0) return; // not ready yet
+
+    // Find the tip of the nose (8 pixels in front, in the facing direction).
+    const noseX = this.x + Math.cos(this.angle) * 9;
+    const noseY = this.y + Math.sin(this.angle) * 9;
+
+    bullets.push(new Bullet(noseX, noseY, this.angle, this.vx, this.vy));
+
+    // Start the cooldown so the next shot has to wait a bit.
+    this.fireCooldown = CONFIG.FIRE_COOLDOWN;
   }
 
   // Draw the plane. camX/camY is where the camera is, so we draw the plane
