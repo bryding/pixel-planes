@@ -206,7 +206,9 @@ function update() {
 
   // --- The player, depending on what state they're in ---
   if (playerState === 'takeoff') {
-    // Rolling down the "runway" and lifting off. Safe to touch the ground.
+    // Rolling down the "runway": full power, nose held up, until we lift off.
+    player.throttle = 1;
+    player.angle = -0.3;            // hold ~17 degrees nose-up for the climb-out
     player.update();
     if (frameCount % 6 === 0) {
       explosions.push(new Explosion(player.x - Math.cos(player.angle) * 10,

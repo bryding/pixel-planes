@@ -19,8 +19,8 @@ const CONFIG = {
 
   THRUST: 0.13,        // How hard the engine pushes. Bigger = faster plane.
   TURN_SPEED: 0.065,   // How fast the nose turns. Bigger = spins quicker.
-  GRAVITY: 0.035,      // How hard the ground pulls the plane down.
-  DRAG: 0.992,         // Air resistance. Closer to 1 = the plane glides more.
+  GRAVITY: 0.05,       // How hard the ground pulls the plane down.
+  DRAG: 0.996,         // Air resistance. Closer to 1 = the plane glides more.
 
   // Real-ish aerodynamics: the wings make LIFT at RIGHT ANGLES to the way the
   // plane is actually moving (not always straight up), and only when there's
@@ -30,7 +30,7 @@ const CONFIG = {
   // from a stall by dropping the nose into a dive.
   LIFT: 0.045,         // How strong the wings' lift is.
   WEATHERVANE: 0.03,   // How fast the nose swings to follow the airflow.
-  DRAG_AOA: 0.03,      // Extra drag when the nose isn't lined up with travel.
+  DRAG_AOA: 0.02,      // Extra drag when the nose isn't lined up with travel.
 
   THROTTLE_RATE: 0.03, // How quickly the throttle (gas pedal) changes.
   START_THROTTLE: 0.6, // How much gas the plane starts with.
@@ -54,9 +54,9 @@ const CONFIG = {
   // stall too. Dive to get your speed (and control) back.
   CEILING: -2200,      // the very top of the sky -- you can't fly past this.
   STALL_ALT: -700,     // above this height the air thins out and lift fades.
-  STALL_SPEED: 6.5,    // slower than this and the wings stall (lose their lift).
-  STALL_DRAG: 0.28,    // how hard a stalled wing brakes you (bigger = drop sooner).
-  TURN_FULL_SPEED: 6,  // you need at least this much speed for full control.
+  STALL_SPEED: 4,      // slower than this and the wings stall (lose their lift).
+  STALL_DRAG: 0.05,    // small extra brake from a badly-stalled (sideways) wing.
+  TURN_FULL_SPEED: 4,  // reference speed for control.
 
   // ---- Guns & bullets ----
   // (Press SPACE to shoot. Try changing these!)

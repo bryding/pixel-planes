@@ -84,23 +84,21 @@ function applyFlightPhysics(o, push) {
     o.vx -= o.vx * induced;
     o.vy -= o.vy * induced;
 
-    // STALL DRAG: a stalled wing (too slow, or nose yanked way off the wind)
-    // acts like a barn door -- a big burst of drag that kills your speed fast,
-    // so you stall and drop quickly instead of coasting on for ages.
-    const stallness = Math.max(1 - stallFade,
-                               Math.min(1, Math.max(0, (Math.abs(aoa) - 0.5) / 0.6)));
+    // A little extra brake only when the wing is turned almost fully sideways
+    // to the airflow (a deep stall). Kept small so you can always recover by
+    // diving (gravity) or throttling up.
+    const stallness = Math.min(1, Math.max(0, (Math.abs(aoa) - 1.0) / 0.6));
     const sd = stallness * CONFIG.STALL_DRAG;
     o.vx -= o.vx * sd;
     o.vy -= o.vy * sd;
 
-    // Weathervane: the nose drifts to follow the airflow (stronger when fast).
-    // This is what drops the nose into a dive after a stall, so you recover.
-    o.angle += angleDiff(vdir, o.angle) * CONFIG.WEATHERVANE *
-               Math.min(1, speed / CONFIG.TURN_FULL_SPEED);
+    // Weathervane: the nose drifts to follow the airflow. This is what drops
+    // the nose into a dive after a stall so you can pick up speed and recover.
+    o.angle += angleDiff(vdir, o.angle) * CONFIG.WEATHERVANE;
 
-    // We're stalling if the air is too thin, the wings are losing their lift
-    // (slowing toward stall speed), or the nose is pointed way off the airflow.
-    o.stalling = density < 0.55 || stallFade < 0.5 || Math.abs(aoa) > 0.9;
+    // We're stalling if the air is too thin, we're slower than stall speed, or
+    // the nose is pointed way off the airflow.
+    o.stalling = density < 0.55 || speed < CONFIG.STALL_SPEED || Math.abs(aoa) > 0.7;
   } else {
     o.stalling = true;
   }
