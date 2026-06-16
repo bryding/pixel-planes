@@ -1,0 +1,21 @@
+/* Make the page a dark background and center the game */
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #10131a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: monospace;
+}
+
+/* The game canvas.
+   image-rendering: pixelated keeps the pixels sharp and chunky
+   instead of blurry when we scale the picture up bigger. */
+#game {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #87ceeb; /* sky blue, shows before the first frame draws */
+  /* The size on screen is set by JavaScript so it always fits the window. */
+}
