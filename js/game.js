@@ -219,8 +219,66 @@ function draw() {
     player.draw(ctx, camera.x, camera.y);
   }
 
+  // --- Arrows pointing at enemies that are off the screen ---
+  drawOffscreenIndicators();
+
   // --- HUD (the info text on top) ---
   drawHud();
+}
+
+// Draw a little arrow at the edge of the screen for every alive enemy that
+// is currently off-screen, so the player knows which way to fly to find them.
+function drawOffscreenIndicators() {
+  if (!CONFIG.SHOW_ENEMY_ARROWS) return;
+
+  const cx = CONFIG.GAME_W / 2; // middle of the screen
+  const cy = CONFIG.GAME_H / 2;
+  const margin = CONFIG.ARROW_MARGIN;
+  const size = CONFIG.ARROW_SIZE;
+
+  for (const enemy of enemies) {
+    if (!enemy.alive) continue;
+
+    // Where the enemy would be on the screen.
+    const sx = enemy.x - camera.x;
+    const sy = enemy.y - camera.y;
+
+    // If it's already visible on screen, it doesn't need an arrow.
+    const onScreen = sx >= 0 && sx <= CONFIG.GAME_W &&
+                     sy >= 0 && sy <= CONFIG.GAME_H;
+    if (onScreen) continue;
+
+    // The direction from the middle of the screen toward the enemy.
+    const angle = Math.atan2(sy - cy, sx - cx);
+    const dx = Math.cos(angle);
+    const dy = Math.sin(angle);
+
+    // Slide out from the center along that direction until we reach the
+    // edge (kept "margin" pixels inside so the arrow isn't half cut off).
+    const halfW = cx - margin;
+    const halfH = cy - margin;
+    let dist;
+    if (Math.abs(dx) * halfH > Math.abs(dy) * halfW) {
+      dist = halfW / Math.abs(dx); // hits the left/right edge first
+    } else {
+      dist = halfH / Math.abs(dy); // hits the top/bottom edge first
+    }
+    const ix = cx + dx * dist;
+    const iy = cy + dy * dist;
+
+    // Draw a small triangle pointing toward the enemy, in its team color.
+    ctx.save();
+    ctx.translate(ix, iy);
+    ctx.rotate(angle);
+    ctx.fillStyle = enemy.bodyColor;
+    ctx.beginPath();
+    ctx.moveTo(size, 0);       // the pointy tip (points at the enemy)
+    ctx.lineTo(-size, -size);  // back corner
+    ctx.lineTo(-size, size);   // other back corner
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
 }
 
 function drawHud() {

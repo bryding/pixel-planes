@@ -53,6 +53,11 @@ const CONFIG = {
   ENEMY_FIRE_COOLDOWN: 35,// Frames between an enemy's shots (bigger = shoots less).
   ENEMY_RESPAWN: 150,     // Frames before a downed enemy flies back in.
 
+  // ---- Off-screen enemy arrows (point toward enemies you can't see) ----
+  SHOW_ENEMY_ARROWS: true, // turn the edge arrows on or off
+  ARROW_MARGIN: 12,        // how far the arrows sit in from the screen edge
+  ARROW_SIZE: 5,           // how big each arrow is
+
   // ---- Colors (you can change these to recolor the game!) ----
   COLORS: {
     skyTop:    '#3aa0e0', // sky color up high
