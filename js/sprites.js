@@ -1,20 +1,20 @@
 // ===========================================================================
-//  SPRITES  --  Detailed pixel-art biplanes (BitPlanes style!).
+//  SPRITES  --  Detailed pixel-art biplanes.
 //
-//  Instead of drawing the plane shape every frame, we PAINT it once onto a
-//  tiny hidden canvas (a "sprite"), pixel by pixel. Then each frame we just
-//  stamp that picture down and spin it. Because the picture is made of real
-//  pixels, when it rotates it stays nice and chunky -- that retro look.
+//  We PAINT each plane once onto a tiny hidden canvas (a "sprite"), pixel by
+//  pixel. Then each frame we just stamp that picture down and spin it. Because
+//  it's made of real pixels, it stays nice and chunky when it rotates.
 //
 //  The plane is painted facing RIGHT. (0,0) is the top-left of the sprite,
-//  and (cx,cy) is the middle, which is the point it spins around.
+//  and (cx,cy) is the middle -- the point it spins around. The design: a blue
+//  biplane with an orange engine cowling, a red roundel, X-braced wings, and
+//  a big landing-gear wheel.
 // ===========================================================================
 
 // Build one biplane picture in the given colors.
 // pal      = { body, lt, dk } main color plus a lighter and darker shade.
 // whiteout = true makes an all-white copy, used for the "I got hit!" flash.
 function buildPlaneSprite(pal, whiteout) {
-  const C = CONFIG.COLORS;
   const W = 44, H = 30, cx = 22, cy = 15;
 
   const cvs = document.createElement('canvas');
@@ -22,82 +22,85 @@ function buildPlaneSprite(pal, whiteout) {
   cvs.height = H;
   const g = cvs.getContext('2d');
 
-  // Pick colors (or white-ish ones for the hit flash).
-  const body   = whiteout ? '#ffffff' : pal.body;
-  const lt     = whiteout ? '#ffffff' : pal.lt;
-  const dk     = whiteout ? '#dcdcdc' : pal.dk;
-  const cowl   = whiteout ? '#e8e8e8' : C.cowl;
-  const metal  = whiteout ? '#ffffff' : C.metal;
-  const wheel  = whiteout ? '#cfcfcf' : C.wheel;
-  const strut  = whiteout ? '#e6e6e6' : C.strut;
-  const pilot  = whiteout ? '#ffffff' : C.pilot;
-  const wire   = whiteout ? '#f0f0f0' : '#cfd8dc';
-  const gun    = whiteout ? '#bdbdbd' : '#222222';
+  // Body colors (or whitish ones for the hit flash).
+  const body = whiteout ? '#ffffff' : pal.body;
+  const lt   = whiteout ? '#ffffff' : pal.lt;
+  const dk   = whiteout ? '#dcdcdc' : pal.dk;
+  // Fixed "parts" colors, shared by every plane.
+  const cowl   = whiteout ? '#eeeeee' : '#e8821e';
+  const cowlLt = whiteout ? '#ffffff' : '#f6a83c';
+  const cowlDk = whiteout ? '#cccccc' : '#b5610f';
+  const hub    = whiteout ? '#ffffff' : '#f4c542';
+  const strut  = whiteout ? '#dddddd' : '#2f3a45';
+  const wheel  = whiteout ? '#cccccc' : '#161616';
+  const wheelHb= whiteout ? '#ffffff' : '#8a8a8a';
+  const roundel= whiteout ? '#ffffff' : '#d23b3b';
+  const roundMd= whiteout ? '#dddddd' : '#ffffff';
+  const cream  = whiteout ? '#ffffff' : '#f3e6c4';
 
-  // tiny helper: paint a block of pixels
+  // tiny helpers
   function px(x, y, w, h, c) { g.fillStyle = c; g.fillRect(x, y, w, h); }
+  function line(x0, y0, x1, y1, c) {            // draw a 1px diagonal line
+    const steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      px(Math.round(x0 + (x1 - x0) * t), Math.round(y0 + (y1 - y0) * t), 1, 1, c);
+    }
+  }
 
   // --- Tail at the back (left) ---
-  px(7, 7, 3, 6, body);     // vertical fin
-  px(7, 7, 1, 6, dk);       // fin shadow edge
-  px(7, 8, 3, 1, lt);       // fin stripe
-  px(4, 13, 8, 2, body);    // horizontal tail wing
-  px(4, 13, 8, 1, lt);      // its highlight
-  px(11, 13, 1, 2, dk);
-
-  // --- Fuselage (the main body), tapering to the tail ---
-  px(8, 12, 3, 5, body);
-  px(10, 11, 22, 7, body);
-  px(10, 11, 22, 1, lt);    // top highlight
-  px(10, 17, 22, 1, dk);    // belly shadow
-
-  // --- Engine cowling at the nose ---
-  px(31, 11, 4, 7, cowl);
-  px(31, 11, 4, 1, metal);  // shiny top
-  px(31, 17, 4, 1, '#22303d');
-  px(35, 12, 1, 5, cowl);   // rounded front
-  px(36, 13, 2, 3, metal);  // spinner / nose cone
-  px(30, 18, 4, 1, '#555');  // exhaust pipe
+  px(4, 13, 8, 3, body);   // horizontal stabilizer
+  px(4, 13, 8, 1, lt);
+  px(6, 8, 3, 6, body);    // vertical fin
+  px(6, 8, 1, 6, dk);
+  px(6, 9, 3, 1, cream);   // tail stripe
+  px(4, 18, 3, 1, strut);  // tail skid
 
   // --- Lower wing ---
-  px(10, 20, 24, 2, body);
-  px(10, 20, 24, 1, lt);
-  px(10, 21, 24, 1, dk);
+  px(9, 20, 24, 2, body);
+  px(9, 20, 24, 1, lt);
+  px(9, 21, 24, 1, dk);
 
-  // --- Rigging wires between the wings (thin diagonal lines) ---
-  px(10, 8, 1, 1, wire); px(11, 10, 1, 1, wire); px(12, 12, 1, 1, wire);
-  px(33, 8, 1, 1, wire); px(32, 10, 1, 1, wire); px(31, 12, 1, 1, wire);
+  // --- Wing struts: an X-brace out near the tips, posts near the body ---
+  line(11, 7, 15, 20, strut); line(15, 7, 11, 20, strut); // left X
+  line(29, 7, 33, 20, strut); line(33, 7, 29, 20, strut); // right X
+  px(18, 8, 1, 12, strut); px(26, 8, 1, 12, strut);        // cabane posts
 
-  // --- Struts holding the wings apart ---
-  px(13, 7, 1, 13, strut);
-  px(28, 7, 1, 13, strut);
-  px(20, 7, 1, 5, strut);   // cabane strut by the cockpit
-  px(24, 7, 1, 5, strut);
+  // --- Upper wing (long, sits high on the struts) ---
+  px(6, 5, 32, 2, body);
+  px(6, 5, 32, 1, cream);  // cream leading edge
+  px(6, 6, 32, 1, dk);     // under-shadow
+  px(6, 5, 1, 1, dk); px(37, 5, 1, 1, dk); // trimmed tips
 
-  // --- Upper wing (long, sits up high on the struts) ---
-  px(7, 5, 30, 2, body);
-  px(7, 5, 30, 1, lt);
-  px(7, 6, 30, 1, dk);
-  // roundel marking
-  px(19, 5, 4, 2, '#f4f4f4');
-  px(20, 5, 2, 1, dk);
+  // --- Fuselage (main body) ---
+  px(9, 12, 25, 7, body);
+  px(9, 12, 25, 1, lt);    // top highlight
+  px(9, 18, 25, 1, dk);    // belly shadow
 
-  // --- Machine guns on top of the cowling ---
-  px(26, 9, 6, 1, gun);
-  px(31, 8, 1, 2, gun);
+  // --- Orange engine cowling at the nose ---
+  px(34, 11, 4, 8, cowl);
+  px(34, 11, 4, 1, cowlLt);
+  px(34, 18, 4, 1, cowlDk);
+  px(38, 12, 1, 6, cowl);  // rounded front
+  px(38, 14, 2, 2, hub);   // spinner hub
 
-  // --- Cockpit hole + pilot with goggles ---
-  px(21, 10, 5, 2, '#2b1d12');
-  px(22, 9, 3, 2, pilot);
-  px(22, 9, 3, 1, '#3a2a1a');  // helmet line
-  px(24, 9, 1, 1, '#1a1a1a');  // goggle glint
+  // --- Red roundel marking on the fuselage ---
+  px(16, 13, 5, 4, roundel);
+  px(17, 14, 3, 2, roundMd);
+  px(18, 15, 1, 1, roundel);
 
-  // --- Landing gear: struts, axle, two wheels ---
-  px(17, 18, 1, 4, strut);
-  px(25, 18, 1, 4, strut);
-  px(15, 24, 12, 1, '#333');
-  px(14, 22, 4, 3, wheel); px(15, 23, 2, 1, '#777');
-  px(24, 22, 4, 3, wheel); px(25, 23, 2, 1, '#777');
+  // --- Cockpit opening ---
+  px(24, 10, 4, 2, '#16222e');
+  px(25, 10, 1, 2, lt);
+
+  // --- Machine gun on top of the cowling ---
+  px(30, 10, 5, 1, strut);
+
+  // --- Landing gear: a fork down to a big wheel ---
+  line(17, 19, 18, 24, strut);
+  line(23, 19, 21, 24, strut);
+  px(16, 23, 7, 4, wheel);    // tire
+  px(18, 24, 3, 2, wheelHb);  // hub
 
   return { canvas: cvs, cx: cx, cy: cy };
 }
@@ -107,12 +110,26 @@ function makePlaneSet(pal) {
   return { normal: buildPlaneSprite(pal, false), flash: buildPlaneSprite(pal, true) };
 }
 
+// Lighten (amt > 0) or darken (amt < 0) a #rrggbb color by an amount.
+function shadeHex(hex, amt) {
+  let n = parseInt(hex.slice(1), 16);
+  let r = Math.max(0, Math.min(255, ((n >> 16) & 255) + amt));
+  let g = Math.max(0, Math.min(255, ((n >> 8) & 255) + amt));
+  let b = Math.max(0, Math.min(255, (n & 255) + amt));
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+
+// Build a full plane sprite set from a single body color (auto light/dark).
+function makePlaneSetFromColor(color) {
+  return makePlaneSet({ body: color, lt: shadeHex(color, 55), dk: shadeHex(color, -55) });
+}
+
 // Pre-build every plane's pictures once, when the game starts.
-// (Keyed by team: 'player', 1 = purple enemies, 2 = orange enemies.)
+// (Keyed by team: 'player' = blue, 1 = purple enemies, 2 = orange enemies.)
 const PLANE_SPRITES = {
-  player: makePlaneSet({ body: CONFIG.COLORS.plane,  lt: '#ff7a6b', dk: CONFIG.COLORS.planeDark }),
-  1:      makePlaneSet({ body: CONFIG.COLORS.enemy,  lt: '#c79be0', dk: CONFIG.COLORS.enemyDark }),
-  2:      makePlaneSet({ body: CONFIG.COLORS.enemy2, lt: '#f5a85a', dk: CONFIG.COLORS.enemy2Dark }),
+  player: makePlaneSet({ body: '#3d8fd6', lt: '#7fbdef', dk: '#2466a0' }),
+  1:      makePlaneSet({ body: '#9b59b6', lt: '#c79be0', dk: '#6c3483' }),
+  2:      makePlaneSet({ body: '#e67e22', lt: '#f5a85a', dk: '#a85916' }),
 };
 
 // Stamp a plane sprite onto the screen, rotated to its flying angle,
@@ -130,7 +147,7 @@ function drawPlaneSprite(ctx, set, x, y, angle, spin, flashing) {
   // Propeller: a blade in front that grows/shrinks to look like it's spinning.
   const blade = Math.sin(spin) * 8;
   ctx.fillStyle = flashing ? '#ffffff' : '#1a1a1a';
-  ctx.fillRect(15, -blade, 2, blade * 2);
+  ctx.fillRect(17, -blade, 2, blade * 2);
 
   ctx.restore();
 }

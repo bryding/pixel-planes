@@ -26,7 +26,7 @@ class Bullet {
   }
 
   update() {
-    this.x += this.vx;
+    this.x = wrapX(this.x + this.vx); // loop around the world sideways
     this.y += this.vy;
 
     // Count down the bullet's life. When it hits 0, mark it dead.
@@ -37,9 +37,9 @@ class Bullet {
     if (this.y > CONFIG.GROUND_Y) this.dead = true;
   }
 
-  draw(ctx, camX, camY) {
+  draw(ctx) {
     ctx.fillStyle = this.color;
     const s = CONFIG.BULLET_SIZE;
-    ctx.fillRect(this.x - camX - s / 2, this.y - camY - s / 2, s, s);
+    ctx.fillRect(worldToScreenX(this.x) - s / 2, this.y - camera.y - s / 2, s, s);
   }
 }

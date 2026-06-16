@@ -40,6 +40,11 @@ class Plane {
     // Missiles you're carrying, and a timer that slowly refills them.
     this.missiles = CONFIG.MISSILE_MAX;
     this.missileTimer = 0;
+
+    // Set true on any frame the plane is touching the ground.
+    this.hitGround = false;
+    // Set by the flight physics when the wings stall.
+    this.stalling = false;
   }
 
   // Called when something hits the player. "damage" is how many hearts it
@@ -65,39 +70,27 @@ class Plane {
     if (Input.left)  this.angle -= CONFIG.TURN_SPEED;
     if (Input.right) this.angle += CONFIG.TURN_SPEED;
 
-    // --- 2. Push the plane in the direction the nose points ---
-    // Math.cos/Math.sin turn an angle into left-right and up-down amounts.
-    const push = this.throttle * CONFIG.THRUST;
-    this.vx += Math.cos(this.angle) * push;
-    this.vy += Math.sin(this.angle) * push;
+    // --- 2. Realistic flight: thrust, gravity, lift, grip, drag, top speed ---
+    applyFlightPhysics(this, this.throttle * CONFIG.THRUST);
 
-    // --- 3. Gravity pulls the plane down ---
-    this.vy += CONFIG.GRAVITY;
-
-    // --- 4. Air resistance slows it down a little ---
-    this.vx *= CONFIG.DRAG;
-    this.vy *= CONFIG.DRAG;
-
-    // --- 5. Don't let it go faster than the top speed ---
-    const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-    if (speed > CONFIG.MAX_SPEED) {
-      this.vx = (this.vx / speed) * CONFIG.MAX_SPEED;
-      this.vy = (this.vy / speed) * CONFIG.MAX_SPEED;
-    }
-
-    // --- 6. Actually move ---
-    this.x += this.vx;
+    // --- 3. Actually move (and loop around the world sideways) ---
+    this.x = wrapX(this.x + this.vx);
     this.y += this.vy;
 
-    // --- 7. Don't fall through the ground ---
+    // --- 4. Touching the ground. We just note it here (hitGround); the game
+    // decides what it means: a safe roll during takeoff, or a fatal crash
+    // while flying.
+    this.hitGround = false;
     if (this.y > CONFIG.GROUND_Y - 6) {
       this.y = CONFIG.GROUND_Y - 6;
-      if (this.vy > 0) this.vy = 0; // stop falling
+      if (this.vy > 0) this.vy = 0; // stop falling through it
+      this.hitGround = true;
     }
 
-    // --- 8. Don't fly off the top of the sky ---
-    if (this.y < 10) {
-      this.y = 10;
+    // --- 5. The ceiling is way up high. You'll usually stall out long
+    // before you reach it, but this is the hard top of the sky.
+    if (this.y < CONFIG.CEILING) {
+      this.y = CONFIG.CEILING;
       if (this.vy < 0) this.vy = 0;
     }
 
@@ -133,12 +126,13 @@ class Plane {
     let target = null, bestDist = Infinity;
     for (const p of planes) {
       if (p === this || !p.alive || p.team === this.team) continue;
-      const d = (p.x - this.x) ** 2 + (p.y - this.y) ** 2;
+      const dx = wrapDX(p.x - this.x), dy = p.y - this.y;
+      const d = dx * dx + dy * dy;
       if (d < bestDist) { bestDist = d; target = p; }
     }
 
-    const nx = this.x + Math.cos(this.angle) * 15;
-    const ny = this.y + Math.sin(this.angle) * 15;
+    const nx = this.x + Math.cos(this.angle) * 17;
+    const ny = this.y + Math.sin(this.angle) * 17;
     missiles.push(new Missile(nx, ny, this.angle, this.team, target));
   }
 
@@ -148,8 +142,8 @@ class Plane {
     if (this.fireCooldown > 0) return; // not ready yet
 
     // Find the tip of the nose (in front, in the facing direction).
-    const noseX = this.x + Math.cos(this.angle) * 15;
-    const noseY = this.y + Math.sin(this.angle) * 15;
+    const noseX = this.x + Math.cos(this.angle) * 17;
+    const noseY = this.y + Math.sin(this.angle) * 17;
 
     bullets.push(new Bullet(
       noseX, noseY, this.angle, this.vx, this.vy,
@@ -160,11 +154,9 @@ class Plane {
     this.fireCooldown = CONFIG.FIRE_COOLDOWN;
   }
 
-  // Draw the plane. camX/camY is where the camera is, so we draw the plane
-  // in the right spot on the screen.
-  draw(ctx, camX, camY) {
-    // Stamp the detailed player biplane, rotated to its flying angle.
-    drawPlaneSprite(ctx, PLANE_SPRITES.player, this.x - camX, this.y - camY,
-                    this.angle, this.propSpin, this.flash > 0);
+  // Draw the plane on screen (worldToScreenX handles the looping world).
+  draw(ctx) {
+    drawPlaneSprite(ctx, PLANE_SPRITES.player, worldToScreenX(this.x),
+                    this.y - camera.y, this.angle, this.propSpin, this.flash > 0);
   }
 }

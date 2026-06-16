@@ -25,7 +25,7 @@ class Missile {
   update() {
     // --- Steer toward the target while we still have fuel ---
     if (this.fuel > 0 && this.target && this.target.alive) {
-      const want = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+      const want = Math.atan2(this.target.y - this.y, wrapDX(this.target.x - this.x));
       const turn = CONFIG.MISSILE_TURN;
       const d = angleDiff(want, this.angle); // shortest way to turn
       if (d > turn) this.angle += turn;
@@ -35,8 +35,8 @@ class Missile {
     }
     // (When fuel is gone, we just keep the angle we have = flies straight.)
 
-    // --- Move forward ---
-    this.x += Math.cos(this.angle) * CONFIG.MISSILE_SPEED;
+    // --- Move forward (and loop around the world sideways) ---
+    this.x = wrapX(this.x + Math.cos(this.angle) * CONFIG.MISSILE_SPEED);
     this.y += Math.sin(this.angle) * CONFIG.MISSILE_SPEED;
 
     // --- Drop a puff of smoke, and age the old puffs ---
@@ -50,7 +50,7 @@ class Missile {
     if (this.y > CONFIG.GROUND_Y) this.dead = true;
   }
 
-  draw(ctx, camX, camY) {
+  draw(ctx) {
     const C = CONFIG.COLORS;
 
     // Smoke trail (older puffs are bigger and more faded).
@@ -59,13 +59,13 @@ class Missile {
       const s = 2 + (1 - a) * 4;        // grows as it fades
       ctx.globalAlpha = a * 0.7;
       ctx.fillStyle = C.smoke;
-      ctx.fillRect(p.x - camX - s / 2, p.y - camY - s / 2, s, s);
+      ctx.fillRect(worldToScreenX(p.x) - s / 2, p.y - camera.y - s / 2, s, s);
     }
     ctx.globalAlpha = 1; // always reset, so nothing else turns see-through
 
     // The missile itself, pointing where it's heading.
     ctx.save();
-    ctx.translate(this.x - camX, this.y - camY);
+    ctx.translate(worldToScreenX(this.x), this.y - camera.y);
     ctx.rotate(this.angle);
     ctx.fillStyle = C.missileFin;
     ctx.fillRect(-6, -3, 3, 6);   // tail fins

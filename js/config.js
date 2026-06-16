@@ -22,6 +22,13 @@ const CONFIG = {
   GRAVITY: 0.035,      // How hard the ground pulls the plane down.
   DRAG: 0.992,         // Air resistance. Closer to 1 = the plane glides more.
 
+  // More realistic flight: wings make LIFT when you fly fast (so you can hold
+  // height), and GRIP slowly bends your momentum toward where the nose points
+  // (so turns feel like a real banking plane, and flying too slow makes you
+  // stall and drop).
+  LIFT: 0.022,         // How much lift the wings make from forward speed.
+  GRIP: 0.085,         // How fast your momentum swings to follow the nose.
+
   THROTTLE_RATE: 0.03, // How quickly the throttle (gas pedal) changes.
   START_THROTTLE: 0.6, // How much gas the plane starts with.
 
@@ -33,6 +40,19 @@ const CONFIG = {
 
   // ---- The world ----
   GROUND_Y: 400,       // How far down the ground is (in game pixels).
+  // The level is this many pixels long. When you fly off one side you pop out
+  // the other side -- so it's a big loop. The rescue barn sits in the middle.
+  WORLD_WIDTH: 8000,
+
+  // ---- Sky ceiling & stalling (BitPlanes-style!) ----
+  // (y counts DOWN, so "up high" is a big negative number.)
+  // Climb too high and the air gets thin: your wings make less lift and your
+  // engine weakens, so you STALL and sink back down. Fly too SLOW and you
+  // stall too. Dive to get your speed (and control) back.
+  CEILING: -2200,      // the very top of the sky -- you can't fly past this.
+  STALL_ALT: -700,     // above this height the air thins out and lift fades.
+  STALL_SPEED: 1.6,    // slower than this and the wings stall (lose their lift).
+  TURN_FULL_SPEED: 3.5,// you need at least this much speed for full control.
 
   // ---- Guns & bullets ----
   // (Press SPACE to shoot. Try changing these!)
@@ -47,24 +67,36 @@ const CONFIG = {
   // sharp-turning plane can dodge them!
   MISSILE_MAX: 5,            // how many missiles you can hold
   MISSILE_REFILL_SECONDS: 20,// you get one more missile every this many seconds
-  MISSILE_SPEED: 7,          // how fast a missile flies (faster than planes)
+  MISSILE_SPEED: 6,          // how fast a missile flies
   MISSILE_TURN: 0.05,        // how sharply it can steer (smaller = easier to dodge)
   MISSILE_FUEL: 100,         // frames it can chase before the fuel runs out
   MISSILE_LIFE: 170,         // frames before it fizzles out completely
 
-  // ---- The player's health ----
+  // ---- The player's health & eject ----
   PLAYER_HEALTH: 5,    // How many hits you can take before going down.
   PLAYER_RESPAWN: 90,  // Frames before you fly back in after being shot down.
+  // Press C to EJECT: you bail out and float down on a parachute. If you
+  // steer your parachute to the big barn in the middle you respawn and KEEP
+  // your points. But if you get shot down instead, your points reset to 0!
+  EJECT_UP: 3,             // little upward hop when you bail out
+  PARACHUTE_FALL: 0.7,     // how fast the parachute sinks
+  PARACHUTE_DRIFT: 0.9,    // how fast you can steer the parachute left/right
+  BARN_RESCUE_RANGE: 110,  // how close to the barn counts as "rescued"
 
-  // ---- Enemy planes (they fly, chase, and shoot — at YOU and each other!) ----
+  // ---- Enemy planes ----
+  // Every bot has its OWN color and its OWN flying style, and they all fight
+  // each other AND you (a free-for-all). They lead their shots, dodge, and
+  // even fire homing missiles. These numbers are the "average" bot; each one
+  // varies a bit around them (see js/enemy.js for the personalities).
   ENEMY_COUNT: 14,        // How many enemy planes are in the sky at once.
-  ENEMY_THRUST: 0.07,     // Engine power for enemies (yours is THRUST above).
-  ENEMY_TURN: 0.04,       // How fast enemies turn their nose. Bigger = nimbler.
+  ENEMY_THRUST: 0.072,    // Engine power for enemies (yours is THRUST above).
+  ENEMY_TURN: 0.045,      // How fast enemies turn their nose. Bigger = nimbler.
   ENEMY_HEALTH: 3,        // How many hits an enemy can take before it pops.
-  ENEMY_FIRE_RANGE: 150,  // How close an enemy must be before it shoots.
-  ENEMY_AIM: 0.30,        // How well-aimed it must be to fire (bigger = sloppier).
-  ENEMY_FIRE_COOLDOWN: 35,// Frames between an enemy's shots (bigger = shoots less).
+  ENEMY_FIRE_RANGE: 170,  // How close an enemy must be before it shoots.
+  ENEMY_AIM: 0.28,        // How well-aimed it must be to fire (bigger = sloppier).
+  ENEMY_FIRE_COOLDOWN: 32,// Frames between an enemy's shots (bigger = shoots less).
   ENEMY_RESPAWN: 150,     // Frames before a downed enemy flies back in.
+  ENEMY_MISSILE_COOLDOWN: 300, // base frames between a bot's missiles.
 
   // ---- Off-screen enemy arrows (point toward enemies you can't see) ----
   SHOW_ENEMY_ARROWS: true, // turn the edge arrows on or off

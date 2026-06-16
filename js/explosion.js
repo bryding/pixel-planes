@@ -1,26 +1,34 @@
 // ===========================================================================
-//  EXPLOSION  --  A quick burst of flying sparks when a plane pops.
-//  It's just for looks (it doesn't hurt anything), but it makes hits
-//  feel a lot more satisfying!
+//  EXPLOSION  --  A quick burst of flying sparks when a plane pops. A "big"
+//  one also has a growing fireball ring, used when a plane is destroyed or
+//  crashes into the ground.
 // ===========================================================================
 
 class Explosion {
-  constructor(x, y, color) {
-    // Make a handful of "sparks", each flying off in a random direction.
-    this.sparks = [];
-    for (let i = 0; i < 12; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 1 + Math.random() * 2.5;
-      this.sparks.push({
-        x: x,
-        y: y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: 15 + Math.random() * 15,
-      });
-    }
+  constructor(x, y, color, big = false) {
+    this.x = x;
+    this.y = y;
     this.color = color;
     this.dead = false;
+
+    // A handful of sparks, each flying off in a random direction.
+    this.sparks = [];
+    const count = big ? 22 : 12;
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1 + Math.random() * (big ? 4 : 2.5);
+      this.sparks.push({
+        x: x, y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 15 + Math.random() * (big ? 22 : 15),
+      });
+    }
+
+    // The fireball ring (only for "big" booms).
+    this.big = big;
+    this.blastR = 0;
+    this.blastLife = big ? 16 : 0;
   }
 
   update() {
@@ -33,15 +41,28 @@ class Explosion {
       s.life -= 1;
       if (s.life > 0) anyAlive = true;
     }
-    // When every spark has faded, this explosion is done.
+    // Grow the fireball ring outward, then let it fade.
+    if (this.blastLife > 0) {
+      this.blastLife -= 1;
+      this.blastR += 3.5;
+      anyAlive = true;
+    }
     if (!anyAlive) this.dead = true;
   }
 
-  draw(ctx, camX, camY) {
+  draw(ctx) {
+    // Fireball ring first (so sparks draw on top).
+    if (this.big && this.blastLife > 0) {
+      const a = this.blastLife / 16;
+      ctx.fillStyle = 'rgba(255,180,60,' + (a * 0.7) + ')';
+      ctx.beginPath();
+      ctx.arc(worldToScreenX(this.x), this.y - camera.y, this.blastR, 0, Math.PI * 2);
+      ctx.fill();
+    }
     for (const s of this.sparks) {
       if (s.life <= 0) continue;
       ctx.fillStyle = this.color;
-      ctx.fillRect(s.x - camX - 1, s.y - camY - 1, 2, 2);
+      ctx.fillRect(worldToScreenX(s.x) - 1, s.y - camera.y - 1, 2, 2);
     }
   }
 }
