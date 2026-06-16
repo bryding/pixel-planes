@@ -117,10 +117,10 @@ class Enemy {
       wantAngle += Math.sin(this.propSpin * 0.1) * S.wobble;
     }
 
-    // Stay out of the ground, and dive down before the air gets too thin
-    // (so the bots don't stall out up high).
+    // Stay off the ground and out of the very top of the sky (the ceiling),
+    // but otherwise the bots use the whole height of the map.
     if (this.y > CONFIG.GROUND_Y - 40) wantAngle = -Math.PI / 2;
-    if (this.y < CONFIG.STALL_ALT + 150) wantAngle = Math.PI / 2;
+    if (this.y < CONFIG.CEILING + 80) wantAngle = Math.PI / 2;
 
     // Turn the nose smoothly toward where we want to go.
     const diff = angleDiff(wantAngle, this.angle);
@@ -200,7 +200,16 @@ class Enemy {
 
   draw(ctx) {
     if (!this.alive) return;
-    drawPlaneSprite(ctx, this.sprite, worldToScreenX(this.x),
-                    this.y - camera.y, this.angle, this.propSpin, this.flash > 0);
+    const sx = worldToScreenX(this.x), sy = this.y - camera.y;
+    drawPlaneSprite(ctx, this.sprite, sx, sy, this.angle, this.propSpin, this.flash > 0);
+
+    // Nametag floating above the plane, so you know who's who (and who got you).
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';        // dark outline for readability
+    ctx.fillText(this.name, sx + 1, sy - 21);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(this.name, sx, sy - 22);
+    ctx.textAlign = 'left';
   }
 }

@@ -15,7 +15,10 @@
 // pal      = { body, lt, dk } main color plus a lighter and darker shade.
 // whiteout = true makes an all-white copy, used for the "I got hit!" flash.
 function buildPlaneSprite(pal, whiteout) {
-  const W = 44, H = 30, cx = 22, cy = 15;
+  // A side-on WWI-style biplane (like BitPlanes): two clearly separated wings
+  // joined by vertical struts, a fuselage tapering to the tail, rounded engine
+  // cowl + prop up front, a cockpit with a pilot, main wheels and a tailwheel.
+  const W = 50, H = 34, cx = 25, cy = 17;
 
   const cvs = document.createElement('canvas');
   cvs.width = W;
@@ -28,19 +31,17 @@ function buildPlaneSprite(pal, whiteout) {
   const dk   = whiteout ? '#dcdcdc' : pal.dk;
   // Fixed "parts" colors, shared by every plane.
   const cowl   = whiteout ? '#eeeeee' : '#e8821e';
-  const cowlLt = whiteout ? '#ffffff' : '#f6a83c';
+  const cowlLt = whiteout ? '#ffffff' : '#ffd9a0';
   const cowlDk = whiteout ? '#cccccc' : '#b5610f';
   const hub    = whiteout ? '#ffffff' : '#f4c542';
-  const strut  = whiteout ? '#dddddd' : '#2f3a45';
+  const strut  = whiteout ? '#e6e6e6' : '#3a2c1c';
   const wheel  = whiteout ? '#cccccc' : '#161616';
-  const wheelHb= whiteout ? '#ffffff' : '#8a8a8a';
-  const roundel= whiteout ? '#ffffff' : '#d23b3b';
-  const roundMd= whiteout ? '#dddddd' : '#ffffff';
-  const cream  = whiteout ? '#ffffff' : '#f3e6c4';
+  const wheelHb= whiteout ? '#ffffff' : '#7a7a7a';
+  const round1 = whiteout ? '#ffffff' : '#d23b3b';
+  const round2 = whiteout ? '#dddddd' : '#ffffff';
 
-  // tiny helpers
   function px(x, y, w, h, c) { g.fillStyle = c; g.fillRect(x, y, w, h); }
-  function line(x0, y0, x1, y1, c) {            // draw a 1px diagonal line
+  function line(x0, y0, x1, y1, c) {
     const steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
@@ -48,59 +49,62 @@ function buildPlaneSprite(pal, whiteout) {
     }
   }
 
-  // --- Tail at the back (left) ---
-  px(4, 13, 8, 3, body);   // horizontal stabilizer
-  px(4, 13, 8, 1, lt);
-  px(6, 8, 3, 6, body);    // vertical fin
-  px(6, 8, 1, 6, dk);
-  px(6, 9, 3, 1, cream);   // tail stripe
-  px(4, 18, 3, 1, strut);  // tail skid
+  // --- Tail at the back (left): fin/rudder + horizontal stabilizer ---
+  px(5, 8, 3, 7, body);     // vertical fin
+  px(5, 8, 1, 7, dk);
+  px(6, 9, 2, 1, lt);
+  px(3, 14, 9, 2, body);    // horizontal tailplane
+  px(3, 14, 9, 1, lt);
+  px(11, 14, 1, 2, dk);
 
   // --- Lower wing ---
-  px(9, 20, 24, 2, body);
-  px(9, 20, 24, 1, lt);
-  px(9, 21, 24, 1, dk);
+  px(9, 23, 30, 2, body);
+  px(9, 23, 30, 1, lt);
+  px(9, 24, 30, 1, dk);
 
-  // --- Wing struts: an X-brace out near the tips, posts near the body ---
-  line(11, 7, 15, 20, strut); line(15, 7, 11, 20, strut); // left X
-  line(29, 7, 33, 20, strut); line(33, 7, 29, 20, strut); // right X
-  px(18, 8, 1, 12, strut); px(26, 8, 1, 12, strut);        // cabane posts
+  // --- Interplane struts (vertical) + cabane struts (the "N" to the body) ---
+  px(15, 6, 1, 18, strut);
+  px(34, 6, 1, 18, strut);
+  line(22, 13, 20, 6, strut);
+  line(27, 13, 29, 6, strut);
 
-  // --- Upper wing (long, sits high on the struts) ---
-  px(6, 5, 32, 2, body);
-  px(6, 5, 32, 1, cream);  // cream leading edge
-  px(6, 6, 32, 1, dk);     // under-shadow
-  px(6, 5, 1, 1, dk); px(37, 5, 1, 1, dk); // trimmed tips
+  // --- Upper wing (staggered slightly forward, long) ---
+  px(8, 5, 35, 2, body);
+  px(8, 5, 35, 1, lt);
+  px(8, 6, 35, 1, dk);
+  px(8, 5, 1, 1, dk); px(42, 5, 1, 1, dk); // softened tips
 
-  // --- Fuselage (main body) ---
-  px(9, 12, 25, 7, body);
-  px(9, 12, 25, 1, lt);    // top highlight
-  px(9, 18, 25, 1, dk);    // belly shadow
+  // --- Fuselage (tapering toward the tail) ---
+  px(6, 14, 4, 4, body);    // tail boom
+  px(9, 12, 30, 7, body);
+  px(9, 12, 30, 1, lt);     // top highlight
+  px(9, 18, 30, 1, dk);     // belly shadow
 
-  // --- Orange engine cowling at the nose ---
-  px(34, 11, 4, 8, cowl);
-  px(34, 11, 4, 1, cowlLt);
-  px(34, 18, 4, 1, cowlDk);
-  px(38, 12, 1, 6, cowl);  // rounded front
-  px(38, 14, 2, 2, hub);   // spinner hub
+  // --- Rounded engine cowling + spinner at the nose ---
+  px(39, 11, 4, 8, cowl);
+  px(39, 11, 4, 1, cowlLt);
+  px(39, 18, 4, 1, cowlDk);
+  px(43, 12, 1, 6, cowl);   // rounded front
+  px(44, 14, 2, 3, hub);    // spinner hub
 
-  // --- Red roundel marking on the fuselage ---
-  px(16, 13, 5, 4, roundel);
-  px(17, 14, 3, 2, roundMd);
-  px(18, 15, 1, 1, roundel);
+  // --- Cockpit opening + pilot head ---
+  px(25, 11, 5, 2, '#20303a');
+  px(26, 10, 3, 2, '#f1c27d');
+  px(26, 10, 3, 1, '#3a2a1a');
 
-  // --- Cockpit opening ---
-  px(24, 10, 4, 2, '#16222e');
-  px(25, 10, 1, 2, lt);
+  // --- Roundel marking on the upper wing ---
+  px(22, 5, 4, 2, round1);
+  px(23, 5, 2, 1, round2);
 
-  // --- Machine gun on top of the cowling ---
-  px(30, 10, 5, 1, strut);
+  // --- Main landing gear: V-struts down to a wheel ---
+  line(21, 19, 19, 28, strut);
+  line(27, 19, 25, 28, strut);
+  px(17, 27, 8, 3, wheel);  // tire
+  px(19, 28, 4, 1, wheelHb);
 
-  // --- Landing gear: a fork down to a big wheel ---
-  line(17, 19, 18, 24, strut);
-  line(23, 19, 21, 24, strut);
-  px(16, 23, 7, 4, wheel);    // tire
-  px(18, 24, 3, 2, wheelHb);  // hub
+  // --- Small tailwheel under the tail ---
+  px(6, 18, 1, 3, strut);
+  px(5, 21, 3, 2, wheel);
 
   return { canvas: cvs, cx: cx, cy: cy };
 }
@@ -145,9 +149,9 @@ function drawPlaneSprite(ctx, set, x, y, angle, spin, flashing) {
   ctx.drawImage(spr.canvas, -spr.cx, -spr.cy);
 
   // Propeller: a blade in front that grows/shrinks to look like it's spinning.
-  const blade = Math.sin(spin) * 8;
+  const blade = Math.sin(spin) * 9;
   ctx.fillStyle = flashing ? '#ffffff' : '#1a1a1a';
-  ctx.fillRect(17, -blade, 2, blade * 2);
+  ctx.fillRect(21, -blade, 2, blade * 2);
 
   ctx.restore();
 }

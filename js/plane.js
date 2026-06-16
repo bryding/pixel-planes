@@ -62,7 +62,7 @@ class Plane {
   // This runs every frame to move the plane.
   update() {
     // --- 1. Read the controls ---
-    if (Input.up)   this.throttle += CONFIG.THROTTLE_RATE;
+    if (Input.up)   this.throttle += CONFIG.THROTTLE_UP_RATE; // slow to spin up
     if (Input.down) this.throttle -= CONFIG.THROTTLE_RATE;
     // Keep the throttle between 0 (off) and 1 (full power).
     this.throttle = Math.max(0, Math.min(1, this.throttle));
@@ -70,8 +70,23 @@ class Plane {
     if (Input.left)  this.angle -= CONFIG.TURN_SPEED;
     if (Input.right) this.angle += CONFIG.TURN_SPEED;
 
-    // --- 2. Realistic flight: thrust, gravity, lift, grip, drag, top speed ---
-    applyFlightPhysics(this, this.throttle * CONFIG.THRUST);
+    // --- 2. Realistic flight. Lift scales with throttle, so cutting the
+    // throttle kills your lift and you fall. ---
+    applyFlightPhysics(this, this.throttle * CONFIG.THRUST, this.throttle);
+
+    // --- 2b. Throttle = altitude. BELOW half throttle you SINK toward about
+    // normal flying speed (so cutting throttle makes you fall). At half throttle
+    // or more the sink stops and you slowly climb back to flight -- which takes
+    // a few seconds because the engine is slow to spin up. ---
+    if (this.throttle < 0.45) {
+      const targetSink = (1 - this.throttle) * CONFIG.MAX_SPEED;
+      if (this.vy < targetSink) this.vy += (targetSink - this.vy) * CONFIG.IDLE_SINK;
+      const spd = Math.hypot(this.vx, this.vy);
+      if (spd > CONFIG.MAX_SPEED) {
+        this.vx = (this.vx / spd) * CONFIG.MAX_SPEED;
+        this.vy = (this.vy / spd) * CONFIG.MAX_SPEED;
+      }
+    }
 
     // --- 3. Actually move (and loop around the world sideways) ---
     this.x = wrapX(this.x + this.vx);

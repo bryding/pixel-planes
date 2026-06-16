@@ -11,8 +11,8 @@ const CONFIG = {
   // bigger to fill your screen, but it's really only drawn this small.
   // Bigger numbers here = the camera is "zoomed out" so you see more sky,
   // more ground, and more of the battle at once.
-  GAME_W: 2240,
-  GAME_H: 1260,
+  GAME_W: 2560,
+  GAME_H: 1440,
 
   // ---- How the plane flies ----
   // (These are the fun ones to experiment with!)
@@ -28,13 +28,18 @@ const CONFIG = {
   // the wings STALL -- lift collapses and gravity takes over. WEATHERVANE is
   // how strongly the nose swings to follow the wind, which helps you recover
   // from a stall by dropping the nose into a dive.
+  IDLE_SINK: 0.08,     // How quickly low throttle drags you down to the fall
+                       // speed. At throttle 0 you sink at about normal flying
+                       // speed; throttle back up to recover.
   LIFT: 0.04,          // How strong the wings' lift is (drives the climb).
-  CAMBER: 0.16,        // Lift even when flying level, so the plane holds height
+  CAMBER: 0.25,        // Lift even when flying level, so the plane holds height
                        // (but still stalls pointing straight up). Bigger = floatier.
   WEATHERVANE: 0.03,   // How fast the nose swings to follow the airflow.
   DRAG_AOA: 0.02,      // Extra drag when the nose isn't lined up with travel.
 
-  THROTTLE_RATE: 0.03, // How quickly the throttle (gas pedal) changes.
+  THROTTLE_RATE: 0.03,    // How quickly the throttle drops when you ease off.
+  THROTTLE_UP_RATE: 0.0075,// How quickly the throttle BUILDS up (slow -- it takes
+                          // a couple of seconds to spin up to full power).
   START_THROTTLE: 0.6, // How much gas the plane starts with.
 
   MAX_SPEED: 10,       // The fastest the plane is allowed to go.
@@ -56,7 +61,7 @@ const CONFIG = {
   // stall too. Dive to get your speed (and control) back.
   CEILING: -2200,      // the very top of the sky -- you can't fly past this.
   STALL_ALT: -700,     // above this height the air thins out and lift fades.
-  STALL_SPEED: 4,      // slower than this and the wings stall (lose their lift).
+  STALL_SPEED: 5,      // slower than this and the wings stall (lose their lift).
   STALL_DRAG: 0.05,    // small extra brake from a badly-stalled (sideways) wing.
   TURN_FULL_SPEED: 4,  // reference speed for control.
 
@@ -74,7 +79,7 @@ const CONFIG = {
   MISSILE_MAX: 5,            // how many missiles you can hold
   MISSILE_REFILL_SECONDS: 20,// you get one more missile every this many seconds
   MISSILE_SPEED: 11,         // a tiny bit faster than your top speed (MAX_SPEED)
-  MISSILE_TURN: 0.05,        // how sharply it can steer (smaller = easier to dodge)
+  MISSILE_TURN: 0.15,        // sharp turn: smallest turn circle ~3 biplanes wide
   MISSILE_FUEL: 600,         // it chases for about 10 seconds, then flies straight
   MISSILE_LIFE: 720,         // frames before it fizzles out completely
   MISSILE_DAMAGE: 10,        // a missile takes off 10 health (so 2 missiles = dead)

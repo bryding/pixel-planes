@@ -30,11 +30,10 @@ function angleDiff(to, from) {
   return d;
 }
 
-// How "thick" the air is at this height: 1 down low, fading to 0 at the
-// ceiling. Thin air (high up) means weak lift and a weak engine.
+// Air is the SAME everywhere now -- the plane flies exactly the same way up
+// high as it does down low (uniform aerodynamic efficiency).
 function airDensity(y) {
-  const t = (y - CONFIG.CEILING) / (CONFIG.STALL_ALT - CONFIG.CEILING);
-  return Math.max(0, Math.min(1, t));
+  return 1;
 }
 
 // Apply one frame of real-ish flight to any flying thing (player or enemy).
@@ -47,7 +46,8 @@ function airDensity(y) {
 // airflow. Point straight up with no throttle and gravity bleeds your speed,
 // the lift dies, and you STALL and fall. The nose then weathervanes down into
 // a dive so you can pick up speed and recover. Sets o.stalling for the HUD.
-function applyFlightPhysics(o, push) {
+function applyFlightPhysics(o, push, liftScale) {
+  if (liftScale === undefined) liftScale = 1; // 1 = full wings; lower = less lift
   const density = airDensity(o.y);
 
   // Engine pushes along the nose (weaker in thin air up high).
@@ -77,7 +77,7 @@ function applyFlightPhysics(o, push) {
     // moment you bleed off speed (like climbing with no throttle) the wings
     // quit and you drop. This is what makes the stall happen quickly.
     const stallFade = Math.max(0, Math.min(1, (speed - CONFIG.STALL_SPEED) / 1.2));
-    const lift = CONFIG.LIFT * speed * cl * density * stallFade;
+    const lift = CONFIG.LIFT * speed * cl * density * stallFade * liftScale;
     const liftDir = vdir - Math.PI / 2;            // 90 deg off the airflow
     o.vx += Math.cos(liftDir) * lift;
     o.vy += Math.sin(liftDir) * lift;
@@ -101,9 +101,9 @@ function applyFlightPhysics(o, push) {
     // the nose into a dive after a stall so you can pick up speed and recover.
     o.angle += angleDiff(vdir, o.angle) * CONFIG.WEATHERVANE;
 
-    // We're stalling if the air is too thin, we're slower than stall speed, or
-    // the nose is pointed way off the airflow.
-    o.stalling = density < 0.55 || speed < CONFIG.STALL_SPEED || Math.abs(aoa) > 0.7;
+    // You stall at the SAME speed no matter which way the plane is pointed:
+    // simply when your airspeed drops below the stall speed.
+    o.stalling = speed < CONFIG.STALL_SPEED;
   } else {
     o.stalling = true;
   }

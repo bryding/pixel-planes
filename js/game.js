@@ -242,10 +242,19 @@ function update() {
       if (ejectPressed) eject();
     }
   } else if (playerState === 'chute') {
+    if (ejectPressed) pilot.deploy(); // press C AGAIN to pop the parachute
     pilot.update();
     // Reach the big barn (drifting OR walking) -> rescued, keep your points.
-    if (Math.abs(wrapDX(pilot.x - BARN_X)) < CONFIG.BARN_RESCUE_RANGE) rescueAtBarn();
-    else checkPilotHit(); // a bullet, missile, or plane can kill the pilot
+    if (Math.abs(wrapDX(pilot.x - BARN_X)) < CONFIG.BARN_RESCUE_RANGE) {
+      rescueAtBarn();
+    } else if (pilot.landed && !pilot.chuteOpen) {
+      // Splat -- hit the ground before opening the parachute.
+      bigExplosion(pilot.x, pilot.y);
+      pushKill('🛩️ YOUR PILOT splatted 💥', '#ff8a65');
+      playerDies(pilot.x, pilot.y, 'NO CHUTE!');
+    } else {
+      checkPilotHit(); // a bullet, missile, or plane can kill the pilot
+    }
   } else { // 'dead'
     playerRespawn -= 1;
     if (playerRespawn <= 0) spawnPlane(camera.x + CONFIG.GAME_W / 2);
@@ -347,22 +356,6 @@ function draw() {
   ctx.fillStyle = '#fff4d6';
   ctx.beginPath(); ctx.arc(sunX, sunY, 28, 0, Math.PI * 2); ctx.fill();
 
-  // --- Thin-air darkening: the higher you climb, the darker (and starrier)
-  // the sky gets, warning you that you're near the stall zone. ---
-  const altY = (playerState === 'chute' && pilot) ? pilot.y : player.y;
-  const altFactor = Math.max(0, Math.min(1,
-    (CONFIG.STALL_ALT - altY) / (CONFIG.STALL_ALT - CONFIG.CEILING)));
-  if (altFactor > 0.01) {
-    ctx.fillStyle = 'rgba(8,16,40,' + (altFactor * 0.55) + ')';
-    ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
-    ctx.fillStyle = 'rgba(255,255,255,' + (altFactor * 0.8) + ')';
-    for (let i = 0; i < 40; i++) {
-      const sx = (i * 197) % CONFIG.GAME_W;
-      const sy = (i * 113) % Math.floor(CONFIG.GAME_H * 0.6);
-      ctx.fillRect(sx, sy, 2, 2);
-    }
-  }
-
   // --- Clouds, far hills, and the treeline on the horizon ---
   drawBackgroundScenery(ctx, camera);
 
@@ -424,6 +417,37 @@ function draw() {
   drawHud();
   drawLeaderboard();
   drawKillFeed();
+  drawMinimap();
+}
+
+// A little map in the corner: the whole looping world as a rectangle, with a
+// RED box for where YOU are and a GREEN flag for the respawn barn.
+function drawMinimap() {
+  const mw = 240, mh = 24, mx = 12, my = 12;
+  const W = CONFIG.WORLD_WIDTH;
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(mx, my, mw, mh);
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(mx + 0.5, my + 0.5, mw - 1, mh - 1);
+  // ground strip along the bottom of the map
+  ctx.fillStyle = 'rgba(120,180,90,0.6)';
+  ctx.fillRect(mx + 1, my + mh - 5, mw - 2, 4);
+
+  // Green flag = the rescue barn
+  const fx = mx + (BARN_X / W) * mw;
+  ctx.fillStyle = '#5a3b2e'; ctx.fillRect(fx, my + mh - 16, 1, 12);
+  ctx.fillStyle = '#2ecc71'; ctx.fillRect(fx + 1, my + mh - 16, 8, 5);
+
+  // Red box = you
+  const who = (playerState === 'chute' && pilot) ? pilot : player;
+  const rx = mx + (wrapX(who.x) / W) * mw;
+  ctx.fillStyle = '#e74c3c';
+  ctx.fillRect(rx - 3, my + mh - 11, 6, 6);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '9px monospace'; ctx.textAlign = 'left';
+  ctx.fillText('MAP', mx + 4, my + 11);
 }
 
 // The "who killed who" feed on the left side (newest on top, fades away).
@@ -521,50 +545,44 @@ function drawBarnArrow() {
 }
 
 function drawHud() {
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.fillRect(6, 6, 128, 74);
+  // --- YOUR plane stats, in a bigger panel centered along the bottom ---
+  const pw = 330, ph = 88;
+  const px0 = Math.round(CONFIG.GAME_W / 2 - pw / 2);
+  const py0 = CONFIG.GAME_H - ph - 26;
+  const barX = px0 + 78, barW = 240;
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(px0, py0, pw, ph);
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'left';
 
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '8px monospace';
+  // Throttle
+  ctx.fillStyle = '#ffffff'; ctx.fillText('THROTTLE', px0 + 10, py0 + 16);
+  ctx.strokeStyle = '#ffffff'; ctx.strokeRect(barX, py0 + 9, barW, 8);
+  ctx.fillStyle = '#f1c40f'; ctx.fillRect(barX + 1, py0 + 10, (barW - 2) * player.throttle, 6);
 
-  // Throttle bar
-  ctx.fillText('THROTTLE', 10, 16);
-  ctx.strokeStyle = '#ffffff';
-  ctx.strokeRect(10, 19, 100, 6);
-  ctx.fillStyle = '#f1c40f';
-  ctx.fillRect(11, 20, 98 * player.throttle, 4);
-
-  // Health bar (turns from green toward red as it empties)
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText('HEALTH', 10, 34);
-  ctx.strokeStyle = '#ffffff';
-  ctx.strokeRect(10, 37, 100, 6);
+  // Health
+  ctx.fillStyle = '#ffffff'; ctx.fillText('HEALTH', px0 + 10, py0 + 34);
+  ctx.strokeStyle = '#ffffff'; ctx.strokeRect(barX, py0 + 27, barW, 8);
   const healthFrac = Math.max(0, player.health) / CONFIG.PLAYER_HEALTH;
   ctx.fillStyle = healthFrac > 0.5 ? '#2ecc71' : (healthFrac > 0.25 ? '#f39c12' : '#e74c3c');
-  ctx.fillRect(11, 38, 98 * healthFrac, 4);
+  ctx.fillRect(barX + 1, py0 + 28, (barW - 2) * healthFrac, 6);
 
-  // Missiles: one little box per missile (filled = ready). The next box
-  // slowly fills up to show the refill timer.
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText('MISSILES', 10, 54);
+  // Missiles (one box each; the next one fills as it reloads)
+  ctx.fillStyle = '#ffffff'; ctx.fillText('MISSILES', px0 + 10, py0 + 54);
   for (let i = 0; i < CONFIG.MISSILE_MAX; i++) {
-    const bx = 62 + i * 12, by = 48;
-    ctx.strokeStyle = '#ffffff';
-    ctx.strokeRect(bx, by, 10, 6);
+    const bx = barX + i * 18, by = py0 + 46;
+    ctx.strokeStyle = '#ffffff'; ctx.strokeRect(bx, by, 14, 9);
     if (i < player.missiles) {
-      ctx.fillStyle = CONFIG.COLORS.missile;
-      ctx.fillRect(bx + 1, by + 1, 8, 4);
+      ctx.fillStyle = CONFIG.COLORS.missile; ctx.fillRect(bx + 1, by + 1, 12, 7);
     } else if (i === player.missiles) {
       const frac = player.missileTimer / (CONFIG.MISSILE_REFILL_SECONDS * 60);
-      ctx.fillStyle = '#7f8c8d';
-      ctx.fillRect(bx + 1, by + 1, 8 * frac, 4);
+      ctx.fillStyle = '#7f8c8d'; ctx.fillRect(bx + 1, by + 1, 12 * frac, 7);
     }
   }
 
   // Speed
   const speed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText('SPEED ' + speed.toFixed(1), 10, 70);
+  ctx.fillStyle = '#ffffff'; ctx.fillText('SPEED ' + speed.toFixed(1), px0 + 10, py0 + 76);
 
   // Big middle-of-screen messages for ejecting / being shot down.
   ctx.textAlign = 'center';
@@ -573,8 +591,13 @@ function drawHud() {
     ctx.font = '20px monospace';
     ctx.fillText('EJECTED!', CONFIG.GAME_W / 2, 70);
     ctx.font = '11px monospace';
-    ctx.fillText('Float/walk (arrows) to the BIG BARN to save your ' + score +
-                 ' points -- don\'t get shot or run over!', CONFIG.GAME_W / 2, 90);
+    if (pilot && !pilot.chuteOpen && !pilot.landed) {
+      ctx.fillStyle = '#ffd23f';
+      ctx.fillText('Press C AGAIN to open your PARACHUTE!', CONFIG.GAME_W / 2, 90);
+    } else {
+      ctx.fillText('Float/walk (arrows) to the BIG BARN to save your ' + score +
+                   ' points -- don\'t get shot or run over!', CONFIG.GAME_W / 2, 90);
+    }
   } else if (playerState === 'dead') {
     ctx.fillStyle = '#ffffff';
     ctx.font = '22px monospace';
@@ -596,8 +619,6 @@ function drawHud() {
   const top = CONFIG.CEILING, bot = CONFIG.GROUND_Y;
   const altToBar = (y) => gy + gh * (y - top) / (bot - top);
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(gx - 2, gy - 2, 14, gh + 4);
-  ctx.fillStyle = 'rgba(231,76,60,0.5)';
-  ctx.fillRect(gx, gy, 10, altToBar(CONFIG.STALL_ALT) - gy); // stall zone
   const my = Math.max(gy, Math.min(gy + gh, altToBar(player.y)));
   ctx.fillStyle = '#ffffff'; ctx.fillRect(gx - 3, my - 1, 16, 2); // your marker
   ctx.font = '8px monospace'; ctx.textAlign = 'center';
