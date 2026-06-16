@@ -11,8 +11,8 @@ const CONFIG = {
   // bigger to fill your screen, but it's really only drawn this small.
   // Bigger numbers here = the camera is "zoomed out" so you see more sky,
   // more ground, and more of the battle at once.
-  GAME_W: 1600,
-  GAME_H: 900,
+  GAME_W: 2240,
+  GAME_H: 1260,
 
   // ---- How the plane flies ----
   // (These are the fun ones to experiment with!)
@@ -37,7 +37,7 @@ const CONFIG = {
   THROTTLE_RATE: 0.03, // How quickly the throttle (gas pedal) changes.
   START_THROTTLE: 0.6, // How much gas the plane starts with.
 
-  MAX_SPEED: 11,       // The fastest the plane is allowed to go.
+  MAX_SPEED: 10,       // The fastest the plane is allowed to go.
 
   // ---- The camera (the view that follows the plane) ----
   CAM_SMOOTH: 0.08,    // How smoothly the camera catches up. Smaller = lazier.
@@ -62,10 +62,10 @@ const CONFIG = {
 
   // ---- Guns & bullets ----
   // (Press SPACE to shoot. Try changing these!)
-  BULLET_SPEED: 15,    // How fast bullets fly out of the nose (faster than planes).
+  BULLET_SPEED: 14,    // How fast bullets fly out of the nose (faster than planes).
   BULLET_LIFE: 70,     // How many frames a bullet lives before it vanishes.
   FIRE_COOLDOWN: 10,   // Frames to wait between shots. Smaller = faster gun.
-  BULLET_SIZE: 3,      // How big each bullet looks (in pixels).
+  BULLET_SIZE: 6,      // How big/thick each bullet tracer looks (in pixels).
 
   // ---- Missiles (press X) ----
   // You carry a few homing missiles. They CHASE the nearest enemy, but only
@@ -73,7 +73,7 @@ const CONFIG = {
   // sharp-turning plane can dodge them!
   MISSILE_MAX: 5,            // how many missiles you can hold
   MISSILE_REFILL_SECONDS: 20,// you get one more missile every this many seconds
-  MISSILE_SPEED: 12,         // a tiny bit faster than your top speed (MAX_SPEED)
+  MISSILE_SPEED: 11,         // a tiny bit faster than your top speed (MAX_SPEED)
   MISSILE_TURN: 0.05,        // how sharply it can steer (smaller = easier to dodge)
   MISSILE_FUEL: 600,         // it chases for about 10 seconds, then flies straight
   MISSILE_LIFE: 720,         // frames before it fizzles out completely

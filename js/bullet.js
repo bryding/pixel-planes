@@ -38,8 +38,26 @@ class Bullet {
   }
 
   draw(ctx) {
-    ctx.fillStyle = this.color;
+    const sx = worldToScreenX(this.x), sy = this.y - camera.y;
+    // A glowing TRACER streak behind the bullet so it's easy to see.
+    const tx = sx - this.vx * 0.6, ty = sy - this.vy * 0.6;
     const s = CONFIG.BULLET_SIZE;
-    ctx.fillRect(worldToScreenX(this.x) - s / 2, this.y - camera.y - s / 2, s, s);
+    ctx.lineCap = 'round';
+
+    // soft outer glow
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = s * 2.2;
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(sx, sy); ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // bright colored core streak
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = s;
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(sx, sy); ctx.stroke();
+
+    // hot white tip
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(sx, sy, s * 0.55, 0, Math.PI * 2); ctx.fill();
   }
 }
