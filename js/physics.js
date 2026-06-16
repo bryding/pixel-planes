@@ -37,47 +37,60 @@ function airDensity(y) {
   return Math.max(0, Math.min(1, t));
 }
 
-// Apply one frame of flight to any flying thing (player or enemy).
+// Apply one frame of real-ish flight to any flying thing (player or enemy).
 //   o     = the plane object (needs x, y, vx, vy, angle)
 //   push  = how hard the engine is pushing this frame
-// This does thrust, gravity, wing lift, stalling, "grip" (momentum follows the
-// nose), air drag, and a top-speed limit. It also sets o.stalling for the HUD.
+//
+// The model: THRUST pushes along the nose, GRAVITY always pulls down, and the
+// WINGS make LIFT at right angles to the way the plane is actually moving --
+// but only when there's airspeed and the nose isn't pointed too far off the
+// airflow. Point straight up with no throttle and gravity bleeds your speed,
+// the lift dies, and you STALL and fall. The nose then weathervanes down into
+// a dive so you can pick up speed and recover. Sets o.stalling for the HUD.
 function applyFlightPhysics(o, push) {
   const density = airDensity(o.y);
 
-  // The engine is weaker in thin air up high.
+  // Engine pushes along the nose (weaker in thin air up high).
   push *= 0.35 + 0.65 * density;
   o.vx += Math.cos(o.angle) * push;
   o.vy += Math.sin(o.angle) * push;
 
-  // Gravity always pulls down. (Climbing fights gravity and bleeds your
-  // speed; diving lets gravity build it back up -- just like a real plane.)
+  // Gravity always pulls down.
   o.vy += CONFIG.GRAVITY;
 
   let speed = Math.hypot(o.vx, o.vy);
 
-  // Wing lift comes from forward speed, but fades when the air is thin (too
-  // high) OR when you're flying too slow (a stall). No lift = you fall.
-  const forward = o.vx * Math.cos(o.angle) + o.vy * Math.sin(o.angle);
-  const speedLift = Math.max(0, Math.min(1, speed / CONFIG.STALL_SPEED));
-  o.vy -= Math.max(0, forward) * CONFIG.LIFT * density * speedLift;
+  if (speed > 0.0001) {
+    const vdir = Math.atan2(o.vy, o.vx);          // the way we're moving
+    const aoa = angleDiff(o.angle, vdir);          // "angle of attack"
 
-  // We're "stalling" if the air is too thin or we're going too slow.
-  o.stalling = density < 0.55 || speed < CONFIG.STALL_SPEED;
+    // Lift coefficient: grows with angle of attack, then COLLAPSES past about
+    // 45 degrees -- that collapse is the stall. (sin(2*aoa) peaks at 45 deg
+    // and is zero at 0 and 90 deg.)
+    const cl = -Math.sin(2 * aoa);
+    const lift = CONFIG.LIFT * speed * cl * density;
+    const liftDir = vdir - Math.PI / 2;            // 90 deg off the airflow
+    o.vx += Math.cos(liftDir) * lift;
+    o.vy += Math.sin(liftDir) * lift;
 
-  // Grip: swing momentum toward the nose -- but only with enough airspeed.
-  // Slow/stalled planes mush around with little control.
-  const grip = CONFIG.GRIP * Math.min(1, speed / CONFIG.TURN_FULL_SPEED);
-  if (speed > 0.001) {
-    let dir = Math.atan2(o.vy, o.vx);
-    dir += angleDiff(o.angle, dir) * grip;
-    o.vx = Math.cos(dir) * speed;
-    o.vy = Math.sin(dir) * speed;
+    // Extra drag when the nose is far off the airflow (and base air drag).
+    o.vx *= CONFIG.DRAG;
+    o.vy *= CONFIG.DRAG;
+    const induced = CONFIG.DRAG_AOA * Math.abs(Math.sin(aoa));
+    o.vx -= o.vx * induced;
+    o.vy -= o.vy * induced;
+
+    // Weathervane: the nose drifts to follow the airflow (stronger when fast).
+    // This is what drops the nose into a dive after a stall, so you recover.
+    o.angle += angleDiff(vdir, o.angle) * CONFIG.WEATHERVANE *
+               Math.min(1, speed / CONFIG.TURN_FULL_SPEED);
+
+    // We're stalling if the air is too thin, we're too slow, or the nose is
+    // pointed way off the airflow (more than ~45 degrees).
+    o.stalling = density < 0.55 || speed < CONFIG.STALL_SPEED || Math.abs(aoa) > 0.9;
+  } else {
+    o.stalling = true;
   }
-
-  // Air resistance.
-  o.vx *= CONFIG.DRAG;
-  o.vy *= CONFIG.DRAG;
 
   // Don't go faster than the top speed.
   speed = Math.hypot(o.vx, o.vy);

@@ -22,12 +22,15 @@ const CONFIG = {
   GRAVITY: 0.035,      // How hard the ground pulls the plane down.
   DRAG: 0.992,         // Air resistance. Closer to 1 = the plane glides more.
 
-  // More realistic flight: wings make LIFT when you fly fast (so you can hold
-  // height), and GRIP slowly bends your momentum toward where the nose points
-  // (so turns feel like a real banking plane, and flying too slow makes you
-  // stall and drop).
-  LIFT: 0.022,         // How much lift the wings make from forward speed.
-  GRIP: 0.085,         // How fast your momentum swings to follow the nose.
+  // Real-ish aerodynamics: the wings make LIFT at RIGHT ANGLES to the way the
+  // plane is actually moving (not always straight up), and only when there's
+  // enough airspeed. Point too steeply ("angle of attack") or fly too slow and
+  // the wings STALL -- lift collapses and gravity takes over. WEATHERVANE is
+  // how strongly the nose swings to follow the wind, which helps you recover
+  // from a stall by dropping the nose into a dive.
+  LIFT: 0.05,          // How strong the wings' lift is.
+  WEATHERVANE: 0.03,   // How fast the nose swings to follow the airflow.
+  DRAG_AOA: 0.03,      // Extra drag when the nose isn't lined up with travel.
 
   THROTTLE_RATE: 0.03, // How quickly the throttle (gas pedal) changes.
   START_THROTTLE: 0.6, // How much gas the plane starts with.
@@ -67,13 +70,14 @@ const CONFIG = {
   // sharp-turning plane can dodge them!
   MISSILE_MAX: 5,            // how many missiles you can hold
   MISSILE_REFILL_SECONDS: 20,// you get one more missile every this many seconds
-  MISSILE_SPEED: 6,          // how fast a missile flies
+  MISSILE_SPEED: 6.6,        // a tiny bit faster than your top speed (MAX_SPEED)
   MISSILE_TURN: 0.05,        // how sharply it can steer (smaller = easier to dodge)
-  MISSILE_FUEL: 100,         // frames it can chase before the fuel runs out
-  MISSILE_LIFE: 170,         // frames before it fizzles out completely
+  MISSILE_FUEL: 600,         // it chases for about 10 seconds, then flies straight
+  MISSILE_LIFE: 720,         // frames before it fizzles out completely
+  MISSILE_DAMAGE: 10,        // a missile takes off 10 health (so 2 missiles = dead)
 
   // ---- The player's health & eject ----
-  PLAYER_HEALTH: 5,    // How many hits you can take before going down.
+  PLAYER_HEALTH: 20,   // 20 bullets (or 2 missiles) to be shot down.
   PLAYER_RESPAWN: 90,  // Frames before you fly back in after being shot down.
   // Press C to EJECT: you bail out and float down on a parachute. If you
   // steer your parachute to the big barn in the middle you respawn and KEEP
@@ -91,7 +95,7 @@ const CONFIG = {
   ENEMY_COUNT: 14,        // How many enemy planes are in the sky at once.
   ENEMY_THRUST: 0.072,    // Engine power for enemies (yours is THRUST above).
   ENEMY_TURN: 0.045,      // How fast enemies turn their nose. Bigger = nimbler.
-  ENEMY_HEALTH: 3,        // How many hits an enemy can take before it pops.
+  ENEMY_HEALTH: 20,       // 20 bullets (or 2 missiles) to pop a bot, same as you.
   ENEMY_FIRE_RANGE: 170,  // How close an enemy must be before it shoots.
   ENEMY_AIM: 0.28,        // How well-aimed it must be to fire (bigger = sloppier).
   ENEMY_FIRE_COOLDOWN: 32,// Frames between an enemy's shots (bigger = shoots less).
