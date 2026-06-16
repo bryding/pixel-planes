@@ -33,6 +33,12 @@ const camera = { x: 0, y: 0 };
 // The list of bullets that are flying right now. Starts empty.
 const bullets = [];
 
+// The list of homing missiles flying right now.
+const missiles = [];
+
+// Remembers if X was held last frame, so one press = one missile.
+let missileWasDown = false;
+
 // The list of explosions playing right now (just for looks).
 const explosions = [];
 
@@ -75,6 +81,8 @@ function respawnPlayer() {
   player.vy = 0;
   player.angle = 0;
   player.flash = 0;
+  player.missiles = CONFIG.MISSILE_MAX; // come back with a full rack
+  player.missileTimer = 0;
 }
 
 // =========================================================================
@@ -86,11 +94,14 @@ function update() {
     player.update();
     // If SPACE is held, ask the plane to shoot (it checks its own cooldown).
     if (Input.fire) player.tryShoot(bullets);
+    // Fire ONE missile each time X is freshly pressed (not held).
+    if (Input.missile && !missileWasDown) player.fireMissile(missiles, planes);
   } else {
     // The player was shot down: count down, then fly back in.
     playerRespawn -= 1;
     if (playerRespawn <= 0) respawnPlayer();
   }
+  missileWasDown = Input.missile; // remember for next frame's "fresh press" check
 
   // --- The enemy planes (each one thinks for itself) ---
   for (const enemy of enemies) {
@@ -123,12 +134,39 @@ function update() {
     }
   }
 
+  // --- Missiles: move them, then check if they hit a plane ---
+  for (const missile of missiles) {
+    missile.update();
+
+    for (const target of planes) {
+      if (!target.alive) continue;
+      if (target.team === missile.team) continue;
+      if (hits(missile, target, 16)) {
+        missile.dead = true;
+        // A missile hits HARD -- enough to pop most planes at once.
+        const popped = target.takeHit(99);
+        // Big boom!
+        const color = (target === player) ? '#ff5a4a' : target.bodyColor;
+        explosions.push(new Explosion(target.x, target.y, color));
+        explosions.push(new Explosion(missile.x, missile.y, CONFIG.COLORS.explosion));
+        if (popped) {
+          if (target === player) playerRespawn = CONFIG.PLAYER_RESPAWN;
+          else if (missile.team === 0) score += 1;
+        }
+        break;
+      }
+    }
+  }
+
   // --- Explosions (just animate the sparks) ---
   for (const boom of explosions) boom.update();
 
   // --- Clean up: forget dead bullets and finished explosions ---
   for (let i = bullets.length - 1; i >= 0; i--) {
     if (bullets[i].dead) bullets.splice(i, 1);
+  }
+  for (let i = missiles.length - 1; i >= 0; i--) {
+    if (missiles[i].dead) missiles.splice(i, 1);
   }
   for (let i = explosions.length - 1; i >= 0; i--) {
     if (explosions[i].dead) explosions.splice(i, 1);
@@ -189,6 +227,11 @@ function draw() {
   // --- Bullets ---
   for (const bullet of bullets) {
     bullet.draw(ctx, camera.x, camera.y);
+  }
+
+  // --- Missiles and their smoke trails ---
+  for (const missile of missiles) {
+    missile.draw(ctx, camera.x, camera.y);
   }
 
   // --- Explosions (drawn on top so the sparks pop) ---
@@ -265,7 +308,7 @@ function drawOffscreenIndicators() {
 
 function drawHud() {
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.fillRect(6, 6, 110, 50);
+  ctx.fillRect(6, 6, 128, 74);
 
   ctx.fillStyle = '#ffffff';
   ctx.font = '8px monospace';
@@ -279,38 +322,58 @@ function drawHud() {
 
   // Health bar (turns from green toward red as it empties)
   ctx.fillStyle = '#ffffff';
-  ctx.fillText('HEALTH', 10, 36);
+  ctx.fillText('HEALTH', 10, 34);
   ctx.strokeStyle = '#ffffff';
-  ctx.strokeRect(10, 39, 100, 6);
+  ctx.strokeRect(10, 37, 100, 6);
   const healthFrac = Math.max(0, player.health) / CONFIG.PLAYER_HEALTH;
   ctx.fillStyle = healthFrac > 0.5 ? '#2ecc71' : (healthFrac > 0.25 ? '#f39c12' : '#e74c3c');
-  ctx.fillRect(11, 40, 98 * healthFrac, 4);
+  ctx.fillRect(11, 38, 98 * healthFrac, 4);
+
+  // Missiles: one little box per missile (filled = ready). The next box
+  // slowly fills up to show the refill timer.
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('MISSILES', 10, 54);
+  for (let i = 0; i < CONFIG.MISSILE_MAX; i++) {
+    const bx = 62 + i * 12, by = 48;
+    ctx.strokeStyle = '#ffffff';
+    ctx.strokeRect(bx, by, 10, 6);
+    if (i < player.missiles) {
+      ctx.fillStyle = CONFIG.COLORS.missile;
+      ctx.fillRect(bx + 1, by + 1, 8, 4);
+    } else if (i === player.missiles) {
+      const frac = player.missileTimer / (CONFIG.MISSILE_REFILL_SECONDS * 60);
+      ctx.fillStyle = '#7f8c8d';
+      ctx.fillRect(bx + 1, by + 1, 8 * frac, 4);
+    }
+  }
 
   // Speed
   const speed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
   ctx.fillStyle = '#ffffff';
-  ctx.fillText('SPEED ' + speed.toFixed(1), 10, 54);
+  ctx.fillText('SPEED ' + speed.toFixed(1), 10, 70);
 
   // Big message in the middle while the player is shot down.
   if (!player.alive) {
     ctx.fillStyle = '#ffffff';
-    ctx.font = '16px monospace';
+    ctx.font = '20px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('SHOT DOWN!', CONFIG.GAME_W / 2, CONFIG.GAME_H / 2);
-    ctx.font = '8px monospace';
-    ctx.fillText('flying back in...', CONFIG.GAME_W / 2, CONFIG.GAME_H / 2 + 14);
+    ctx.font = '10px monospace';
+    ctx.fillText('flying back in...', CONFIG.GAME_W / 2, CONFIG.GAME_H / 2 + 18);
     ctx.textAlign = 'left'; // put alignment back to normal
   }
 
   // Score (how many targets popped)
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.fillRect(CONFIG.GAME_W - 70, 6, 64, 14);
+  ctx.fillRect(CONFIG.GAME_W - 80, 6, 74, 16);
   ctx.fillStyle = '#ffffff';
-  ctx.fillText('SCORE ' + score, CONFIG.GAME_W - 64, 16);
+  ctx.fillText('SCORE ' + score, CONFIG.GAME_W - 74, 17);
 
-  // Friendly controls reminder in the corner
+  // Friendly controls reminder along the bottom
   ctx.fillStyle = 'rgba(255,255,255,0.8)';
-  ctx.fillText('Arrows: fly   Space: shoot', 150, 264);
+  ctx.textAlign = 'center';
+  ctx.fillText('Arrows: fly    Space: guns    X: missile', CONFIG.GAME_W / 2, CONFIG.GAME_H - 14);
+  ctx.textAlign = 'left';
 }
 
 // =========================================================================

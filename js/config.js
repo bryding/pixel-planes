@@ -11,8 +11,8 @@ const CONFIG = {
   // bigger to fill your screen, but it's really only drawn this small.
   // Bigger numbers here = the camera is "zoomed out" so you see more sky,
   // more ground, and more of the battle at once.
-  GAME_W: 1200,
-  GAME_H: 675,
+  GAME_W: 1600,
+  GAME_H: 900,
 
   // ---- How the plane flies ----
   // (These are the fun ones to experiment with!)
@@ -41,12 +41,23 @@ const CONFIG = {
   FIRE_COOLDOWN: 10,   // Frames to wait between shots. Smaller = faster gun.
   BULLET_SIZE: 3,      // How big each bullet looks (in pixels).
 
+  // ---- Missiles (press X) ----
+  // You carry a few homing missiles. They CHASE the nearest enemy, but only
+  // while they have fuel -- once the fuel runs out they fly straight, so a
+  // sharp-turning plane can dodge them!
+  MISSILE_MAX: 5,            // how many missiles you can hold
+  MISSILE_REFILL_SECONDS: 20,// you get one more missile every this many seconds
+  MISSILE_SPEED: 7,          // how fast a missile flies (faster than planes)
+  MISSILE_TURN: 0.05,        // how sharply it can steer (smaller = easier to dodge)
+  MISSILE_FUEL: 100,         // frames it can chase before the fuel runs out
+  MISSILE_LIFE: 170,         // frames before it fizzles out completely
+
   // ---- The player's health ----
   PLAYER_HEALTH: 5,    // How many hits you can take before going down.
   PLAYER_RESPAWN: 90,  // Frames before you fly back in after being shot down.
 
   // ---- Enemy planes (they fly, chase, and shoot — at YOU and each other!) ----
-  ENEMY_COUNT: 4,         // How many enemy planes are in the sky at once.
+  ENEMY_COUNT: 14,        // How many enemy planes are in the sky at once.
   ENEMY_THRUST: 0.07,     // Engine power for enemies (yours is THRUST above).
   ENEMY_TURN: 0.04,       // How fast enemies turn their nose. Bigger = nimbler.
   ENEMY_HEALTH: 3,        // How many hits an enemy can take before it pops.
@@ -78,6 +89,10 @@ const CONFIG = {
     enemy2:    '#e67e22', // orange enemy team
     enemy2Dark:'#a85916', // orange enemy shadows
     explosion: '#ffce54', // explosion sparks
+    missile:   '#ecf0f1', // missile body (white)
+    missileTip:'#ffd23f', // missile nose
+    missileFin:'#c0392b', // missile fins
+    smoke:     '#cfcfcf', // missile smoke trail
 
     // ---- Detailed plane parts (used by the biplane drawing) ----
     cowl:    '#34495e', // metal engine cover at the front

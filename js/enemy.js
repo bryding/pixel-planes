@@ -127,9 +127,10 @@ class Enemy {
     this.fireCooldown = CONFIG.ENEMY_FIRE_COOLDOWN;
   }
 
-  // Called when a bullet hits us. Returns true if we just got popped.
-  takeHit() {
-    this.health -= 1;
+  // Called when a bullet or missile hits us. "damage" is how much it takes
+  // off (bullets = 1, missiles = a lot). Returns true if we just got popped.
+  takeHit(damage = 1) {
+    this.health -= damage;
     this.flash = 6;
     if (this.health <= 0) {
       this.alive = false;

@@ -36,11 +36,16 @@ class Plane {
 
     // A quick flash when hit, so taking damage feels real.
     this.flash = 0;
+
+    // Missiles you're carrying, and a timer that slowly refills them.
+    this.missiles = CONFIG.MISSILE_MAX;
+    this.missileTimer = 0;
   }
 
-  // Called when an enemy bullet hits the player. Returns true if just downed.
-  takeHit() {
-    this.health -= 1;
+  // Called when something hits the player. "damage" is how many hearts it
+  // takes away (bullets = 1, a missile = a lot). Returns true if just downed.
+  takeHit(damage = 1) {
+    this.health -= damage;
     this.flash = 8;
     if (this.health <= 0) {
       this.alive = false;
@@ -104,6 +109,37 @@ class Plane {
 
     // Count the hit-flash down toward 0.
     if (this.flash > 0) this.flash -= 1;
+
+    // Slowly refill missiles: add one every MISSILE_REFILL_SECONDS seconds
+    // (we count frames; about 60 frames make one second).
+    if (this.missiles < CONFIG.MISSILE_MAX) {
+      this.missileTimer += 1;
+      if (this.missileTimer >= CONFIG.MISSILE_REFILL_SECONDS * 60) {
+        this.missiles += 1;
+        this.missileTimer = 0;
+      }
+    } else {
+      this.missileTimer = 0;
+    }
+  }
+
+  // Launch one homing missile at the nearest enemy (if we have any left).
+  // "planes" is every plane, so we can find the closest enemy to lock onto.
+  fireMissile(missiles, planes) {
+    if (this.missiles <= 0) return;
+    this.missiles -= 1;
+
+    // Find the closest enemy (a plane on another team) to chase.
+    let target = null, bestDist = Infinity;
+    for (const p of planes) {
+      if (p === this || !p.alive || p.team === this.team) continue;
+      const d = (p.x - this.x) ** 2 + (p.y - this.y) ** 2;
+      if (d < bestDist) { bestDist = d; target = p; }
+    }
+
+    const nx = this.x + Math.cos(this.angle) * 15;
+    const ny = this.y + Math.sin(this.angle) * 15;
+    missiles.push(new Missile(nx, ny, this.angle, this.team, target));
   }
 
   // Try to fire the gun. If the cooldown is ready, make a new bullet at the
