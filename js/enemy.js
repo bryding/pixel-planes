@@ -82,9 +82,14 @@ class Enemy {
     this.missileCooldown = Math.floor(style.missileCd * (0.5 + botRand(team, 8)));
     this.flash = 0;
     this.propSpin = 0;
+
+    // Power-up timers (bots use power-ups too).
+    this.invincibleTimer = 0;
+    this.wideTimer = 0;
+    this.frozenTimer = 0;
   }
 
-  update(planes, bullets, missiles) {
+  update(planes, bullets, missiles, powerups) {
     if (!this.alive) {
       this.respawnTimer -= 1;
       if (this.respawnTimer <= 0) this.respawn(planes);
@@ -94,7 +99,20 @@ class Enemy {
     if (this.flash > 0) this.flash -= 1;
     if (this.fireCooldown > 0) this.fireCooldown -= 1;
     if (this.missileCooldown > 0) this.missileCooldown -= 1;
+    if (this.invincibleTimer > 0) this.invincibleTimer -= 1;
+    if (this.wideTimer > 0) this.wideTimer -= 1;
     this.propSpin += 1;
+
+    // Frozen by a bad bubble: no thinking, just drift for a moment.
+    if (this.frozenTimer > 0) {
+      this.frozenTimer -= 1;
+      applyFlightPhysics(this, 0);
+      this.x = wrapX(this.x + this.vx);
+      this.y += this.vy;
+      if (this.y > CONFIG.GROUND_Y - 6) { this.y = CONFIG.GROUND_Y - 6; this.vy = 0; }
+      if (this.y < CONFIG.CEILING) { this.y = CONFIG.CEILING; this.vy = 0; }
+      return;
+    }
 
     const S = this.style;
     const target = this.findTarget(planes);
@@ -116,6 +134,10 @@ class Enemy {
       // Acrobats wiggle as they fly.
       wantAngle += Math.sin(this.propSpin * 0.1) * S.wobble;
     }
+
+    // Go grab a good power-up bubble if one is close (and skip the bad ones).
+    const bub = this.findBubble(powerups);
+    if (bub) wantAngle = Math.atan2(bub.y - this.y, wrapDX(bub.x - this.x));
 
     // Stay off the ground and out of the very top of the sky (the ceiling),
     // but otherwise the bots use the whole height of the map.
@@ -154,6 +176,21 @@ class Enemy {
     }
   }
 
+  // Find the closest GOOD bubble worth grabbing (skip skulls and buffs we
+  // already have). Returns null if none are close enough.
+  findBubble(powerups) {
+    if (!powerups) return null;
+    let best = null, bd = CONFIG.ENEMY_BUBBLE_SEEK_RANGE * CONFIG.ENEMY_BUBBLE_SEEK_RANGE;
+    for (const p of powerups) {
+      if (p.dead || p.type === 'skull') continue;
+      if (p.type === 'shield' && this.invincibleTimer > 0) continue;
+      if (p.type === 'turret' && this.wideTimer > 0) continue;
+      const dx = wrapDX(p.x - this.x), dy = p.y - this.y, d = dx * dx + dy * dy;
+      if (d < bd) { bd = d; best = p; }
+    }
+    return best;
+  }
+
   // Find the closest ALIVE plane that isn't on our team (everyone else!).
   findTarget(planes) {
     let best = null, bestDist = Infinity;
@@ -167,14 +204,21 @@ class Enemy {
   }
 
   shoot(bullets) {
-    bullets.push(new Bullet(
-      this.x + Math.cos(this.angle) * 17,
-      this.y + Math.sin(this.angle) * 17,
-      this.angle, this.vx, this.vy, this.team, this.bodyColor));
+    const nx = this.x + Math.cos(this.angle) * 17;
+    const ny = this.y + Math.sin(this.angle) * 17;
+    if (this.wideTimer > 0) { // turret power-up: 5-bullet wide shot
+      for (let i = -2; i <= 2; i++) {
+        bullets.push(new Bullet(nx, ny, this.angle + i * CONFIG.WIDE_SHOT_SPREAD,
+                                this.vx, this.vy, this.team, this.bodyColor));
+      }
+    } else {
+      bullets.push(new Bullet(nx, ny, this.angle, this.vx, this.vy, this.team, this.bodyColor));
+    }
     this.fireCooldown = this.style.fireCd;
   }
 
   takeHit(damage = 1) {
+    if (this.invincibleTimer > 0) return false; // shield
     this.health -= damage;
     this.flash = 6;
     if (this.health <= 0) {
@@ -211,5 +255,12 @@ class Enemy {
     ctx.fillStyle = '#ffffff';
     ctx.fillText(this.name, sx, sy - 22);
     ctx.textAlign = 'left';
+
+    // Shield bubble while this bot is invincible.
+    if (this.invincibleTimer > 0) {
+      ctx.strokeStyle = 'rgba(91,192,255,0.9)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(sx, sy, 26, 0, Math.PI * 2); ctx.stroke();
+    }
   }
 }

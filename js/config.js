@@ -20,7 +20,8 @@ const CONFIG = {
   THRUST: 0.13,        // How hard the engine pushes. Bigger = faster plane.
   TURN_SPEED: 0.065,   // How fast the nose turns. Bigger = spins quicker.
   GRAVITY: 0.05,       // How hard the ground pulls the plane down.
-  DRAG: 0.996,         // Air resistance. Closer to 1 = the plane glides more.
+  DRAG: 0.987,         // Air resistance. Tuned so your cruise speed scales with
+                       // the throttle (about throttle x MAX_SPEED).
 
   // Real-ish aerodynamics: the wings make LIFT at RIGHT ANGLES to the way the
   // plane is actually moving (not always straight up), and only when there's
@@ -113,13 +114,14 @@ const CONFIG = {
   ENEMY_AIM: 0.26,        // How well-aimed it must be to fire (bigger = sloppier).
   ENEMY_FIRE_COOLDOWN: 36,// Frames between an enemy's shots (bigger = shoots less).
   ENEMY_RESPAWN: 160,     // Frames before a downed enemy flies back in.
-  ENEMY_MISSILE_COOLDOWN: 460, // base frames between a bot's missiles (calmer).
+  ENEMY_MISSILE_COOLDOWN: 220, // base frames between a bot's missiles.
+  ENEMY_BUBBLE_SEEK_RANGE: 520, // how far a bot will detour to grab a power-up.
 
   // ---- Power-up bubbles (fly into them!) ----
   // shield = invincible for a bit, turret = wide 5-bullet shot, skull = BAD
   // (freezes you and costs you half your health).
-  POWERUP_INTERVAL: 420,   // frames between new bubbles appearing (~7s)
-  POWERUP_MAX: 3,          // how many bubbles can float at once
+  POWERUP_INTERVAL: 150,   // frames between new bubbles appearing
+  POWERUP_PER_TYPE: 3,     // keep this many of EACH kind spread around the map
   POWERUP_RADIUS: 15,      // how big a bubble is
   POWERUP_LIFE: 1200,      // frames a bubble floats before it pops on its own
   SHIELD_TIME: 600,        // shield: 10 seconds of being invincible

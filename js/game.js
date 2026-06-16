@@ -237,7 +237,7 @@ function update() {
     player.update();
     // Touching the ground: a gentle, level touchdown is a safe landing (you
     // just roll); coming in too fast or too steep is a fatal crash.
-    const hardLanding = player.hitGround &&
+    const hardLanding = player.hitGround && player.invincibleTimer <= 0 &&
       (player.impactVy >= CONFIG.LAND_MAX_VY ||
        Math.abs(angleDiff(player.angle, 0)) >= CONFIG.LAND_MAX_ANGLE);
     if (hardLanding) {
@@ -271,7 +271,7 @@ function update() {
 
   // --- The bots (each one thinks for itself; they can fire missiles too) ---
   for (const enemy of enemies) {
-    enemy.update(planes, bullets, missiles);
+    enemy.update(planes, bullets, missiles, powerups);
   }
 
   // --- Bullets: move them and check if they hit any plane ---
@@ -316,6 +316,16 @@ function update() {
       if (!p.dead && hits(p, player, CONFIG.POWERUP_RADIUS + 14)) {
         p.dead = true;
         applyPowerUp(p.type);
+      }
+    }
+  }
+  // Bots collect bubbles too.
+  for (const e of enemies) {
+    if (!e.alive) continue;
+    for (const p of powerups) {
+      if (!p.dead && hits(p, e, CONFIG.POWERUP_RADIUS + 14)) {
+        p.dead = true;
+        applyPowerUpToBot(e, p.type);
       }
     }
   }
@@ -450,16 +460,24 @@ function draw() {
   drawMinimap();
 }
 
-// Spawn a power-up bubble, keeping up to 3 of EACH kind floating at once.
+// Spawn a power-up bubble, keeping 3 of EACH kind spread across the whole map.
 function spawnPowerUp() {
   const types = ['shield', 'turret', 'skull'];
-  const need = types.filter(t => powerups.filter(p => p.type === t).length < 3);
+  const need = types.filter(t => powerups.filter(p => p.type === t).length < CONFIG.POWERUP_PER_TYPE);
   if (!need.length) return;
   const t = need[Math.floor(Math.random() * need.length)];
-  const focus = (playerState === 'chute' && pilot) ? pilot : player;
-  const px = wrapX(focus.x + (Math.random() < 0.5 ? -1 : 1) * (350 + Math.random() * 550));
+  const px = Math.random() * CONFIG.WORLD_WIDTH;        // anywhere across the map
   const py = 70 + Math.random() * (CONFIG.GROUND_Y - 160);
   powerups.push(new PowerUp(px, py, t));
+}
+
+// Give a bot the power-up it flew into.
+function applyPowerUpToBot(e, type) {
+  if (type === 'shield') e.invincibleTimer = CONFIG.SHIELD_TIME;
+  else if (type === 'turret') e.wideTimer = CONFIG.WIDE_SHOT_TIME;
+  else { e.frozenTimer = CONFIG.FREEZE_TIME; e.health = Math.max(1, Math.ceil(e.health / 2)); e.flash = 6; }
+  const col = type === 'shield' ? '#5bc0ff' : type === 'turret' ? '#e0a93a' : '#c0392b';
+  explosions.push(new Explosion(e.x, e.y, col));
 }
 
 // Apply a power-up's effect to the player when collected.
