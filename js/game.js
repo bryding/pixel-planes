@@ -54,6 +54,10 @@ let ejectWasDown = false;
 // The list of explosions playing right now (just for looks).
 const explosions = [];
 
+// Floating power-up bubbles, and a timer for spawning more.
+const powerups = [];
+let powerupTimer = 120;
+
 // Make the bots. Each one gets its OWN team number (so it fights everyone),
 // its OWN color, and its OWN flying style. They're spread around the world.
 const enemies = [];
@@ -231,12 +235,17 @@ function update() {
     if (player.y <= CONFIG.GROUND_Y - 55) playerState = 'flying'; // airborne!
   } else if (playerState === 'flying') {
     player.update();
-    if (player.hitGround) {
-      // Crashed into the ground! Big boom, points reset.
+    // Touching the ground: a gentle, level touchdown is a safe landing (you
+    // just roll); coming in too fast or too steep is a fatal crash.
+    const hardLanding = player.hitGround &&
+      (player.impactVy >= CONFIG.LAND_MAX_VY ||
+       Math.abs(angleDiff(player.angle, 0)) >= CONFIG.LAND_MAX_ANGLE);
+    if (hardLanding) {
       bigExplosion(player.x, CONFIG.GROUND_Y - 6);
       pushKill('🛩️ YOU crashed 💥', '#ff8a65');
       playerDies(player.x, CONFIG.GROUND_Y - 6, 'CRASHED!');
-    } else {
+    } else if (player.frozenTimer <= 0) {
+      // Flying (or safely rolling on the ground): normal controls.
       if (Input.fire) player.tryShoot(bullets);
       if (missilePressed) player.fireMissile(missiles, planes);
       if (ejectPressed) eject();
@@ -298,6 +307,19 @@ function update() {
     }
   }
 
+  // --- Power-ups: spawn over time, float, and get collected ---
+  powerupTimer -= 1;
+  if (powerupTimer <= 0) { spawnPowerUp(); powerupTimer = CONFIG.POWERUP_INTERVAL; }
+  for (const p of powerups) p.update();
+  if (playerState === 'flying' || playerState === 'takeoff') {
+    for (const p of powerups) {
+      if (!p.dead && hits(p, player, CONFIG.POWERUP_RADIUS + 14)) {
+        p.dead = true;
+        applyPowerUp(p.type);
+      }
+    }
+  }
+
   // --- Explosions (just animate the sparks) ---
   for (const boom of explosions) boom.update();
 
@@ -310,6 +332,9 @@ function update() {
   }
   for (let i = explosions.length - 1; i >= 0; i--) {
     if (explosions[i].dead) explosions.splice(i, 1);
+  }
+  for (let i = powerups.length - 1; i >= 0; i--) {
+    if (powerups[i].dead) powerups.splice(i, 1);
   }
   for (let i = killFeed.length - 1; i >= 0; i--) {
     killFeed[i].life -= 1;
@@ -391,6 +416,11 @@ function draw() {
     missile.draw(ctx);
   }
 
+  // --- Power-up bubbles ---
+  for (const p of powerups) {
+    p.draw(ctx);
+  }
+
   // --- Explosions (drawn on top so the sparks pop) ---
   for (const boom of explosions) {
     boom.draw(ctx);
@@ -418,6 +448,37 @@ function draw() {
   drawLeaderboard();
   drawKillFeed();
   drawMinimap();
+}
+
+// Spawn a power-up bubble, keeping up to 3 of EACH kind floating at once.
+function spawnPowerUp() {
+  const types = ['shield', 'turret', 'skull'];
+  const need = types.filter(t => powerups.filter(p => p.type === t).length < 3);
+  if (!need.length) return;
+  const t = need[Math.floor(Math.random() * need.length)];
+  const focus = (playerState === 'chute' && pilot) ? pilot : player;
+  const px = wrapX(focus.x + (Math.random() < 0.5 ? -1 : 1) * (350 + Math.random() * 550));
+  const py = 70 + Math.random() * (CONFIG.GROUND_Y - 160);
+  powerups.push(new PowerUp(px, py, t));
+}
+
+// Apply a power-up's effect to the player when collected.
+function applyPowerUp(type) {
+  if (type === 'shield') {
+    player.invincibleTimer = CONFIG.SHIELD_TIME;
+    pushKill('🛡️ YOU grabbed a SHIELD', '#5bc0ff');
+    explosions.push(new Explosion(player.x, player.y, '#5bc0ff'));
+  } else if (type === 'turret') {
+    player.wideTimer = CONFIG.WIDE_SHOT_TIME;
+    pushKill('🔫 YOU grabbed WIDE SHOT', '#e0a93a');
+    explosions.push(new Explosion(player.x, player.y, '#e0a93a'));
+  } else { // skull -- bad!
+    player.frozenTimer = CONFIG.FREEZE_TIME;
+    player.health = Math.max(1, Math.ceil(player.health / 2)); // lose half health
+    player.flash = 8;
+    pushKill('☠️ BAD bubble! frozen + half health', '#ff8a65');
+    explosions.push(new Explosion(player.x, player.y, '#c0392b'));
+  }
 }
 
 // A little map in the corner: the whole looping world as a rectangle, with a
@@ -583,6 +644,18 @@ function drawHud() {
   // Speed
   const speed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
   ctx.fillStyle = '#ffffff'; ctx.fillText('SPEED ' + speed.toFixed(1), px0 + 10, py0 + 76);
+
+  // Active power-up status, stacked just above the panel.
+  const statuses = [];
+  if (player.invincibleTimer > 0) statuses.push(['🛡️ SHIELD ' + Math.ceil(player.invincibleTimer / 60) + 's', '#5bc0ff']);
+  if (player.wideTimer > 0)       statuses.push(['🔫 WIDE ' + Math.ceil(player.wideTimer / 60) + 's', '#e0a93a']);
+  if (player.frozenTimer > 0)     statuses.push(['❄️ FROZEN ' + Math.ceil(player.frozenTimer / 60) + 's', '#9ad8ff']);
+  ctx.font = '13px monospace'; ctx.textAlign = 'center';
+  statuses.forEach((s, i) => {
+    ctx.fillStyle = s[1];
+    ctx.fillText(s[0], CONFIG.GAME_W / 2, py0 - 8 - i * 16);
+  });
+  ctx.textAlign = 'left';
 
   // Big middle-of-screen messages for ejecting / being shot down.
   ctx.textAlign = 'center';

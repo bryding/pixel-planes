@@ -61,7 +61,8 @@ const CONFIG = {
   // stall too. Dive to get your speed (and control) back.
   CEILING: -2200,      // the very top of the sky -- you can't fly past this.
   STALL_ALT: -700,     // above this height the air thins out and lift fades.
-  STALL_SPEED: 5,      // slower than this and the wings stall (lose their lift).
+  STALL_SPEED: 1.5,    // stall speed when flying level (you can fly quite slow).
+  STALL_SPEED_UP: 5,   // stall speed when pointed straight up (need more speed).
   STALL_DRAG: 0.05,    // small extra brake from a badly-stalled (sideways) wing.
   TURN_FULL_SPEED: 4,  // reference speed for control.
 
@@ -95,6 +96,9 @@ const CONFIG = {
   PARACHUTE_DRIFT: 0.9,    // how fast you can steer the parachute left/right
   PILOT_WALK: 3,           // how fast the pilot walks on the ground
   BARN_RESCUE_RANGE: 110,  // how close to the barn counts as "rescued"
+  // Land gently and you're fine; come down too fast or too steep and you crash.
+  LAND_MAX_VY: 2.6,        // max downward speed for a safe landing
+  LAND_MAX_ANGLE: 0.45,    // max nose tilt from level for a safe landing
 
   // ---- Enemy planes ----
   // Every bot has its OWN color and its OWN flying style, and they all fight
@@ -110,6 +114,18 @@ const CONFIG = {
   ENEMY_FIRE_COOLDOWN: 36,// Frames between an enemy's shots (bigger = shoots less).
   ENEMY_RESPAWN: 160,     // Frames before a downed enemy flies back in.
   ENEMY_MISSILE_COOLDOWN: 460, // base frames between a bot's missiles (calmer).
+
+  // ---- Power-up bubbles (fly into them!) ----
+  // shield = invincible for a bit, turret = wide 5-bullet shot, skull = BAD
+  // (freezes you and costs you half your health).
+  POWERUP_INTERVAL: 420,   // frames between new bubbles appearing (~7s)
+  POWERUP_MAX: 3,          // how many bubbles can float at once
+  POWERUP_RADIUS: 15,      // how big a bubble is
+  POWERUP_LIFE: 1200,      // frames a bubble floats before it pops on its own
+  SHIELD_TIME: 600,        // shield: 10 seconds of being invincible
+  WIDE_SHOT_TIME: 600,     // turret: 10 seconds of the wide 5-bullet shot
+  WIDE_SHOT_SPREAD: 0.14,  // angle between the 5 wide-shot bullets
+  FREEZE_TIME: 300,        // skull: frozen (no control) for 5 seconds
 
   // ---- Off-screen enemy arrows (point toward enemies you can't see) ----
   SHOW_ENEMY_ARROWS: true, // turn the edge arrows on or off

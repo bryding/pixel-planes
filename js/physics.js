@@ -76,7 +76,12 @@ function applyFlightPhysics(o, push, liftScale) {
     // Lift also fades out FAST as you slow toward the stall speed -- so the
     // moment you bleed off speed (like climbing with no throttle) the wings
     // quit and you drop. This is what makes the stall happen quickly.
-    const stallFade = Math.max(0, Math.min(1, (speed - CONFIG.STALL_SPEED) / 1.2));
+    // Your stall speed depends on how steeply you're pointed: low when level
+    // (you can fly slow), but higher when climbing straight up (a vertical
+    // climb needs lots of speed). "up" is 0 level/diving, 1 straight up.
+    const up = Math.max(0, -Math.sin(o.angle));
+    const effStall = CONFIG.STALL_SPEED + up * (CONFIG.STALL_SPEED_UP - CONFIG.STALL_SPEED);
+    const stallFade = Math.max(0, Math.min(1, (speed - effStall) / 1.2));
     const lift = CONFIG.LIFT * speed * cl * density * stallFade * liftScale;
     const liftDir = vdir - Math.PI / 2;            // 90 deg off the airflow
     o.vx += Math.cos(liftDir) * lift;
@@ -101,9 +106,7 @@ function applyFlightPhysics(o, push, liftScale) {
     // the nose into a dive after a stall so you can pick up speed and recover.
     o.angle += angleDiff(vdir, o.angle) * CONFIG.WEATHERVANE;
 
-    // You stall at the SAME speed no matter which way the plane is pointed:
-    // simply when your airspeed drops below the stall speed.
-    o.stalling = speed < CONFIG.STALL_SPEED;
+    o.stalling = speed < effStall;
   } else {
     o.stalling = true;
   }

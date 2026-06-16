@@ -43,13 +43,21 @@ class Plane {
 
     // Set true on any frame the plane is touching the ground.
     this.hitGround = false;
+    // How fast we were descending the moment we touched down (for soft-landing).
+    this.impactVy = 0;
     // Set by the flight physics when the wings stall.
     this.stalling = false;
+
+    // Power-up timers (count down to 0).
+    this.invincibleTimer = 0; // shield: can't be hurt
+    this.wideTimer = 0;       // turret: 5-bullet wide shot
+    this.frozenTimer = 0;     // skull: no control
   }
 
   // Called when something hits the player. "damage" is how many hearts it
   // takes away (bullets = 1, a missile = a lot). Returns true if just downed.
   takeHit(damage = 1) {
+    if (this.invincibleTimer > 0) return false; // shield: ignore all damage
     this.health -= damage;
     this.flash = 8;
     if (this.health <= 0) {
@@ -61,14 +69,16 @@ class Plane {
 
   // This runs every frame to move the plane.
   update() {
-    // --- 1. Read the controls ---
-    if (Input.up)   this.throttle += CONFIG.THROTTLE_UP_RATE; // slow to spin up
-    if (Input.down) this.throttle -= CONFIG.THROTTLE_RATE;
-    // Keep the throttle between 0 (off) and 1 (full power).
-    this.throttle = Math.max(0, Math.min(1, this.throttle));
+    // --- 1. Read the controls (unless we're FROZEN by a bad power-up) ---
+    if (this.frozenTimer <= 0) {
+      if (Input.up)   this.throttle += CONFIG.THROTTLE_UP_RATE; // slow to spin up
+      if (Input.down) this.throttle -= CONFIG.THROTTLE_RATE;
+      // Keep the throttle between 0 (off) and 1 (full power).
+      this.throttle = Math.max(0, Math.min(1, this.throttle));
 
-    if (Input.left)  this.angle -= CONFIG.TURN_SPEED;
-    if (Input.right) this.angle += CONFIG.TURN_SPEED;
+      if (Input.left)  this.angle -= CONFIG.TURN_SPEED;
+      if (Input.right) this.angle += CONFIG.TURN_SPEED;
+    }
 
     // --- 2. Realistic flight. Lift scales with throttle, so cutting the
     // throttle kills your lift and you fall. ---
@@ -98,7 +108,8 @@ class Plane {
     this.hitGround = false;
     if (this.y > CONFIG.GROUND_Y - 6) {
       this.y = CONFIG.GROUND_Y - 6;
-      if (this.vy > 0) this.vy = 0; // stop falling through it
+      this.impactVy = this.vy;       // remember how hard we touched down
+      if (this.vy > 0) this.vy = 0;  // stop falling through it
       this.hitGround = true;
     }
 
@@ -117,6 +128,11 @@ class Plane {
 
     // Count the hit-flash down toward 0.
     if (this.flash > 0) this.flash -= 1;
+
+    // Count power-up timers down toward 0.
+    if (this.invincibleTimer > 0) this.invincibleTimer -= 1;
+    if (this.wideTimer > 0) this.wideTimer -= 1;
+    if (this.frozenTimer > 0) this.frozenTimer -= 1;
 
     // Slowly refill missiles: add one every MISSILE_REFILL_SECONDS seconds
     // (we count frames; about 60 frames make one second).
@@ -160,10 +176,17 @@ class Plane {
     const noseX = this.x + Math.cos(this.angle) * 17;
     const noseY = this.y + Math.sin(this.angle) * 17;
 
-    bullets.push(new Bullet(
-      noseX, noseY, this.angle, this.vx, this.vy,
-      this.team, CONFIG.COLORS.bullet
-    ));
+    // With the turret power-up, fire 5 bullets in a wide fan; otherwise 1.
+    if (this.wideTimer > 0) {
+      for (let i = -2; i <= 2; i++) {
+        const a = this.angle + i * CONFIG.WIDE_SHOT_SPREAD;
+        bullets.push(new Bullet(noseX, noseY, a, this.vx, this.vy,
+                                this.team, CONFIG.COLORS.bullet));
+      }
+    } else {
+      bullets.push(new Bullet(noseX, noseY, this.angle, this.vx, this.vy,
+                              this.team, CONFIG.COLORS.bullet));
+    }
 
     // Start the cooldown so the next shot has to wait a bit.
     this.fireCooldown = CONFIG.FIRE_COOLDOWN;
@@ -171,7 +194,42 @@ class Plane {
 
   // Draw the plane on screen (worldToScreenX handles the looping world).
   draw(ctx) {
-    drawPlaneSprite(ctx, PLANE_SPRITES.player, worldToScreenX(this.x),
-                    this.y - camera.y, this.angle, this.propSpin, this.flash > 0);
+    const sx = worldToScreenX(this.x), sy = this.y - camera.y;
+
+    // --- Battle damage: smoke when hurt, smoke + fire when badly hurt ---
+    const hf = this.health / CONFIG.PLAYER_HEALTH;
+    if (hf <= 0.75 && this.alive) {
+      for (let i = 1; i <= 4; i++) {            // smoke trailing behind the tail
+        const back = 16 + i * 7;
+        const px = sx - Math.cos(this.angle) * back;
+        const py = sy - Math.sin(this.angle) * back - i;
+        const wob = Math.sin(frameCount * 0.3 + i) * 2;
+        ctx.fillStyle = 'rgba(70,70,70,' + (0.45 - i * 0.08) + ')';
+        ctx.beginPath(); ctx.arc(px + wob, py, 2 + i * 1.3, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    if (hf <= 0.25 && this.alive) {             // flames near the engine
+      const fx = sx - Math.cos(this.angle) * 4;
+      const fy = sy - Math.sin(this.angle) * 4;
+      ctx.fillStyle = '#ff7a1a';
+      ctx.beginPath(); ctx.arc(fx + Math.sin(frameCount * 0.6) * 2, fy, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffce54';
+      ctx.beginPath(); ctx.arc(fx, fy - 1, 2.4, 0, Math.PI * 2); ctx.fill();
+    }
+
+    drawPlaneSprite(ctx, PLANE_SPRITES.player, sx, sy,
+                    this.angle, this.propSpin, this.flash > 0);
+
+    // Shield bubble while invincible.
+    if (this.invincibleTimer > 0) {
+      ctx.strokeStyle = 'rgba(91,192,255,0.9)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(sx, sy, 26, 0, Math.PI * 2); ctx.stroke();
+    }
+    // Icy tint while frozen.
+    if (this.frozenTimer > 0) {
+      ctx.fillStyle = 'rgba(150,220,255,0.35)';
+      ctx.beginPath(); ctx.arc(sx, sy, 22, 0, Math.PI * 2); ctx.fill();
+    }
   }
 }
