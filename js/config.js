@@ -11,8 +11,8 @@ const CONFIG = {
   // bigger to fill your screen, but it's really only drawn this small.
   // Bigger numbers here = the camera is "zoomed out" so you see more sky,
   // more ground, and more of the battle at once.
-  GAME_W: 800,
-  GAME_H: 450,
+  GAME_W: 1200,
+  GAME_H: 675,
 
   // ---- How the plane flies ----
   // (These are the fun ones to experiment with!)
