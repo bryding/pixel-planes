@@ -14,6 +14,14 @@ const BOT_COLORS = [
   '#e84393', '#00b894', '#fdcb6e', '#a0522d', '#7f8c8d',
 ];
 
+// Goofy names (with emoji) shown on the leaderboard.
+const BOT_NAMES = [
+  '🐵 Monkey Bananas', '💀 Spooky Steve', '🦖 Dino Dan', '🐸 Sir Hops',
+  '🤖 Robo Randy', '🐙 Inky Pete', '👽 Zorp', '🐔 Capt. Cluck',
+  '🌮 Taco Tank', '🦄 Sparkle Sam', '🐢 Turbo Tortoise', '🍌 Banana Joe',
+  '👻 Boo Crew', '🐝 Buzzy', '🦅 Eagle Eye',
+];
+
 // Steady "random-looking" number 0..1 from a bot's index (so a bot's style is
 // always the same, not jittering every time).
 function botRand(i, salt) {
@@ -25,16 +33,16 @@ function botRand(i, salt) {
 // and nudging the numbers a bit so no two bots fly exactly alike.
 function makeBotStyle(i) {
   const archetypes = [
-    { name: 'ace',     turn: 1.25, thrust: 1.15, aim: 0.7, fireCd: 0.8, missile: 0.9, evade: 0.5, lead: 1.0,  wobble: 0.0 },
-    { name: 'rookie',  turn: 0.85, thrust: 0.9,  aim: 1.6, fireCd: 1.4, missile: 1.6, evade: 0.3, lead: 0.4,  wobble: 0.05 },
-    { name: 'acrobat', turn: 1.5,  thrust: 1.05, aim: 1.1, fireCd: 1.0, missile: 1.2, evade: 0.6, lead: 0.7,  wobble: 0.35 },
-    { name: 'bomber',  turn: 0.8,  thrust: 0.95, aim: 1.2, fireCd: 1.3, missile: 0.5, evade: 0.2, lead: 0.8,  wobble: 0.0 },
-    { name: 'sniper',  turn: 0.95, thrust: 1.0,  aim: 0.5, fireCd: 1.1, missile: 1.0, evade: 0.4, lead: 1.1,  wobble: 0.0 },
-    { name: 'kamikaze',turn: 1.3,  thrust: 1.25, aim: 1.3, fireCd: 1.0, missile: 1.3, evade: 0.0, lead: 0.6,  wobble: 0.1 },
-    { name: 'coward',  turn: 1.1,  thrust: 1.0,  aim: 1.1, fireCd: 1.2, missile: 1.1, evade: 0.9, lead: 0.7,  wobble: 0.1 },
+    { name: 'ace',     turn: 1.05, thrust: 1.1,  aim: 0.7, fireCd: 1.0, missile: 1.1, evade: 0.5, lead: 1.0,  wobble: 0.0 },
+    { name: 'rookie',  turn: 0.8,  thrust: 0.9,  aim: 1.6, fireCd: 1.6, missile: 1.8, evade: 0.3, lead: 0.4,  wobble: 0.03 },
+    { name: 'acrobat', turn: 1.2,  thrust: 1.0,  aim: 1.1, fireCd: 1.2, missile: 1.4, evade: 0.6, lead: 0.7,  wobble: 0.12 },
+    { name: 'bomber',  turn: 0.75, thrust: 0.95, aim: 1.2, fireCd: 1.4, missile: 0.7, evade: 0.2, lead: 0.8,  wobble: 0.0 },
+    { name: 'sniper',  turn: 0.85, thrust: 1.0,  aim: 0.5, fireCd: 1.2, missile: 1.2, evade: 0.4, lead: 1.1,  wobble: 0.0 },
+    { name: 'kamikaze',turn: 1.15, thrust: 1.15, aim: 1.3, fireCd: 1.1, missile: 1.4, evade: 0.0, lead: 0.6,  wobble: 0.05 },
+    { name: 'coward',  turn: 1.0,  thrust: 1.0,  aim: 1.1, fireCd: 1.3, missile: 1.2, evade: 0.9, lead: 0.7,  wobble: 0.05 },
   ];
   const a = archetypes[i % archetypes.length];
-  const j = (salt) => 0.85 + botRand(i, salt) * 0.3; // a small 0.85..1.15 nudge
+  const j = (salt) => 0.92 + botRand(i, salt) * 0.16; // a gentle 0.92..1.08 nudge
 
   return {
     name: a.name,
@@ -52,7 +60,7 @@ function makeBotStyle(i) {
 }
 
 class Enemy {
-  constructor(x, y, team, color, style) {
+  constructor(x, y, team, color, style, name) {
     this.x = x;
     this.y = y;
     this.vx = -2;
@@ -62,6 +70,8 @@ class Enemy {
     this.team = team;          // every bot has a unique team number
     this.bodyColor = color;    // its color (used for bullets, arrows, sprite)
     this.style = style;        // its flying personality
+    this.name = name;          // its goofy leaderboard name
+    this.score = 0;            // how many planes it has shot down
     this.sprite = makePlaneSetFromColor(color);
 
     this.health = CONFIG.ENEMY_HEALTH;

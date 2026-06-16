@@ -60,7 +60,8 @@ const enemies = [];
 for (let i = 0; i < CONFIG.ENEMY_COUNT; i++) {
   const ex = wrapX(200 + i * (CONFIG.WORLD_WIDTH / CONFIG.ENEMY_COUNT));
   const ey = 60 + (i * 53) % 180;
-  enemies.push(new Enemy(ex, ey, i + 1, BOT_COLORS[i % BOT_COLORS.length], makeBotStyle(i)));
+  enemies.push(new Enemy(ex, ey, i + 1, BOT_COLORS[i % BOT_COLORS.length],
+                         makeBotStyle(i), BOT_NAMES[i % BOT_NAMES.length]));
 }
 
 // One list with EVERY plane in it (player first, then bots).
@@ -143,11 +144,42 @@ function rescueAtBarn() {
 // handles your own death (points reset).
 function onPlanePopped(target, shooterTeam) {
   bigExplosion(target.x, target.y);
-  if (target === player) {
-    playerDies(player.x, player.y, 'SHOT DOWN!'); // shot down = points reset
-  } else if (shooterTeam === 0) {
-    score += 1;                                   // you shot a bot down
+  // Award the kill to whoever fired (you, or one of the bots).
+  if (shooterTeam === 0) {
+    score += 1;
+  } else {
+    const shooter = enemies.find(e => e.team === shooterTeam);
+    if (shooter) shooter.score += 1;
   }
+  if (target === player) {
+    playerDies(player.x, player.y, 'SHOT DOWN!'); // your points reset
+  }
+}
+
+// Draw the leaderboard panel on the right side: who has the most points.
+function drawLeaderboard() {
+  const rows = [{ name: '🛩️ YOU', score: score, you: true }];
+  for (const e of enemies) rows.push({ name: e.name, score: e.score });
+  rows.sort((a, b) => b.score - a.score);
+  const top = rows.slice(0, 8);
+
+  const w = 220, rh = 17, x = CONFIG.GAME_W - w - 34, y = 28;
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(x, y, w, 22 + top.length * rh);
+  ctx.fillStyle = '#ffd23f';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('LEADERBOARD', x + 8, y + 15);
+  ctx.font = '11px monospace';
+  top.forEach((e, i) => {
+    const ty = y + 31 + i * rh;
+    ctx.fillStyle = e.you ? '#7fbdef' : '#ffffff';
+    ctx.textAlign = 'left';
+    ctx.fillText((i + 1) + '. ' + e.name, x + 8, ty);
+    ctx.textAlign = 'right';
+    ctx.fillText('' + e.score, x + w - 8, ty);
+  });
+  ctx.textAlign = 'left';
 }
 
 // =========================================================================
@@ -339,6 +371,7 @@ function draw() {
 
   // --- HUD (the info text on top) ---
   drawHud();
+  drawLeaderboard();
 }
 
 // Draw a little arrow at the edge of the screen for every alive enemy that

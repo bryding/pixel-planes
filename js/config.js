@@ -93,15 +93,15 @@ const CONFIG = {
   // each other AND you (a free-for-all). They lead their shots, dodge, and
   // even fire homing missiles. These numbers are the "average" bot; each one
   // varies a bit around them (see js/enemy.js for the personalities).
-  ENEMY_COUNT: 14,        // How many enemy planes are in the sky at once.
-  ENEMY_THRUST: 0.072,    // Engine power for enemies (yours is THRUST above).
-  ENEMY_TURN: 0.045,      // How fast enemies turn their nose. Bigger = nimbler.
+  ENEMY_COUNT: 10,        // How many enemy planes are in the sky at once.
+  ENEMY_THRUST: 0.07,     // Engine power for enemies (yours is THRUST above).
+  ENEMY_TURN: 0.038,      // How fast enemies turn their nose. Bigger = nimbler.
   ENEMY_HEALTH: 20,       // 20 bullets (or 2 missiles) to pop a bot, same as you.
-  ENEMY_FIRE_RANGE: 170,  // How close an enemy must be before it shoots.
-  ENEMY_AIM: 0.28,        // How well-aimed it must be to fire (bigger = sloppier).
-  ENEMY_FIRE_COOLDOWN: 32,// Frames between an enemy's shots (bigger = shoots less).
-  ENEMY_RESPAWN: 150,     // Frames before a downed enemy flies back in.
-  ENEMY_MISSILE_COOLDOWN: 300, // base frames between a bot's missiles.
+  ENEMY_FIRE_RANGE: 175,  // How close an enemy must be before it shoots.
+  ENEMY_AIM: 0.26,        // How well-aimed it must be to fire (bigger = sloppier).
+  ENEMY_FIRE_COOLDOWN: 36,// Frames between an enemy's shots (bigger = shoots less).
+  ENEMY_RESPAWN: 160,     // Frames before a downed enemy flies back in.
+  ENEMY_MISSILE_COOLDOWN: 460, // base frames between a bot's missiles (calmer).
 
   // ---- Off-screen enemy arrows (point toward enemies you can't see) ----
   SHOW_ENEMY_ARROWS: true, // turn the edge arrows on or off
@@ -151,5 +151,17 @@ const CONFIG = {
     barnDoor:   '#7a2a1e', // barn door
     hay:        '#e3c466', // haybales
     hayDark:    '#c9a23f', // haybale shadow
+
+    // ---- Stardew-style cozy details ----
+    grassLt:    '#86c25a', // bright grass highlight tufts
+    grassDk:    '#4f8a3a', // darker grass blades
+    flowerR:    '#e74c3c', // red flowers
+    flowerY:    '#f6d743', // yellow flowers
+    flowerW:    '#ffffff', // white flowers
+    flowerP:    '#b39ddb', // purple flowers
+    berry:      '#e0413a', // berries on bushes
+    fence:      '#a9784b', // fence wood
+    fenceDk:    '#7a5230', // fence wood shadow
+    treeLeafLt: '#5fae4a', // tree canopy highlight
   },
 };

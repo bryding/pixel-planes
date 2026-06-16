@@ -110,11 +110,13 @@ const SCENERY = (function () {
     const jitter = (sceneRand(x * 3.1) - 0.5) * 60;
     const r = sceneRand(x * 1.7);
     let type;
-    if (r < 0.42) type = 'tree';
-    else if (r < 0.64) type = 'bush';
-    else if (r < 0.85) type = 'hay';
+    if (r < 0.32) type = 'tree';
+    else if (r < 0.48) type = 'bush';
+    else if (r < 0.62) type = 'hay';
+    else if (r < 0.78) type = 'flowers';
+    else if (r < 0.90) type = 'fence';
     else type = 'barn';
-    list.push({ x: x + jitter, type: type, s: 0.8 + sceneRand(x * 9) * 0.7 });
+    list.push({ x: x + jitter, type: type, s: 0.85 + sceneRand(x * 9) * 0.7 });
   }
   return list;
 })();
@@ -122,12 +124,15 @@ const SCENERY = (function () {
 // Draw all the ground scenery for whatever part of the world is on screen.
 function drawGroundScenery(ctx) {
   const by = CONFIG.GROUND_Y - camera.y;
+  drawGrassDetail(ctx, by); // lush grass tufts + little wildflowers first
   for (const item of SCENERY) {
     const sx = worldToScreenX(item.x);
     if (sx < -80 || sx > CONFIG.GAME_W + 80) continue; // off screen, skip
     if (item.type === 'tree') drawTree(ctx, sx, by, item.s);
     else if (item.type === 'bush') drawBush(ctx, sx, by);
     else if (item.type === 'hay') drawHaybales(ctx, sx, by);
+    else if (item.type === 'flowers') drawFlowers(ctx, sx, by);
+    else if (item.type === 'fence') drawFence(ctx, sx, by);
     else drawBarn(ctx, sx, by);
   }
   // The big rescue barn in the middle.
@@ -135,28 +140,87 @@ function drawGroundScenery(ctx) {
   if (bx > -160 && bx < CONFIG.GAME_W + 160) drawBigBarn(ctx, bx, by);
 }
 
+// A carpet of little grass blades and wildflowers across the visible ground.
+function drawGrassDetail(ctx, by) {
+  const C = CONFIG.COLORS;
+  const step = 26;
+  const start = Math.floor(camera.x / step) - 1;
+  const end = Math.ceil((camera.x + CONFIG.GAME_W) / step) + 1;
+  const blooms = [C.flowerR, C.flowerY, C.flowerW, C.flowerP];
+  for (let i = start; i <= end; i++) {
+    const sx = worldToScreenX(i * step);
+    const r = sceneRand(i * 2.7);
+    ctx.fillStyle = r < 0.5 ? C.grassLt : C.grassDk;
+    ctx.fillRect(sx, by + 6, 2, 4);
+    ctx.fillRect(sx + 3, by + 9, 2, 3);
+    if (r > 0.84) { // a little wildflower
+      ctx.fillStyle = C.grassDk; ctx.fillRect(sx + 1, by + 1, 1, 5);
+      ctx.fillStyle = blooms[Math.floor(sceneRand(i * 5.1) * 4)];
+      ctx.fillRect(sx, by - 1, 3, 3);
+    }
+  }
+}
+
 function drawTree(ctx, sx, by, s) {
   const C = CONFIG.COLORS;
-  const th = 16 * s;
+  const th = 22 * s;
+  // Trunk with a shaded side.
   ctx.fillStyle = C.treeTrunk;
   ctx.fillRect(sx - 2 * s, by - th, 4 * s, th);
-  const cy = by - th - 6 * s, rad = 11 * s;
+  ctx.fillStyle = '#54331a';
+  ctx.fillRect(sx + 0.5 * s, by - th, 1.5 * s, th);
+  // Layered round canopy with a shadow base and a sunny highlight.
+  const cy = by - th - 4 * s, rad = 13 * s;
+  ctx.fillStyle = C.treeLeafDk;
+  blob(ctx, sx + 2 * s, cy + 3 * s, rad);
   ctx.fillStyle = C.treeLeaf;
   blob(ctx, sx, cy, rad);
-  blob(ctx, sx - rad * 0.7, cy + rad * 0.3, rad * 0.7);
-  blob(ctx, sx + rad * 0.7, cy + rad * 0.3, rad * 0.7);
-  ctx.fillStyle = C.treeLeafDk;
-  blob(ctx, sx + rad * 0.3, cy + rad * 0.4, rad * 0.6);
+  blob(ctx, sx - rad * 0.7, cy + rad * 0.2, rad * 0.7);
+  blob(ctx, sx + rad * 0.7, cy + rad * 0.2, rad * 0.7);
+  blob(ctx, sx, cy - rad * 0.6, rad * 0.7);
+  ctx.fillStyle = C.treeLeafLt;
+  blob(ctx, sx - rad * 0.4, cy - rad * 0.4, rad * 0.45);
 }
 
 function drawBush(ctx, sx, by) {
   const C = CONFIG.COLORS;
+  ctx.fillStyle = C.treeLeafDk; blob(ctx, sx + 1, by - 3, 8);
   ctx.fillStyle = C.treeLeaf;
   blob(ctx, sx, by - 5, 7);
   blob(ctx, sx - 6, by - 3, 5);
   blob(ctx, sx + 6, by - 3, 5);
-  ctx.fillStyle = C.treeLeafDk;
-  blob(ctx, sx + 2, by - 2, 4);
+  ctx.fillStyle = C.treeLeafLt; blob(ctx, sx - 3, by - 7, 3);
+  // A few red berries.
+  ctx.fillStyle = C.berry;
+  ctx.fillRect(sx - 2, by - 4, 2, 2);
+  ctx.fillRect(sx + 3, by - 2, 2, 2);
+  ctx.fillRect(sx + 1, by - 8, 2, 2);
+}
+
+// A little white picket-ish fence.
+function drawFence(ctx, sx, by) {
+  const C = CONFIG.COLORS;
+  for (let p = 0; p < 3; p++) {
+    const px = sx + p * 12;
+    ctx.fillStyle = C.fenceDk; ctx.fillRect(px, by - 14, 3, 14);
+    ctx.fillStyle = C.fence;   ctx.fillRect(px, by - 14, 2, 14);
+  }
+  ctx.fillStyle = C.fence;
+  ctx.fillRect(sx, by - 12, 27, 2);
+  ctx.fillRect(sx, by - 6, 27, 2);
+}
+
+// A patch of colorful wildflowers.
+function drawFlowers(ctx, sx, by) {
+  const C = CONFIG.COLORS;
+  const cols = [C.flowerR, C.flowerY, C.flowerW, C.flowerP];
+  for (let k = 0; k < 5; k++) {
+    const fx = sx + (k - 2) * 5;
+    const fy = by - (3 + (k % 2) * 4);
+    ctx.fillStyle = C.grassDk; ctx.fillRect(fx, fy, 1, by - fy);
+    ctx.fillStyle = cols[(k + Math.floor(sceneRand(sx + k) * 4)) % 4];
+    ctx.fillRect(fx - 1, fy - 2, 3, 3);
+  }
 }
 
 function drawHaybales(ctx, sx, by) {
