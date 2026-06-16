@@ -56,16 +56,6 @@ let score = 0;
 // Counts down while the player is shot down, then they fly back in.
 let playerRespawn = 0;
 
-// Some clouds scattered around the world to make flying feel like moving.
-const clouds = [];
-for (let i = 0; i < 30; i++) {
-  clouds.push({
-    x: i * 220 + (i * 53) % 140, // spread them out
-    y: 20 + (i * 37) % 120,
-    size: 8 + (i * 13) % 12,
-  });
-}
-
 // A simple "did these two things touch?" check.
 // We measure the distance between their centers; if it's smaller than
 // "radius", they're close enough to count as a hit.
@@ -114,7 +104,7 @@ function update() {
     for (const target of planes) {
       if (!target.alive) continue;             // can't hit a downed plane
       if (target.team === bullet.team) continue; // bullets don't hit teammates
-      if (hits(bullet, target, 9)) {
+      if (hits(bullet, target, 12)) {
         bullet.dead = true;                    // the bullet is used up
         const popped = target.takeHit();
         if (popped) {
@@ -152,8 +142,9 @@ function update() {
   camera.x += (targetX - camera.x) * CONFIG.CAM_SMOOTH;
   camera.y += (targetY - camera.y) * CONFIG.CAM_SMOOTH;
 
-  // Don't let the camera show below the ground too much.
-  const maxCamY = CONFIG.GROUND_Y - CONFIG.GAME_H + 20;
+  // Don't let the camera show too far below the ground, but DO leave room
+  // to see the countryside (trees, barns, haybales) when flying low.
+  const maxCamY = CONFIG.GROUND_Y - CONFIG.GAME_H + 140;
   if (camera.y > maxCamY) camera.y = maxCamY;
 }
 
@@ -170,20 +161,8 @@ function draw() {
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
 
-  // --- Clouds (move slower than the plane = "parallax", makes depth) ---
-  ctx.fillStyle = C.cloud;
-  for (const cloud of clouds) {
-    const cx = cloud.x - camera.x * 0.5; // 0.5 = half speed = far away feeling
-    const cy = cloud.y - camera.y * 0.5;
-    // a fluffy cloud made of a few overlapping blobs
-    ctx.fillRect(cx, cy, cloud.size * 2, cloud.size);
-    ctx.fillRect(cx + cloud.size * 0.5, cy - cloud.size * 0.4, cloud.size, cloud.size);
-  }
-
-  // --- Far hills (move a bit slower than the ground) ---
-  ctx.fillStyle = C.hills;
-  const hillY = CONFIG.GROUND_Y - camera.y * 0.8;
-  ctx.fillRect(0, hillY - 30, CONFIG.GAME_W, 40);
+  // --- Clouds, far hills, and the treeline on the horizon ---
+  drawBackgroundScenery(ctx, camera);
 
   // --- Ground ---
   const groundScreenY = CONFIG.GROUND_Y - camera.y;
@@ -194,10 +173,13 @@ function draw() {
 
   // Some ground stripes that scroll by so you can feel the speed.
   ctx.fillStyle = C.groundDark;
-  for (let i = -1; i < 20; i++) {
+  for (let i = -1; i < CONFIG.GAME_W / 60 + 2; i++) {
     const stripeX = (i * 60 - (camera.x % 60));
     ctx.fillRect(stripeX, groundScreenY + 14, 30, 3);
   }
+
+  // --- Trees, bushes, haybales and barns sitting on the grass ---
+  drawGroundScenery(ctx, camera);
 
   // --- The enemy planes ---
   for (const enemy of enemies) {

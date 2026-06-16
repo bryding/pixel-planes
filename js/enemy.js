@@ -23,6 +23,7 @@ class Enemy {
 
     this.fireCooldown = 0;
     this.flash = 0; // white flash when hit
+    this.propSpin = 0; // spins the propeller
 
     // Pick this plane's colors based on its team.
     const C = CONFIG.COLORS;
@@ -47,6 +48,7 @@ class Enemy {
 
     if (this.flash > 0) this.flash -= 1;
     if (this.fireCooldown > 0) this.fireCooldown -= 1;
+    this.propSpin += 1; // keep the propeller spinning
 
     // --- 1. Find the closest target on a different team ---
     const target = this.findTarget(planes);
@@ -116,8 +118,8 @@ class Enemy {
 
   // Fire a bullet out of the nose, tagged with this plane's team.
   shoot(bullets) {
-    const noseX = this.x + Math.cos(this.angle) * 9;
-    const noseY = this.y + Math.sin(this.angle) * 9;
+    const noseX = this.x + Math.cos(this.angle) * 15;
+    const noseY = this.y + Math.sin(this.angle) * 15;
     bullets.push(new Bullet(
       noseX, noseY, this.angle, this.vx, this.vy,
       this.team, CONFIG.COLORS.enemyBullet
@@ -158,20 +160,9 @@ class Enemy {
     ctx.translate(this.x - camX, this.y - camY);
     ctx.rotate(this.angle); // rotate to face flying direction
 
-    const body = this.flash > 0 ? '#ffffff' : this.bodyColor;
-    const dark = this.flash > 0 ? '#dddddd' : this.darkColor;
-
-    // Body
-    ctx.fillStyle = body;
-    ctx.fillRect(-8, -3, 16, 6);
-    // Belly stripe
-    ctx.fillStyle = dark;
-    ctx.fillRect(-8, 1, 16, 2);
-    // Wing
-    ctx.fillStyle = body;
-    ctx.fillRect(-2, -6, 6, 3);
-    // Tail fin (at the back)
-    ctx.fillRect(-9, -7, 3, 4);
+    // Draw the detailed biplane in this enemy's team colors.
+    const pal = { body: this.bodyColor, dark: this.darkColor };
+    drawBiplane(ctx, pal, this.propSpin, this.flash > 0);
 
     ctx.restore();
   }

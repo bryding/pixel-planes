@@ -111,9 +111,9 @@ class Plane {
   tryShoot(bullets) {
     if (this.fireCooldown > 0) return; // not ready yet
 
-    // Find the tip of the nose (8 pixels in front, in the facing direction).
-    const noseX = this.x + Math.cos(this.angle) * 9;
-    const noseY = this.y + Math.sin(this.angle) * 9;
+    // Find the tip of the nose (in front, in the facing direction).
+    const noseX = this.x + Math.cos(this.angle) * 15;
+    const noseY = this.y + Math.sin(this.angle) * 15;
 
     bullets.push(new Bullet(
       noseX, noseY, this.angle, this.vx, this.vy,
@@ -134,31 +134,9 @@ class Plane {
     ctx.translate(screenX, screenY); // move the "pen" to the plane
     ctx.rotate(this.angle);          // rotate so the plane faces its angle
 
-    const C = CONFIG.COLORS;
-
-    // If we were just hit, flash white so the damage is easy to notice.
-    const bodyColor = this.flash > 0 ? '#ffffff' : C.plane;
-    const darkColor = this.flash > 0 ? '#dddddd' : C.planeDark;
-
-    // Body (a little rectangle)
-    ctx.fillStyle = bodyColor;
-    ctx.fillRect(-8, -3, 16, 6);
-
-    // Darker belly stripe
-    ctx.fillStyle = darkColor;
-    ctx.fillRect(-8, 1, 16, 2);
-
-    // Wing (sticking up a bit)
-    ctx.fillStyle = bodyColor;
-    ctx.fillRect(-2, -6, 6, 3);
-
-    // Tail fin (at the back)
-    ctx.fillRect(-9, -7, 3, 4);
-
-    // Propeller at the front: it flickers as it spins
-    ctx.fillStyle = C.propeller;
-    const blade = Math.sin(this.propSpin) * 5;
-    ctx.fillRect(8, -blade, 2, blade * 2);
+    // Draw the detailed biplane in the player's colors.
+    const pal = { body: CONFIG.COLORS.plane, dark: CONFIG.COLORS.planeDark };
+    drawBiplane(ctx, pal, this.propSpin, this.flash > 0);
 
     ctx.restore();
   }

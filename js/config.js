@@ -9,8 +9,10 @@ const CONFIG = {
   // ---- The size of the game picture (in pixels) ----
   // Small numbers make a chunky, retro pixel look. The picture is stretched
   // bigger to fill your screen, but it's really only drawn this small.
-  GAME_W: 480,
-  GAME_H: 270,
+  // Bigger numbers here = the camera is "zoomed out" so you see more sky,
+  // more ground, and more of the battle at once.
+  GAME_W: 800,
+  GAME_H: 450,
 
   // ---- How the plane flies ----
   // (These are the fun ones to experiment with!)
@@ -30,14 +32,14 @@ const CONFIG = {
   CAM_LOOKAHEAD: 60,   // How far ahead it peeks in the direction you're flying.
 
   // ---- The world ----
-  GROUND_Y: 250,       // How far down the ground is (in game pixels).
+  GROUND_Y: 400,       // How far down the ground is (in game pixels).
 
   // ---- Guns & bullets ----
   // (Press SPACE to shoot. Try changing these!)
   BULLET_SPEED: 5,     // How fast bullets fly out of the nose.
   BULLET_LIFE: 70,     // How many frames a bullet lives before it vanishes.
   FIRE_COOLDOWN: 10,   // Frames to wait between shots. Smaller = faster gun.
-  BULLET_SIZE: 2,      // How big each bullet looks (in pixels).
+  BULLET_SIZE: 3,      // How big each bullet looks (in pixels).
 
   // ---- The player's health ----
   PLAYER_HEALTH: 5,    // How many hits you can take before going down.
@@ -76,5 +78,26 @@ const CONFIG = {
     enemy2:    '#e67e22', // orange enemy team
     enemy2Dark:'#a85916', // orange enemy shadows
     explosion: '#ffce54', // explosion sparks
+
+    // ---- Detailed plane parts (used by the biplane drawing) ----
+    cowl:    '#34495e', // metal engine cover at the front
+    metal:   '#95a5a6', // shiny metal bits (propeller hub)
+    wheel:   '#2c3e50', // tires and propeller blade
+    glass:   '#aee0ff', // cockpit window
+    pilot:   '#f1c27d', // the pilot's head
+    strut:   '#7a5230', // wooden struts between the wings
+
+    // ---- Scenery (the countryside in the distance) ----
+    hillFar:    '#6f9e54', // far rolling hills
+    hillNear:   '#5a8f3a', // nearer hills
+    treeline:   '#2f5e27', // a dark band of far-away trees
+    treeTrunk:  '#6b4423', // tree trunks
+    treeLeaf:   '#3e7d34', // tree leaves
+    treeLeafDk: '#2f5e27', // tree leaf shadow
+    barnWall:   '#b5402f', // red barn walls
+    barnRoof:   '#5a3b2e', // barn roof
+    barnDoor:   '#7a2a1e', // barn door
+    hay:        '#e3c466', // haybales
+    hayDark:    '#c9a23f', // haybale shadow
   },
 };
