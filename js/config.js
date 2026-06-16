@@ -28,7 +28,9 @@ const CONFIG = {
   // the wings STALL -- lift collapses and gravity takes over. WEATHERVANE is
   // how strongly the nose swings to follow the wind, which helps you recover
   // from a stall by dropping the nose into a dive.
-  LIFT: 0.045,         // How strong the wings' lift is.
+  LIFT: 0.04,          // How strong the wings' lift is (drives the climb).
+  CAMBER: 0.16,        // Lift even when flying level, so the plane holds height
+                       // (but still stalls pointing straight up). Bigger = floatier.
   WEATHERVANE: 0.03,   // How fast the nose swings to follow the airflow.
   DRAG_AOA: 0.02,      // Extra drag when the nose isn't lined up with travel.
 
@@ -86,6 +88,7 @@ const CONFIG = {
   EJECT_UP: 3,             // little upward hop when you bail out
   PARACHUTE_FALL: 0.7,     // how fast the parachute sinks
   PARACHUTE_DRIFT: 0.9,    // how fast you can steer the parachute left/right
+  PILOT_WALK: 3,           // how fast the pilot walks on the ground
   BARN_RESCUE_RANGE: 110,  // how close to the barn counts as "rescued"
 
   // ---- Enemy planes ----

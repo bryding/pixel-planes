@@ -67,7 +67,12 @@ function applyFlightPhysics(o, push) {
     // Lift coefficient: grows with angle of attack, then COLLAPSES past about
     // 45 degrees -- that collapse is the stall. (sin(2*aoa) peaks at 45 deg
     // and is zero at 0 and 90 deg.)
-    const cl = -Math.sin(2 * aoa);
+    // Lift coefficient. The CAMBER term gives lift even at zero angle (so the
+    // plane holds height in level flight); the sin term adds lift as you pull
+    // up and then COLLAPSES past ~45 deg (the stall). Note: when you fly
+    // straight up, this lift points sideways -- it can't hold you up -- so a
+    // throttle-off vertical climb still stalls and drops.
+    const cl = CONFIG.CAMBER * Math.cos(aoa) - Math.sin(2 * aoa);
     // Lift also fades out FAST as you slow toward the stall speed -- so the
     // moment you bleed off speed (like climbing with no throttle) the wings
     // quit and you drop. This is what makes the stall happen quickly.

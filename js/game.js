@@ -147,6 +147,20 @@ function rescueAtBarn() {
   spawnPlane(BARN_X);
 }
 
+// While parachuting/walking, the pilot can be killed by enemy fire or by a
+// plane running into them. If so, you die and your points reset.
+function checkPilotHit() {
+  if (!pilot) return;
+  const hitBy = (list, r) => list.some(o => o.team !== 0 && hits(o, pilot, r));
+  let dead = hitBy(bullets, 8) || hitBy(missiles, 12);
+  if (!dead) dead = enemies.some(e => e.alive && hits(e, pilot, 16)); // ran over
+  if (dead) {
+    bigExplosion(pilot.x, pilot.y);
+    pushKill('🛩️ YOUR PILOT down 💥', '#ff8a65');
+    playerDies(pilot.x, pilot.y, 'PILOT DOWN!');
+  }
+}
+
 // Called when any plane is popped. Adds a boom, scores it if YOU did it, and
 // handles your own death (points reset).
 function onPlanePopped(target, shooterTeam) {
@@ -229,11 +243,9 @@ function update() {
     }
   } else if (playerState === 'chute') {
     pilot.update();
-    if (pilot.landed) {
-      // Did we land at the big barn? Then we're rescued (keep points).
-      if (Math.abs(wrapDX(pilot.x - BARN_X)) < CONFIG.BARN_RESCUE_RANGE) rescueAtBarn();
-      else { pushKill('🛩️ YOU crashed 💥', '#ff8a65'); playerDies(pilot.x, pilot.y, 'CRASHED!'); }
-    }
+    // Reach the big barn (drifting OR walking) -> rescued, keep your points.
+    if (Math.abs(wrapDX(pilot.x - BARN_X)) < CONFIG.BARN_RESCUE_RANGE) rescueAtBarn();
+    else checkPilotHit(); // a bullet, missile, or plane can kill the pilot
   } else { // 'dead'
     playerRespawn -= 1;
     if (playerRespawn <= 0) spawnPlane(camera.x + CONFIG.GAME_W / 2);
@@ -561,8 +573,8 @@ function drawHud() {
     ctx.font = '20px monospace';
     ctx.fillText('EJECTED!', CONFIG.GAME_W / 2, 70);
     ctx.font = '11px monospace';
-    ctx.fillText('Steer your parachute to the BIG BARN to save your ' + score + ' points!',
-                 CONFIG.GAME_W / 2, 90);
+    ctx.fillText('Float/walk (arrows) to the BIG BARN to save your ' + score +
+                 ' points -- don\'t get shot or run over!', CONFIG.GAME_W / 2, 90);
   } else if (playerState === 'dead') {
     ctx.fillStyle = '#ffffff';
     ctx.font = '22px monospace';
