@@ -54,7 +54,8 @@ const CONFIG = {
   // stall too. Dive to get your speed (and control) back.
   CEILING: -2200,      // the very top of the sky -- you can't fly past this.
   STALL_ALT: -700,     // above this height the air thins out and lift fades.
-  STALL_SPEED: 1.6,    // slower than this and the wings stall (lose their lift).
+  STALL_SPEED: 3.6,    // slower than this and the wings stall (lose their lift).
+  STALL_DRAG: 0.2,     // how hard a stalled wing brakes you (bigger = drop sooner).
   TURN_FULL_SPEED: 3.5,// you need at least this much speed for full control.
 
   // ---- Guns & bullets ----

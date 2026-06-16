@@ -68,7 +68,11 @@ function applyFlightPhysics(o, push) {
     // 45 degrees -- that collapse is the stall. (sin(2*aoa) peaks at 45 deg
     // and is zero at 0 and 90 deg.)
     const cl = -Math.sin(2 * aoa);
-    const lift = CONFIG.LIFT * speed * cl * density;
+    // Lift also fades out FAST as you slow toward the stall speed -- so the
+    // moment you bleed off speed (like climbing with no throttle) the wings
+    // quit and you drop. This is what makes the stall happen quickly.
+    const stallFade = Math.max(0, Math.min(1, (speed - CONFIG.STALL_SPEED) / 1.2));
+    const lift = CONFIG.LIFT * speed * cl * density * stallFade;
     const liftDir = vdir - Math.PI / 2;            // 90 deg off the airflow
     o.vx += Math.cos(liftDir) * lift;
     o.vy += Math.sin(liftDir) * lift;
@@ -80,14 +84,23 @@ function applyFlightPhysics(o, push) {
     o.vx -= o.vx * induced;
     o.vy -= o.vy * induced;
 
+    // STALL DRAG: a stalled wing (too slow, or nose yanked way off the wind)
+    // acts like a barn door -- a big burst of drag that kills your speed fast,
+    // so you stall and drop quickly instead of coasting on for ages.
+    const stallness = Math.max(1 - stallFade,
+                               Math.min(1, Math.max(0, (Math.abs(aoa) - 0.5) / 0.6)));
+    const sd = stallness * CONFIG.STALL_DRAG;
+    o.vx -= o.vx * sd;
+    o.vy -= o.vy * sd;
+
     // Weathervane: the nose drifts to follow the airflow (stronger when fast).
     // This is what drops the nose into a dive after a stall, so you recover.
     o.angle += angleDiff(vdir, o.angle) * CONFIG.WEATHERVANE *
                Math.min(1, speed / CONFIG.TURN_FULL_SPEED);
 
-    // We're stalling if the air is too thin, we're too slow, or the nose is
-    // pointed way off the airflow (more than ~45 degrees).
-    o.stalling = density < 0.55 || speed < CONFIG.STALL_SPEED || Math.abs(aoa) > 0.9;
+    // We're stalling if the air is too thin, the wings are losing their lift
+    // (slowing toward stall speed), or the nose is pointed way off the airflow.
+    o.stalling = density < 0.55 || stallFade < 0.5 || Math.abs(aoa) > 0.9;
   } else {
     o.stalling = true;
   }
