@@ -190,6 +190,10 @@ const WW2_SPRITES = {
   black: makePlaneSetFromColor('#2b2b2b'),
 };
 
+// Alien Invasion: every untagged runner flies the SAME blue plane (the UFOs
+// draw a saucer instead). Matches the blue "runner" arrow color.
+const ALIEN_PLANE_SPRITE = makePlaneSetFromColor('#3b9bff');
+
 // Pre-build every plane's pictures once, when the game starts.
 // (Keyed by team: 'player' = blue, 1 = purple enemies, 2 = orange enemies.)
 const PLANE_SPRITES = {

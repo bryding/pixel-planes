@@ -939,27 +939,43 @@ function drawBotChute(c) {
 // A little map in the corner: the whole looping world as a rectangle, with a
 // RED box for where YOU are and a GREEN flag for the respawn barn.
 function drawMinimap() {
-  const mw = 240, mh = 24, mx = 12, my = 12;
+  // The map is now TALL: side-to-side shows where you are across the world,
+  // and up-and-down shows your HEIGHT, from the ground up to the ceiling. So
+  // the higher you fly, the higher your marker sits in the box.
+  const mw = 240, mh = 120, mx = 12, my = 12;
   const W = CONFIG.WORLD_WIDTH;
+  const top = CONFIG.CEILING, bot = CONFIG.GROUND_Y, H = bot - top;
+  const innerH = mh - 4;
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
   ctx.fillRect(mx, my, mw, mh);
   ctx.strokeStyle = 'rgba(255,255,255,0.7)';
   ctx.lineWidth = 1;
   ctx.strokeRect(mx + 0.5, my + 0.5, mw - 1, mh - 1);
+
+  // Turn a world (x, y) into a spot inside the map box.
+  const mapX = x => mx + (wrapX(x) / W) * mw;
+  const mapY = y => my + Math.max(0, Math.min(1, (y - top) / H)) * innerH;
+
   // ground strip along the bottom of the map
   ctx.fillStyle = 'rgba(120,180,90,0.6)';
-  ctx.fillRect(mx + 1, my + mh - 5, mw - 2, 4);
+  ctx.fillRect(mx + 1, my + mh - 4, mw - 2, 3);
 
-  // Green flag = the rescue barn
-  const fx = mx + (BARN_X / W) * mw;
-  ctx.fillStyle = '#5a3b2e'; ctx.fillRect(fx, my + mh - 16, 1, 12);
-  ctx.fillStyle = '#2ecc71'; ctx.fillRect(fx + 1, my + mh - 16, 8, 5);
+  // Every bot as a small dot, so you can see the whole area at a glance.
+  for (const e of enemies) {
+    if (!e.alive) continue;
+    ctx.fillStyle = (mode === 'alien') ? (e.isUfo ? '#2ecc40' : '#3b9bff') : e.bodyColor;
+    ctx.fillRect(mapX(e.x) - 1, mapY(e.y) - 1, 2, 2);
+  }
 
-  // Red box = you
+  // Green flag = the rescue barn (sits on the ground)
+  const fx = mapX(BARN_X);
+  ctx.fillStyle = '#5a3b2e'; ctx.fillRect(fx, my + mh - 12, 1, 9);
+  ctx.fillStyle = '#2ecc71'; ctx.fillRect(fx + 1, my + mh - 12, 7, 4);
+
+  // Red box = you, now placed by BOTH where you are and how high you are.
   const who = (playerState === 'chute' && pilot) ? pilot : player;
-  const rx = mx + (wrapX(who.x) / W) * mw;
   ctx.fillStyle = '#e74c3c';
-  ctx.fillRect(rx - 3, my + mh - 11, 6, 6);
+  ctx.fillRect(mapX(who.x) - 3, mapY(who.y) - 3, 6, 6);
 
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
   ctx.font = '9px monospace'; ctx.textAlign = 'left';
@@ -1192,7 +1208,14 @@ function startAlien() {
   spawnPlane(100);
   playerState = 'flying';                 // everyone starts already in the air
   const all = [player, ...enemies];
-  all.forEach(p => { p.isUfo = false; });
+  // There are NO power-ups in Alien Tag, so clear any bubbles on the map and
+  // strip every power-up the player or bots carried in from another mode --
+  // otherwise a leftover shield would make someone impossible to tag.
+  powerups.length = 0;
+  all.forEach(p => {
+    p.isUfo = false;
+    p.invincibleTimer = 0; p.wideTimer = 0; p.frozenTimer = 0;
+  });
   const alive = all.filter(p => p.alive !== false);
   alive[Math.floor(Math.random() * alive.length)].isUfo = true; // random first UFO
   placeAlienRound();
@@ -1286,14 +1309,27 @@ function alienBotFly(b) {
     return;
   }
 
-  // --- Runner: fly like a plane and steer AWAY from the nearest UFO ---
-  let want = b.angle;
-  if (best) {
-    const dx = wrapDX(best.x - b.x), dy = best.y - b.y;
-    want = Math.atan2(-dy, -dx);
+  // --- Runner: fly like a plane and try its HARDEST to stay away from the
+  // UFOs. We add up a "push" away from EVERY UFO (closer ones push harder), so
+  // a runner dodges the whole pack instead of just the nearest one -- and won't
+  // flee straight into a second UFO. We also push off the ground and ceiling so
+  // it can't get cornered against them. The runner flies toward the combined
+  // escape direction at full throttle. ---
+  let fx = 0, fy = 0;
+  for (const p of planes) {
+    if (!p.alive || !p.isUfo) continue;
+    const dx = wrapDX(b.x - p.x), dy = b.y - p.y; // vector FROM the UFO to me
+    const dist = Math.hypot(dx, dy) || 1;
+    const w = 1 / (dist * dist);                  // nearer UFO = stronger push
+    fx += (dx / dist) * w; fy += (dy / dist) * w;
   }
-  if (b.y > CONFIG.GROUND_Y - 40) want = -Math.PI / 2;
-  if (b.y < CONFIG.CEILING + 80) want = Math.PI / 2;
+  // Soft walls: shove away from the ground (push up) and ceiling (push down).
+  const gd = Math.max(20, CONFIG.GROUND_Y - b.y); // distance to ground
+  const cd = Math.max(20, b.y - CONFIG.CEILING);  // distance to ceiling
+  fy -= 1 / (gd * gd);   // near the ground -> push up (negative y)
+  fy += 1 / (cd * cd);   // near the ceiling -> push down (positive y)
+
+  let want = (fx === 0 && fy === 0) ? b.angle : Math.atan2(fy, fx);
   const diff = angleDiff(want, b.angle);
   if (diff > 0.02) b.angle += b.style.turn; else if (diff < -0.02) b.angle -= b.style.turn;
   applyFlightPhysics(b, b.style.thrust);

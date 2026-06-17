@@ -232,6 +232,7 @@ class Plane {
     let set = PLANE_SPRITES.player;
     if (mode === 'unicorn') set = UNICORN_SPRITES.player;
     else if (mode === 'ww2') set = WW2_SPRITES[this.faction];
+    else if (mode === 'alien') set = ALIEN_PLANE_SPRITE; // untagged runners are blue
     drawPlaneSprite(ctx, set, sx, sy, this.angle, this.propSpin, this.flash > 0);
 
     // Shield bubble while invincible.

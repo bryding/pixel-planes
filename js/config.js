@@ -60,7 +60,9 @@ const CONFIG = {
   // Climb too high and the air gets thin: your wings make less lift and your
   // engine weakens, so you STALL and sink back down. Fly too SLOW and you
   // stall too. Dive to get your speed (and control) back.
-  CEILING: -2200,      // the very top of the sky -- you can't fly past this.
+  CEILING: -7400,      // the very top of the sky -- you can't fly past this.
+                       // (ground is y=400, so the sky is now ~7800 tall: 3x
+                       // taller than before. Applies to every mode.)
 
   // --- Alien Invasion (tag) mode ---
   UFO_SPEED: 10,       // how fast a UFO flies -- the SAME as a plane's top
