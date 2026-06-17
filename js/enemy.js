@@ -73,6 +73,7 @@ class Enemy {
     this.name = name;          // its goofy leaderboard name
     this.score = 0;            // how many planes it has shot down
     this.sprite = makePlaneSetFromColor(color);
+    this.uniSprite = makeUnicornSetFromColor(color); // used in Unicorn Mode
 
     this.health = CONFIG.ENEMY_HEALTH;
     this.alive = true;
@@ -112,6 +113,21 @@ class Enemy {
       if (this.y > CONFIG.GROUND_Y - 6) { this.y = CONFIG.GROUND_Y - 6; this.vy = 0; }
       if (this.y < CONFIG.CEILING) { this.y = CONFIG.CEILING; this.vy = 0; }
       return;
+    }
+
+    // Bots know when to bail: if they're about to die with an enemy on their
+    // tail, they EJECT (a parachute floats down) and respawn instead of dying.
+    if (this.health <= 1 && this.invincibleTimer <= 0) {
+      const t = this.findTarget(planes);
+      if (t) {
+        const d = Math.hypot(wrapDX(t.x - this.x), t.y - this.y);
+        if (d < 240 && Math.random() < 0.02) {
+          spawnBotChute(this.x, this.y, this.bodyColor);
+          this.alive = false;
+          this.respawnTimer = CONFIG.ENEMY_RESPAWN;
+          return;
+        }
+      }
     }
 
     const S = this.style;
@@ -206,13 +222,14 @@ class Enemy {
   shoot(bullets) {
     const nx = this.x + Math.cos(this.angle) * 17;
     const ny = this.y + Math.sin(this.angle) * 17;
+    const col = CONFIG.COLORS.enemyBullet; // all bot bullets look the same
     if (this.wideTimer > 0) { // turret power-up: 5-bullet wide shot
       for (let i = -2; i <= 2; i++) {
         bullets.push(new Bullet(nx, ny, this.angle + i * CONFIG.WIDE_SHOT_SPREAD,
-                                this.vx, this.vy, this.team, this.bodyColor));
+                                this.vx, this.vy, this.team, col));
       }
     } else {
-      bullets.push(new Bullet(nx, ny, this.angle, this.vx, this.vy, this.team, this.bodyColor));
+      bullets.push(new Bullet(nx, ny, this.angle, this.vx, this.vy, this.team, col));
     }
     this.fireCooldown = this.style.fireCd;
   }
@@ -245,7 +262,8 @@ class Enemy {
   draw(ctx) {
     if (!this.alive) return;
     const sx = worldToScreenX(this.x), sy = this.y - camera.y;
-    drawPlaneSprite(ctx, this.sprite, sx, sy, this.angle, this.propSpin, this.flash > 0);
+    const set = (mode === 'unicorn') ? this.uniSprite : this.sprite;
+    drawPlaneSprite(ctx, set, sx, sy, this.angle, this.propSpin, this.flash > 0);
 
     // Nametag floating above the plane, so you know who's who (and who got you).
     ctx.font = '11px monospace';

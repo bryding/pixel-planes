@@ -53,6 +53,26 @@ class Missile {
   draw(ctx) {
     const C = CONFIG.COLORS;
 
+    // Unicorn Mode: a golden horn with a rainbow trail. 🦄🌈
+    if (typeof mode !== 'undefined' && mode === 'unicorn') {
+      const rain = ['#e74c3c', '#f39c12', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'];
+      this.trail.forEach((p, i) => {
+        const a = p.life / 14, s = 3 + (1 - a) * 4;
+        ctx.globalAlpha = a * 0.85;
+        ctx.fillStyle = rain[i % 6];
+        ctx.fillRect(worldToScreenX(p.x) - s / 2, p.y - camera.y - s / 2, s, s);
+      });
+      ctx.globalAlpha = 1;
+      ctx.save();
+      ctx.translate(worldToScreenX(this.x), this.y - camera.y);
+      ctx.rotate(this.angle);
+      ctx.fillStyle = '#f4c542';                 // golden horn
+      ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-5, -3); ctx.lineTo(-5, 3); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(2, -1, 2, 2); // sparkle
+      ctx.restore();
+      return;
+    }
+
     // Smoke trail (older puffs are bigger and more faded).
     for (const p of this.trail) {
       const a = p.life / 14;            // 1 = fresh, 0 = gone

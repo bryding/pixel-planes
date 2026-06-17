@@ -27,7 +27,8 @@ function blob(ctx, x, y, r) {
 
 // One puffy cartoon cloud built from several white blobs.
 function drawCloud(ctx, x, y, s, seed) {
-  ctx.fillStyle = '#f9f2e2';                 // warm cream (vintage) white
+  const uni = (typeof mode !== 'undefined' && mode === 'unicorn');
+  ctx.fillStyle = uni ? '#ffd1ec' : '#f9f2e2'; // cotton candy / cream
   const lobes = 3 + Math.floor(sceneRand(seed * 3.1) * 3); // 3..5 puffs in a row
   for (let k = 0; k < lobes; k++) {
     const lx = x + (k - (lobes - 1) / 2) * (16 * s);
@@ -36,7 +37,7 @@ function drawCloud(ctx, x, y, s, seed) {
   }
   blob(ctx, x - 8 * s, y - 10 * s, 11 * s); // a couple of higher puffs
   blob(ctx, x + 9 * s, y - 8 * s, 10 * s);
-  ctx.fillStyle = '#e7d9bd';                 // warm soft bottom shadow
+  ctx.fillStyle = uni ? '#f7b8de' : '#e7d9bd'; // soft bottom shadow
   ctx.fillRect(x - 22 * s, y + 7 * s, 44 * s, 4 * s);
 }
 
@@ -117,11 +118,12 @@ function drawTreeline(ctx, camera) {
 
 function drawBackgroundScenery(ctx, camera) {
   const C = CONFIG.COLORS;
+  const uni = (typeof mode !== 'undefined' && mode === 'unicorn');
   drawClouds(ctx, camera);
-  drawZeppelins(ctx, camera);   // vintage airship drifting by
-  drawHillLayer(ctx, camera, C.hillFar, 0.65, 55, 80);
+  if (!uni) drawZeppelins(ctx, camera);   // no airship in candyland
+  drawHillLayer(ctx, camera, uni ? '#f0a0cf' : C.hillFar, 0.65, 55, 80);
   drawTreeline(ctx, camera);
-  drawHillLayer(ctx, camera, C.hillNear, 0.85, 80, 120);
+  drawHillLayer(ctx, camera, uni ? '#d96aa6' : C.hillNear, 0.85, 80, 120);
 }
 
 // ---------------------------------------------------------------------------
@@ -193,6 +195,7 @@ function drawGrassDetail(ctx, by) {
 
 function drawTree(ctx, sx, by, s) {
   const C = CONFIG.COLORS;
+  if (typeof mode !== 'undefined' && mode === 'unicorn') { drawLollipop(ctx, sx, by, s); return; }
   const th = 22 * s;
   // Trunk with a shaded side.
   ctx.fillStyle = C.treeTrunk;
@@ -212,8 +215,29 @@ function drawTree(ctx, sx, by, s) {
   blob(ctx, sx - rad * 0.4, cy - rad * 0.4, rad * 0.45);
 }
 
+// A candy lollipop (replaces trees in Unicorn Mode).
+function drawLollipop(ctx, sx, by, s) {
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(sx - 1, by - 22 * s, 2, 22 * s);     // stick
+  const cy = by - 26 * s, r = 9 * s;
+  ctx.fillStyle = '#ff5ea8';
+  ctx.beginPath(); ctx.arc(sx, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(sx, cy, r * 0.55, 0, Math.PI * 1.5); ctx.stroke(); // swirl
+  ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(sx - 3, cy - 4, 2, 2);
+}
+
 function drawBush(ctx, sx, by) {
   const C = CONFIG.COLORS;
+  if (typeof mode !== 'undefined' && mode === 'unicorn') { // gumdrop
+    const cols = ['#9b59b6', '#3498db', '#2ecc71', '#e74c3c', '#f1c40f'];
+    const col = cols[Math.floor(Math.abs(Math.sin(sx * 12.9)) * 5) % 5];
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(sx, by - 6, 8, Math.PI, Math.PI * 2); ctx.fill();
+    ctx.fillRect(sx - 8, by - 6, 16, 6);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(sx - 3, by - 9, 3, 2);
+    return;
+  }
   ctx.fillStyle = C.treeLeafDk; blob(ctx, sx + 1, by - 3, 8);
   ctx.fillStyle = C.treeLeaf;
   blob(ctx, sx, by - 5, 7);

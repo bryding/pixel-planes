@@ -28,6 +28,12 @@ html, body {
   transform: translateX(-50%);
   z-index: 10;
   display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+}
+.menuGroup {
+  display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
@@ -38,6 +44,11 @@ html, body {
   max-height: 290px;        /* about 7 buttons tall before it wraps */
   gap: 5px;
   align-content: center;
+}
+#modeMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 #topBar button {
   font-family: monospace;

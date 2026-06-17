@@ -217,8 +217,8 @@ class Plane {
       ctx.beginPath(); ctx.arc(fx, fy - 1, 2.4, 0, Math.PI * 2); ctx.fill();
     }
 
-    drawPlaneSprite(ctx, PLANE_SPRITES.player, sx, sy,
-                    this.angle, this.propSpin, this.flash > 0);
+    const set = (mode === 'unicorn') ? UNICORN_SPRITES.player : PLANE_SPRITES.player;
+    drawPlaneSprite(ctx, set, sx, sy, this.angle, this.propSpin, this.flash > 0);
 
     // Shield bubble while invincible.
     if (this.invincibleTimer > 0) {

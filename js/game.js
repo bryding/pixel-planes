@@ -58,6 +58,12 @@ const explosions = [];
 const powerups = [];
 let powerupTimer = 120;
 
+// Cosmetic parachutes from bots that ejected (just for looks).
+const botChutes = [];
+function spawnBotChute(x, y, color) {
+  botChutes.push({ x: x, y: y, vx: (Math.random() - 0.5) * 1.4, vy: 0.5, color: color, life: 320 });
+}
+
 // Make the bots. Each one gets its OWN team number (so it fights everyone),
 // its OWN color, and its OWN flying style. They're spread around the world.
 const enemies = [];
@@ -106,6 +112,14 @@ function removeAllBots() {
   planes.length = 1; // planes[0] is the player; drop the rest
 }
 
+// ---- Game mode (Classic / Unicorn) ----
+let mode = 'classic';
+function setMode(m) { mode = m; }
+function toggleModeMenu() {
+  const m = document.getElementById('modeMenu');
+  m.style.display = (m.style.display === 'none' || !m.style.display) ? 'flex' : 'none';
+}
+
 // ---- Modifier / cheat menu state & actions ----
 let timeScale = 1;          // game-speed multiplier (0.5 = slow, 2 = fast)
 let infiniteHealth = false;
@@ -146,8 +160,34 @@ function giveAllBotsPower() {
     e.wideTimer += CONFIG.WIDE_SHOT_TIME;
   }
 }
+
+// Give EVERY bot one chosen power: 'shield', 'turret', or 'freeze'.
+function giveAllBots(type) {
+  for (const e of enemies) {
+    if (type === 'shield') e.invincibleTimer += CONFIG.SHIELD_TIME;
+    else if (type === 'turret') e.wideTimer += CONFIG.WIDE_SHOT_TIME;
+    else if (type === 'freeze') e.frozenTimer += CONFIG.FREEZE_TIME;
+  }
+}
 function toggleInfHealth()   { infiniteHealth = !infiniteHealth; return infiniteHealth; }
 function toggleInfMissiles() { infiniteMissiles = !infiniteMissiles; return infiniteMissiles; }
+
+// Reset every modifier back to its default.
+function resetDefaults() {
+  timeScale = 1;
+  infiniteHealth = false;
+  infiniteMissiles = false;
+  player.invincibleTimer = 0;
+  player.wideTimer = 0;
+  player.frozenTimer = 0;
+  removeAllBots();
+  for (let i = 0; i < CONFIG.ENEMY_COUNT; i++) addBot();
+  const set = (id, txt) => { const b = document.getElementById(id); if (b) b.textContent = txt; };
+  set('halfBtn', '0.5x Speed');
+  set('dblBtn', '2x Speed');
+  set('hpBtn', '∞ Health: OFF');
+  set('missBtn', '∞ Missiles: OFF');
+}
 
 // Your points. They grow when you shoot bots down. They RESET if you die,
 // but you keep them if you eject and parachute safely to the barn.
@@ -418,6 +458,15 @@ function update() {
     }
   }
 
+  // --- Bot parachutes drifting down (cosmetic) ---
+  for (const c of botChutes) {
+    c.vy = Math.min(0.9, c.vy + 0.02);
+    c.x = wrapX(c.x + c.vx);
+    c.y += c.vy;
+    if (c.y >= CONFIG.GROUND_Y - 4) { c.y = CONFIG.GROUND_Y - 4; c.life -= 6; }
+    c.life -= 1;
+  }
+
   // --- Explosions (just animate the sparks) ---
   for (const boom of explosions) boom.update();
 
@@ -433,6 +482,9 @@ function update() {
   }
   for (let i = powerups.length - 1; i >= 0; i--) {
     if (powerups[i].dead) powerups.splice(i, 1);
+  }
+  for (let i = botChutes.length - 1; i >= 0; i--) {
+    if (botChutes[i].life <= 0) botChutes.splice(i, 1);
   }
   for (let i = killFeed.length - 1; i >= 0; i--) {
     killFeed[i].life -= 1;
@@ -461,12 +513,30 @@ function update() {
 function draw() {
   const C = CONFIG.COLORS;
 
-  // --- Sky (a gradient from one blue to another) ---
+  const uni = (mode === 'unicorn');
+
+  // --- Sky (a gradient; pastel candy colors in Unicorn Mode) ---
   const sky = ctx.createLinearGradient(0, 0, 0, CONFIG.GAME_H);
-  sky.addColorStop(0, C.skyTop);
-  sky.addColorStop(1, C.skyBottom);
+  if (uni) { sky.addColorStop(0, '#bfe3ff'); sky.addColorStop(1, '#ffe1f3'); }
+  else { sky.addColorStop(0, C.skyTop); sky.addColorStop(1, C.skyBottom); }
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
+
+  // --- Unicorn Mode: a big rainbow arching across the whole screen ---
+  if (uni) {
+    const rcx = CONFIG.GAME_W / 2, rcy = CONFIG.GAME_H * 0.95;
+    const rain = ['#e74c3c', '#f39c12', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'];
+    const baseR = CONFIG.GAME_W * 0.45;
+    ctx.lineWidth = 16;
+    ctx.globalAlpha = 0.45;
+    rain.forEach((col, i) => {
+      ctx.strokeStyle = col;
+      ctx.beginPath();
+      ctx.arc(rcx, rcy, baseR - i * 16, Math.PI, Math.PI * 2);
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+  }
 
   // --- Soft vintage sun with a warm glow ---
   const sunX = CONFIG.GAME_W * 0.80, sunY = CONFIG.GAME_H * 0.20;
@@ -482,11 +552,11 @@ function draw() {
   // --- Clouds, far hills, and the treeline on the horizon ---
   drawBackgroundScenery(ctx, camera);
 
-  // --- Ground ---
+  // --- Ground (candy pink in Unicorn Mode) ---
   const groundScreenY = CONFIG.GROUND_Y - camera.y;
-  ctx.fillStyle = C.ground;
+  ctx.fillStyle = uni ? '#f7a8d8' : C.ground;
   ctx.fillRect(0, groundScreenY, CONFIG.GAME_W, CONFIG.GAME_H);
-  ctx.fillStyle = C.groundDark;
+  ctx.fillStyle = uni ? '#e87bbf' : C.groundDark;
   ctx.fillRect(0, groundScreenY, CONFIG.GAME_W, 4);
 
   // Some ground stripes that scroll by so you can feel the speed.
@@ -518,6 +588,9 @@ function draw() {
   for (const p of powerups) {
     p.draw(ctx);
   }
+
+  // --- Bot parachutes (cosmetic) ---
+  for (const c of botChutes) drawBotChute(c);
 
   // --- Explosions (drawn on top so the sparks pop) ---
   for (const boom of explosions) {
@@ -585,6 +658,20 @@ function applyPowerUp(type) {
     pushKill('☠️ BAD bubble! frozen + half health', '#ff8a65');
     explosions.push(new Explosion(player.x, player.y, '#c0392b'));
   }
+}
+
+// Draw one cosmetic bot parachute (canopy + dangling pilot).
+function drawBotChute(c) {
+  const sx = worldToScreenX(c.x), sy = c.y - camera.y;
+  ctx.fillStyle = c.color;
+  ctx.beginPath(); ctx.arc(sx, sy - 14, 9, Math.PI, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#dddddd'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(sx - 8, sy - 14); ctx.lineTo(sx - 2, sy - 3);
+  ctx.moveTo(sx + 8, sy - 14); ctx.lineTo(sx + 2, sy - 3);
+  ctx.stroke();
+  ctx.fillStyle = '#3a2a1a'; ctx.fillRect(sx - 2, sy - 4, 4, 5);
+  ctx.fillStyle = CONFIG.COLORS.pilot; ctx.fillRect(sx - 2, sy - 7, 4, 2);
 }
 
 // A little map in the corner: the whole looping world as a rectangle, with a
@@ -713,22 +800,26 @@ function drawBarnArrow() {
 
 function drawHud() {
   // --- YOUR plane stats, in a bigger panel centered along the bottom ---
-  const pw = 330, ph = 88;
+  const pw = 360, ph = 88;
   const px0 = Math.round(CONFIG.GAME_W / 2 - pw / 2);
   const py0 = CONFIG.GAME_H - ph - 26;
-  const barX = px0 + 78, barW = 240;
+  const barX = px0 + 106, barW = 244;
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
   ctx.fillRect(px0, py0, pw, ph);
   ctx.font = '10px monospace';
   ctx.textAlign = 'left';
 
-  // Throttle
-  ctx.fillStyle = '#ffffff'; ctx.fillText('THROTTLE', px0 + 10, py0 + 16);
+  // Names change in Unicorn Mode.
+  const lblThrottle = (mode === 'unicorn') ? 'GALLOP SPEED' : 'THROTTLE';
+  const lblHealth = (mode === 'unicorn') ? 'SPARKLE POWER' : 'HEALTH';
+
+  // Throttle / Gallop speed
+  ctx.fillStyle = '#ffffff'; ctx.fillText(lblThrottle, px0 + 10, py0 + 16);
   ctx.strokeStyle = '#ffffff'; ctx.strokeRect(barX, py0 + 9, barW, 8);
   ctx.fillStyle = '#f1c40f'; ctx.fillRect(barX + 1, py0 + 10, (barW - 2) * player.throttle, 6);
 
-  // Health
-  ctx.fillStyle = '#ffffff'; ctx.fillText('HEALTH', px0 + 10, py0 + 34);
+  // Health / Sparkle power
+  ctx.fillStyle = '#ffffff'; ctx.fillText(lblHealth, px0 + 10, py0 + 34);
   ctx.strokeStyle = '#ffffff'; ctx.strokeRect(barX, py0 + 27, barW, 8);
   const healthFrac = Math.max(0, player.health) / CONFIG.PLAYER_HEALTH;
   ctx.fillStyle = healthFrac > 0.5 ? '#2ecc71' : (healthFrac > 0.25 ? '#f39c12' : '#e74c3c');

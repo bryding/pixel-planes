@@ -39,6 +39,18 @@ class Bullet {
 
   draw(ctx) {
     const sx = worldToScreenX(this.x), sy = this.y - camera.y;
+
+    // Unicorn Mode: bullets are heart emojis. 💖
+    if (typeof mode !== 'undefined' && mode === 'unicorn') {
+      ctx.font = (CONFIG.BULLET_SIZE * 3.2) + 'px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('❤️', sx, sy);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+      return;
+    }
+
     // A glowing TRACER streak behind the bullet so it's easy to see.
     const tx = sx - this.vx * 0.6, ty = sy - this.vy * 0.6;
     const s = CONFIG.BULLET_SIZE;

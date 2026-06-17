@@ -118,6 +118,72 @@ function makePlaneSetFromColor(color) {
   return makePlaneSet({ body: color, lt: shadeHex(color, 55), dk: shadeHex(color, -55) });
 }
 
+// ---------------------------------------------------------------------------
+//  UNICORN sprite (for Unicorn Mode). Same size/pivot as the plane so all the
+//  flight maths line up -- it just LOOKS like a flying unicorn.
+// ---------------------------------------------------------------------------
+function buildUnicornSprite(pal, whiteout) {
+  const W = 50, H = 34, cx = 25, cy = 17;
+  const cvs = document.createElement('canvas');
+  cvs.width = W; cvs.height = H;
+  const g = cvs.getContext('2d');
+  const body = whiteout ? '#ffffff' : pal.body;
+  const lt   = whiteout ? '#ffffff' : pal.lt;
+  const dk   = whiteout ? '#dcdcdc' : pal.dk;
+  const horn = whiteout ? '#ffffff' : '#f4c542';
+  const hoof = whiteout ? '#cccccc' : '#3a2c1c';
+  const rain = ['#e74c3c', '#f39c12', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'];
+  function px(x, y, w, h, c) { g.fillStyle = c; g.fillRect(x, y, w, h); }
+  function line(x0, y0, x1, y1, c) {
+    const s = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+    for (let i = 0; i <= s; i++) { const t = i / s;
+      px(Math.round(x0 + (x1 - x0) * t), Math.round(y0 + (y1 - y0) * t), 1, 1, c); }
+  }
+
+  // Flowing rainbow tail (back/left)
+  for (let i = 0; i < 6; i++) line(13, 13 + i, 3, 21 + i, rain[i]);
+
+  // Back legs
+  px(15, 21, 2, 7, body); px(15, 27, 2, 1, hoof);
+  px(19, 21, 2, 7, body); px(19, 27, 2, 1, hoof);
+
+  // Body / torso
+  px(12, 13, 24, 9, body);
+  px(12, 13, 24, 1, lt);
+  px(12, 21, 24, 1, dk);
+
+  // Front legs
+  px(28, 21, 2, 7, body); px(28, 27, 2, 1, hoof);
+  px(32, 21, 2, 7, body); px(32, 27, 2, 1, hoof);
+
+  // Neck + head (front/right)
+  px(33, 9, 5, 6, body);
+  px(36, 4, 9, 9, body);
+  px(36, 4, 9, 1, lt);
+  px(44, 8, 2, 4, body);     // muzzle
+  px(40, 1, 2, 3, body);     // ear
+  px(42, 8, 1, 2, '#1a1a1a'); // eye
+
+  // Rainbow mane down the neck
+  for (let i = 0; i < 6; i++) px(31 + i, 5, 1, 9, rain[i]);
+
+  // Golden spiral horn pointing up-front
+  line(44, 4, 49, -1, horn); line(45, 4, 49, 0, horn);
+  px(46, 2, 1, 1, '#ffffff');
+
+  return { canvas: cvs, cx: cx, cy: cy };
+}
+function makeUnicornSet(pal) {
+  return { normal: buildUnicornSprite(pal, false), flash: buildUnicornSprite(pal, true) };
+}
+function makeUnicornSetFromColor(color) {
+  return makeUnicornSet({ body: color, lt: shadeHex(color, 55), dk: shadeHex(color, -55) });
+}
+// The player's unicorn (bots build their own from their color).
+const UNICORN_SPRITES = {
+  player: makeUnicornSet({ body: '#3d8fd6', lt: '#7fbdef', dk: '#2466a0' }),
+};
+
 // Pre-build every plane's pictures once, when the game starts.
 // (Keyed by team: 'player' = blue, 1 = purple enemies, 2 = orange enemies.)
 const PLANE_SPRITES = {
