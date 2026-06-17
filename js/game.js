@@ -132,7 +132,10 @@ function setMode(m) {
   }
   if (m === 'ww2') assignWW2Factions();
   if (m === 'alien') startAlien();
-  if (prev === 'alien' && m !== 'alien') spawnPlane(100); // back to flying
+  if (m === 'dirtbike') startDirtbike();
+  // Leaving a "ground" mini-game -> put a flying plane back.
+  const ground = x => (x === 'alien' || x === 'dirtbike');
+  if (ground(prev) && !ground(m)) spawnPlane(100);
 }
 
 // Put the player on GREEN and split the bots: the first few are BLACK,
@@ -414,6 +417,7 @@ function drawLeaderboard() {
 // =========================================================================
 function update() {
   if (mode === 'alien') { alienUpdate(); return; }   // moon musical-chairs game
+  if (mode === 'dirtbike') { dirtUpdate(); return; } // motocross ramps game
   // Work out "fresh press" of X (missile) and C (eject).
   const missilePressed = Input.missile && !missileWasDown;
   const ejectPressed = Input.eject && !ejectWasDown;
@@ -606,6 +610,7 @@ function update() {
 // =========================================================================
 function draw() {
   if (mode === 'alien') { drawAlien(); return; }   // moon scene
+  if (mode === 'dirtbike') { dirtDraw(); return; } // motocross scene
   const C = CONFIG.COLORS;
 
   const uni = (mode === 'unicorn');
@@ -1212,6 +1217,130 @@ function drawUfo(u) {
   ctx.fillStyle = '#9aa3a7'; ctx.beginPath(); ctx.ellipse(u.x, u.y, 36, 13, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#cfd8dc'; ctx.beginPath(); ctx.ellipse(u.x, u.y - 7, 17, 11, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#7CFC00'; for (let i = -2; i <= 2; i++) ctx.fillRect(u.x + i * 11 - 1, u.y + 5, 3, 3);
+}
+
+// =========================================================================
+//  DIRTBIKE MODE -- ride a motocross bike, hit 7 kinds of ramps, do flips,
+//  and DON'T land upside down (or you crash).
+// =========================================================================
+// 7 ramp types: different heights/power and 3 visual styles (0 triangle,
+// 1 curved kicker, 2 tabletop).
+const DIRT_RAMPS = [
+  { h: 30, power: 8,  style: 0 }, { h: 45, power: 10, style: 1 },
+  { h: 60, power: 12, style: 2 }, { h: 25, power: 7,  style: 0 },
+  { h: 78, power: 14, style: 1 }, { h: 52, power: 11, style: 2 },
+  { h: 95, power: 16, style: 0 },
+];
+let dirtBike = null;
+let dirtRamps = [];
+let dirtMsg = '', dirtMsgTimer = 0;
+function dirtGY() { return CONFIG.GROUND_Y - 14; } // where the wheels rest
+
+function startDirtbike() {
+  dirtBike = { x: 100, y: dirtGY(), vx: 0, vy: 0, angle: 0, onGround: true };
+  dirtRamps = [];
+  let x = 500;
+  for (let i = 0; x < CONFIG.WORLD_WIDTH - 300; i++) {
+    const t = DIRT_RAMPS[i % DIRT_RAMPS.length];
+    dirtRamps.push({ x: x, h: t.h, power: t.power, style: t.style, w: 44 + t.h * 0.8 });
+    x += 620 + (i % 3) * 180;
+  }
+  dirtMsg = ''; dirtMsgTimer = 0;
+}
+function dirtCrash() {
+  bigExplosion(dirtBike.x, dirtBike.y);
+  dirtMsg = 'CRASHED -- landed upside down!'; dirtMsgTimer = 120;
+  // reset the bike where it is, back upright and stopped
+  dirtBike.vx = 0; dirtBike.vy = 0; dirtBike.angle = 0; dirtBike.y = dirtGY(); dirtBike.onGround = true;
+}
+function dirtUpdate() {
+  const b = dirtBike, gy = dirtGY();
+  if (dirtMsgTimer > 0) dirtMsgTimer -= 1; else dirtMsg = '';
+
+  if (b.onGround) {
+    if (Input.up) b.vx += 0.25;       // gas
+    if (Input.down) b.vx -= 0.22;     // brake
+    b.vx *= 0.992; b.vx = Math.max(0, Math.min(15, b.vx));
+    b.angle *= 0.7; if (Math.abs(b.angle) < 0.02) b.angle = 0;  // level out
+    b.y = gy; b.vy = 0;
+    b.x = wrapX(b.x + b.vx);
+    for (const r of dirtRamps) {       // hit a ramp -> launch into the air
+      if (Math.abs(wrapDX(r.x - b.x)) < r.w * 0.5 && b.vx > 2.5) {
+        b.vy = -r.power * (0.6 + b.vx / 15);
+        b.onGround = false;
+        b.angle = -0.5;                // pops nose-up off the ramp
+        break;
+      }
+    }
+  } else {
+    b.vy += 0.45;                      // gravity
+    if (Input.left) b.angle -= 0.06;   // backflip
+    if (Input.right) b.angle += 0.06;  // frontflip
+    if (Input.up) b.vx += 0.05;        // a little air control
+    b.x = wrapX(b.x + b.vx);
+    b.y += b.vy;
+    if (b.y >= gy) {                   // landing!
+      b.y = gy;
+      const a = Math.atan2(Math.sin(b.angle), Math.cos(b.angle)); // -PI..PI
+      if (Math.abs(a) < 1.2) { b.onGround = true; b.angle = 0; b.vy = 0; } // upright = safe
+      else dirtCrash();                // upside down = crash
+    }
+  }
+
+  const targetX = b.x - CONFIG.GAME_W * 0.35;
+  camera.x += wrapDX(targetX - camera.x) * 0.1;
+  const targetY = Math.min(CONFIG.GROUND_Y - CONFIG.GAME_H + 200, b.y - CONFIG.GAME_H * 0.62);
+  camera.y += (targetY - camera.y) * 0.12;
+}
+
+function dirtDraw() {
+  const W = CONFIG.GAME_W, H = CONFIG.GAME_H;
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#6fb7e8'); sky.addColorStop(1, '#cfe9f7');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+  const by = CONFIG.GROUND_Y - camera.y;
+  ctx.fillStyle = '#8a5a32'; ctx.fillRect(0, by, W, H - by);   // dirt
+  ctx.fillStyle = '#6e4524'; ctx.fillRect(0, by, W, 4);
+  for (const r of dirtRamps) drawRamp(r);
+  drawBike(dirtBike);
+  ctx.fillStyle = '#ffffff'; ctx.font = '18px monospace'; ctx.textAlign = 'center';
+  ctx.fillText('DIRTBIKE!  Up = gas, Left/Right = flip in the air -- don\'t land upside down!', W / 2, 108);
+  ctx.fillText('Speed ' + dirtBike.vx.toFixed(1), W / 2, 130);
+  if (dirtMsgTimer > 0) { ctx.fillStyle = '#ff5a4a'; ctx.font = '24px monospace'; ctx.fillText(dirtMsg, W / 2, 168); }
+  ctx.textAlign = 'left';
+}
+function drawRamp(r) {
+  const sx = worldToScreenX(r.x), by = CONFIG.GROUND_Y - camera.y;
+  if (sx < -120 || sx > CONFIG.GAME_W + 120) return;
+  const w = r.w, h = r.h;
+  ctx.fillStyle = '#7a5230';
+  ctx.beginPath();
+  if (r.style === 2) {               // tabletop
+    ctx.moveTo(sx - w / 2, by); ctx.lineTo(sx - w / 4, by - h);
+    ctx.lineTo(sx + w / 4, by - h); ctx.lineTo(sx + w / 2, by);
+  } else if (r.style === 1) {        // curved kicker
+    ctx.moveTo(sx - w / 2, by); ctx.quadraticCurveTo(sx + w / 2, by, sx + w / 2, by - h);
+    ctx.lineTo(sx + w / 2, by);
+  } else {                           // triangle
+    ctx.moveTo(sx - w / 2, by); ctx.lineTo(sx + w / 2, by - h); ctx.lineTo(sx + w / 2, by);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#5a3b22'; ctx.fillRect(sx - w / 2, by - 2, w, 3);
+}
+function drawBike(b) {
+  const sx = worldToScreenX(b.x), sy = b.y - camera.y;
+  ctx.save(); ctx.translate(sx, sy); ctx.rotate(b.angle);
+  ctx.fillStyle = '#111111';
+  ctx.beginPath(); ctx.arc(-12, 6, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(12, 6, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#666666';
+  ctx.beginPath(); ctx.arc(-12, 6, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(12, 6, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#e0413a'; ctx.fillRect(-12, 0, 24, 5);        // frame
+  ctx.fillRect(9, -7, 4, 9);                                     // handlebars
+  ctx.fillStyle = '#2c4a7a'; ctx.fillRect(-5, -12, 9, 11);       // rider body
+  ctx.fillStyle = '#dfe6ee'; ctx.beginPath(); ctx.arc(2, -15, 4, 0, Math.PI * 2); ctx.fill(); // helmet
+  ctx.restore();
 }
 
 // =========================================================================
