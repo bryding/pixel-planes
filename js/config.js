@@ -63,7 +63,8 @@ const CONFIG = {
   CEILING: -2200,      // the very top of the sky -- you can't fly past this.
 
   // --- Alien Invasion (tag) mode ---
-  UFO_SPEED: 8,        // how fast a UFO flies (it floats freely, no gravity).
+  UFO_SPEED: 11,       // how fast a UFO flies (1 faster than a plane's top
+                       // speed of MAX_SPEED=10, so it can always catch runners).
   UFO_TAG_RANGE: 30,   // how close a UFO must get to TAG a runner.
 
   STALL_ALT: -700,     // above this height the air thins out and lift fades.
