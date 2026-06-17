@@ -71,6 +71,30 @@ for (let i = 0; i < CONFIG.ENEMY_COUNT; i++) {
 // One list with EVERY plane in it (player first, then bots).
 const planes = [player, ...enemies];
 
+// Next unique team number for any bots added with the on-screen buttons.
+let nextTeam = CONFIG.ENEMY_COUNT + 1;
+
+// Button 1: add another fighting bot near the action.
+function addBot() {
+  const i = nextTeam;
+  const focus = (playerState === 'chute' && pilot) ? pilot : player;
+  const ex = wrapX(focus.x + (Math.random() < 0.5 ? -1 : 1) * (450 + Math.random() * 400));
+  const ey = 50 + Math.random() * 180;
+  const e = new Enemy(ex, ey, nextTeam, BOT_COLORS[i % BOT_COLORS.length],
+                      makeBotStyle(i), BOT_NAMES[i % BOT_NAMES.length]);
+  nextTeam += 1;
+  enemies.push(e);
+  planes.push(e);
+}
+
+// Button 2: remove one fighting bot.
+function removeBot() {
+  if (!enemies.length) return;
+  const e = enemies.pop();
+  const idx = planes.indexOf(e);
+  if (idx >= 0) planes.splice(idx, 1);
+}
+
 // Your points. They grow when you shoot bots down. They RESET if you die,
 // but you keep them if you eject and parachute safely to the barn.
 let score = 0;

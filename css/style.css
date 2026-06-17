@@ -19,3 +19,28 @@ html, body {
   background: #87ceeb; /* sky blue, shows before the first frame draws */
   /* The size on screen is set by JavaScript so it always fits the window. */
 }
+
+/* The Add/Remove Plane buttons, floating at the very top-middle. */
+#botButtons {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  gap: 10px;
+}
+#botButtons button {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: bold;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid #ffffff;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+#botButtons button:hover {
+  background: rgba(40, 80, 120, 0.85);
+}

@@ -50,61 +50,51 @@ function buildPlaneSprite(pal, whiteout) {
   }
 
   // --- Tail at the back (left): fin/rudder + horizontal stabilizer ---
-  px(5, 8, 3, 7, body);     // vertical fin
-  px(5, 8, 1, 7, dk);
-  px(6, 9, 2, 1, lt);
-  px(3, 14, 9, 2, body);    // horizontal tailplane
-  px(3, 14, 9, 1, lt);
-  px(11, 14, 1, 2, dk);
+  px(5, 9, 3, 6, body);      // vertical fin
+  px(5, 9, 1, 6, dk);
+  px(6, 10, 2, 1, lt);
+  px(3, 15, 9, 2, body);     // horizontal tailplane
+  px(3, 15, 9, 1, lt);
+  px(11, 15, 1, 2, dk);
 
-  // --- Lower wing ---
-  px(9, 23, 30, 2, body);
-  px(9, 23, 30, 1, lt);
-  px(9, 24, 30, 1, dk);
+  // --- The ONE wing (monoplane): a tapered airfoil under the fuselage ---
+  px(14, 20, 24, 3, body);
+  px(14, 20, 24, 1, lt);     // sunlit top of the wing
+  px(14, 22, 24, 1, dk);     // shaded underside
+  px(33, 19, 5, 1, lt);      // a little leading-edge sweep at the root
+  px(14, 20, 1, 1, dk); px(37, 20, 1, 1, dk); // softened tips
 
-  // --- Interplane struts (vertical) + cabane struts (the "N" to the body) ---
-  px(15, 6, 1, 18, strut);
-  px(34, 6, 1, 18, strut);
-  line(22, 13, 20, 6, strut);
-  line(27, 13, 29, 6, strut);
+  // --- Fuselage (streamlined, tapering to the tail) ---
+  px(6, 15, 4, 4, body);     // tail boom
+  px(9, 13, 31, 7, body);
+  px(9, 13, 31, 1, lt);      // top highlight
+  px(9, 19, 31, 1, dk);      // belly shadow
 
-  // --- Upper wing (staggered slightly forward, long) ---
-  px(8, 5, 35, 2, body);
-  px(8, 5, 35, 1, lt);
-  px(8, 6, 35, 1, dk);
-  px(8, 5, 1, 1, dk); px(42, 5, 1, 1, dk); // softened tips
+  // --- Engine cowling + spinner at the nose ---
+  px(40, 12, 4, 7, cowl);
+  px(40, 12, 4, 1, cowlLt);
+  px(40, 18, 4, 1, cowlDk);
+  px(44, 13, 1, 5, cowl);    // rounded front
+  px(45, 14, 2, 3, hub);     // spinner hub
 
-  // --- Fuselage (tapering toward the tail) ---
-  px(6, 14, 4, 4, body);    // tail boom
-  px(9, 12, 30, 7, body);
-  px(9, 12, 30, 1, lt);     // top highlight
-  px(9, 18, 30, 1, dk);     // belly shadow
+  // --- Bubble canopy + pilot head ---
+  px(24, 10, 8, 3, dk);          // canopy frame
+  px(25, 10, 6, 2, '#9fd8ff');   // glass
+  px(26, 11, 3, 2, '#f1c27d');   // pilot head
 
-  // --- Rounded engine cowling + spinner at the nose ---
-  px(39, 11, 4, 8, cowl);
-  px(39, 11, 4, 1, cowlLt);
-  px(39, 18, 4, 1, cowlDk);
-  px(43, 12, 1, 6, cowl);   // rounded front
-  px(44, 14, 2, 3, hub);    // spinner hub
+  // --- Roundel marking on the fuselage ---
+  px(17, 14, 4, 3, round1);
+  px(18, 15, 2, 1, round2);
 
-  // --- Cockpit opening + pilot head ---
-  px(25, 11, 5, 2, '#20303a');
-  px(26, 10, 3, 2, '#f1c27d');
-  px(26, 10, 3, 1, '#3a2a1a');
-
-  // --- Roundel marking on the upper wing ---
-  px(22, 5, 4, 2, round1);
-  px(23, 5, 2, 1, round2);
-
-  // --- Main landing gear: V-struts down to a wheel ---
-  line(21, 19, 19, 28, strut);
-  line(27, 19, 25, 28, strut);
-  px(17, 27, 8, 3, wheel);  // tire
-  px(19, 28, 4, 1, wheelHb);
+  // --- Main landing gear: strut + wheel under the wing ---
+  line(23, 22, 22, 28, strut);
+  line(27, 22, 26, 28, strut);
+  px(21, 27, 8, 3, wheel);   // tire
+  px(23, 28, 4, 1, wheelHb);
 
   // --- Small tailwheel under the tail ---
-  px(6, 18, 1, 3, strut);
-  px(5, 21, 3, 2, wheel);
+  px(6, 19, 1, 3, strut);
+  px(5, 22, 3, 2, wheel);
 
   return { canvas: cvs, cx: cx, cy: cy };
 }
