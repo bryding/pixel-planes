@@ -58,6 +58,15 @@ function applyFlightPhysics(o, push, liftScale) {
   // Gravity always pulls down.
   o.vy += CONFIG.GRAVITY;
 
+  // Bad Weather: a strong wind blows to the RIGHT. Flying right is much faster
+  // (tailwind); flying left fights the wind.
+  let maxSp = CONFIG.MAX_SPEED;
+  const bw = (typeof mode !== 'undefined' && mode === 'badweather');
+  if (bw) {
+    o.vx += CONFIG.BW_WIND;
+    if (Math.cos(o.angle) > 0) maxSp = CONFIG.MAX_SPEED * CONFIG.BW_TAILWIND_MULT;
+  }
+
   let speed = Math.hypot(o.vx, o.vy);
 
   if (speed > 0.0001) {
@@ -80,7 +89,13 @@ function applyFlightPhysics(o, push, liftScale) {
     // (you can fly slow), but higher when climbing straight up (a vertical
     // climb needs lots of speed). "up" is 0 level/diving, 1 straight up.
     const up = Math.max(0, -Math.sin(o.angle));
-    const effStall = CONFIG.STALL_SPEED + up * (CONFIG.STALL_SPEED_UP - CONFIG.STALL_SPEED);
+    let effStall = CONFIG.STALL_SPEED + up * (CONFIG.STALL_SPEED_UP - CONFIG.STALL_SPEED);
+    if (bw) {
+      // Wind asymmetry: flying LEFT you never stall; flying RIGHT you stall
+      // unless you keep more than half throttle on.
+      if (Math.cos(o.angle) <= 0) effStall = 0;
+      else if (liftScale < 0.5) effStall = 9999;
+    }
     const stallFade = Math.max(0, Math.min(1, (speed - effStall) / 1.2));
     const lift = CONFIG.LIFT * speed * cl * density * stallFade * liftScale;
     const liftDir = vdir - Math.PI / 2;            // 90 deg off the airflow
@@ -111,10 +126,10 @@ function applyFlightPhysics(o, push, liftScale) {
     o.stalling = true;
   }
 
-  // Don't go faster than the top speed.
+  // Don't go faster than the top speed (boosted when flying right in a tailwind).
   speed = Math.hypot(o.vx, o.vy);
-  if (speed > CONFIG.MAX_SPEED) {
-    o.vx = (o.vx / speed) * CONFIG.MAX_SPEED;
-    o.vy = (o.vy / speed) * CONFIG.MAX_SPEED;
+  if (speed > maxSp) {
+    o.vx = (o.vx / speed) * maxSp;
+    o.vy = (o.vy / speed) * maxSp;
   }
 }

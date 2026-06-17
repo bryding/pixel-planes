@@ -130,6 +130,38 @@ function toggleModeMenu() {
   m.style.display = (m.style.display === 'none' || !m.style.display) ? 'flex' : 'none';
 }
 
+// ---- Bad Weather lightning ----
+const lightnings = [];        // active lightning bolts (just for drawing)
+let lightningTimer = CONFIG.BW_LIGHTNING_INTERVAL;
+let lightningFlash = 0;
+
+// Strike a random plane with lightning. You're more likely to be hit the
+// HIGHER you are -- except at the very top of the sky, where you're safe.
+function lightningStrike() {
+  const safeTop = CONFIG.CEILING + 160; // above this height = safe from lightning
+  const cands = [];
+  if (playerState === 'flying' && player.y > safeTop) cands.push(player);
+  for (const e of enemies) if (e.alive && e.y > safeTop) cands.push(e);
+  if (!cands.length) return;
+
+  let total = 0;
+  const weights = cands.map(p => { const w = Math.max(20, CONFIG.GROUND_Y - p.y); total += w; return w; });
+  let r = Math.random() * total, pick = cands[cands.length - 1];
+  for (let i = 0; i < cands.length; i++) { r -= weights[i]; if (r <= 0) { pick = cands[i]; break; } }
+
+  lightnings.push({ x: pick.x, y: pick.y, life: 14 });
+  lightningFlash = 8;
+  bigExplosion(pick.x, pick.y);
+  if (pick === player) {
+    pushKill('⚡ YOU were struck by lightning', '#ffe066');
+    playerDies(player.x, player.y, 'STRUCK BY LIGHTNING!');
+  } else {
+    pushKill('⚡ ' + pick.name + ' struck by lightning', '#ffe066');
+    pick.alive = false;
+    pick.respawnTimer = CONFIG.ENEMY_RESPAWN;
+  }
+}
+
 // ---- Modifier / cheat menu state & actions ----
 let timeScale = 1;          // game-speed multiplier (0.5 = slow, 2 = fast)
 let infiniteHealth = false;
@@ -262,6 +294,15 @@ function bigExplosion(x, y) {
 
 // Press C to bail out: the plane is lost and the pilot floats down.
 function eject() {
+  // In Bad Weather, bailing out gets you struck by lightning instantly!
+  if (mode === 'badweather') {
+    lightnings.push({ x: player.x, y: player.y, life: 14 });
+    lightningFlash = 8;
+    bigExplosion(player.x, player.y);
+    pushKill('⚡ YOU ejected into the storm', '#ffe066');
+    playerDies(player.x, player.y, 'STRUCK BY LIGHTNING!');
+    return;
+  }
   explosions.push(new Explosion(player.x, player.y, '#bbbbbb'));
   explosions.push(new Explosion(player.x, player.y, '#ff5a4a'));
   pilot = new Pilot(player.x, player.y);
@@ -362,9 +403,14 @@ function update() {
     player.throttle = 1;
     player.angle = -0.3;            // hold ~17 degrees nose-up for the climb-out
     player.update();
-    if (frameCount % 6 === 0) {
-      explosions.push(new Explosion(player.x - Math.cos(player.angle) * 10,
-                                    CONFIG.GROUND_Y - 2, '#cbb58a')); // dust trail
+    if (frameCount % 5 === 0) {
+      const sxw = player.x - Math.cos(player.angle) * 10, syw = CONFIG.GROUND_Y - 2;
+      if (mode === 'badweather') {
+        explosions.push(new Explosion(sxw, syw, '#6b8fb0')); // water spray
+        explosions.push(new Explosion(sxw, syw, '#4a3a22')); // mud spray
+      } else {
+        explosions.push(new Explosion(sxw, syw, '#cbb58a')); // dust
+      }
     }
     if (player.y <= CONFIG.GROUND_Y - 55) playerState = 'flying'; // airborne!
   } else if (playerState === 'flying') {
@@ -468,6 +514,17 @@ function update() {
     }
   }
 
+  // --- Bad Weather lightning: strike someone every few seconds ---
+  if (mode === 'badweather') {
+    lightningTimer -= 1;
+    if (lightningTimer <= 0) { lightningStrike(); lightningTimer = CONFIG.BW_LIGHTNING_INTERVAL; }
+  }
+  for (let i = lightnings.length - 1; i >= 0; i--) {
+    lightnings[i].life -= 1;
+    if (lightnings[i].life <= 0) lightnings.splice(i, 1);
+  }
+  if (lightningFlash > 0) lightningFlash -= 1;
+
   // --- Bot parachutes drifting down (cosmetic) ---
   for (const c of botChutes) {
     c.vy = Math.min(0.9, c.vy + 0.02);
@@ -525,9 +582,11 @@ function draw() {
 
   const uni = (mode === 'unicorn');
 
-  // --- Sky (a gradient; pastel candy colors in Unicorn Mode) ---
+  // --- Sky (pastel candy in Unicorn Mode, dark & stormy in Bad Weather) ---
+  const storm = (mode === 'badweather');
   const sky = ctx.createLinearGradient(0, 0, 0, CONFIG.GAME_H);
   if (uni) { sky.addColorStop(0, '#bfe3ff'); sky.addColorStop(1, '#ffe1f3'); }
+  else if (storm) { sky.addColorStop(0, '#262d3a'); sky.addColorStop(1, '#3c4452'); }
   else { sky.addColorStop(0, C.skyTop); sky.addColorStop(1, C.skyBottom); }
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
@@ -550,25 +609,27 @@ function draw() {
     ctx.globalAlpha = 1;
   }
 
-  // --- Soft vintage sun with a warm glow ---
-  const sunX = CONFIG.GAME_W * 0.80, sunY = CONFIG.GAME_H * 0.20;
-  const glow = ctx.createRadialGradient(sunX, sunY, 8, sunX, sunY, 240);
-  glow.addColorStop(0, 'rgba(255,246,214,0.95)');
-  glow.addColorStop(0.25, 'rgba(255,236,178,0.45)');
-  glow.addColorStop(1, 'rgba(255,236,178,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(sunX - 240, sunY - 240, 480, 480);
-  ctx.fillStyle = '#fff4d6';
-  ctx.beginPath(); ctx.arc(sunX, sunY, 28, 0, Math.PI * 2); ctx.fill();
+  // --- Soft vintage sun with a warm glow (hidden during the storm) ---
+  if (!storm) {
+    const sunX = CONFIG.GAME_W * 0.80, sunY = CONFIG.GAME_H * 0.20;
+    const glow = ctx.createRadialGradient(sunX, sunY, 8, sunX, sunY, 240);
+    glow.addColorStop(0, 'rgba(255,246,214,0.95)');
+    glow.addColorStop(0.25, 'rgba(255,236,178,0.45)');
+    glow.addColorStop(1, 'rgba(255,236,178,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(sunX - 240, sunY - 240, 480, 480);
+    ctx.fillStyle = '#fff4d6';
+    ctx.beginPath(); ctx.arc(sunX, sunY, 28, 0, Math.PI * 2); ctx.fill();
+  }
 
   // --- Clouds, far hills, and the treeline on the horizon ---
   drawBackgroundScenery(ctx, camera);
 
-  // --- Ground (candy pink in Unicorn Mode) ---
+  // --- Ground (candy pink in Unicorn, muddy brown in Bad Weather) ---
   const groundScreenY = CONFIG.GROUND_Y - camera.y;
-  ctx.fillStyle = uni ? '#f7a8d8' : C.ground;
+  ctx.fillStyle = uni ? '#f7a8d8' : (storm ? '#5a4632' : C.ground);
   ctx.fillRect(0, groundScreenY, CONFIG.GAME_W, CONFIG.GAME_H);
-  ctx.fillStyle = uni ? '#e87bbf' : C.groundDark;
+  ctx.fillStyle = uni ? '#e87bbf' : (storm ? '#43341f' : C.groundDark);
   ctx.fillRect(0, groundScreenY, CONFIG.GAME_W, 4);
 
   // Some ground stripes that scroll by so you can feel the speed.
@@ -626,6 +687,9 @@ function draw() {
   ctx.fillStyle = vg;
   ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
 
+  // --- Bad Weather: rain, storm darkening, and lightning over the world ---
+  if (mode === 'badweather') drawBadWeather();
+
   // --- HUD (the info text on top) ---
   drawHud();
   drawLeaderboard();
@@ -669,6 +733,42 @@ function applyPowerUp(type) {
     player.flash = 8;
     pushKill('☠️ BAD bubble! frozen + half health', '#ff8a65');
     explosions.push(new Explosion(player.x, player.y, '#c0392b'));
+  }
+}
+
+// Bad Weather overlay: storm darkening, heavy slanted rain, lightning + flash.
+function drawBadWeather() {
+  ctx.fillStyle = 'rgba(18,22,36,0.42)';     // gloom
+  ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
+
+  // Heavy rain: lots of slanted streaks, animated by the frame counter.
+  ctx.strokeStyle = 'rgba(190,205,235,0.5)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < 320; i++) {
+    const x = ((i * 137 + frameCount * 16) % (CONFIG.GAME_W + 60)) - 30;
+    const y = ((i * 83 + frameCount * 26) % (CONFIG.GAME_H + 60)) - 30;
+    ctx.moveTo(x, y); ctx.lineTo(x - 6, y + 16);
+  }
+  ctx.stroke();
+
+  // Lightning bolts (jagged white line from the sky down to the victim).
+  for (const b of lightnings) {
+    const sx = worldToScreenX(b.x), sy = b.y - camera.y;
+    ctx.strokeStyle = '#fdfdc0';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    let x = sx, y = 0;
+    ctx.moveTo(x, y);
+    while (y < sy) { y += 34; x += (Math.random() - 0.5) * 44; ctx.lineTo(x, y); }
+    ctx.lineTo(sx, sy);
+    ctx.stroke();
+  }
+
+  // Whole-screen flash right after a strike.
+  if (lightningFlash > 0) {
+    ctx.fillStyle = 'rgba(255,255,255,' + (lightningFlash / 8 * 0.5) + ')';
+    ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
   }
 }
 

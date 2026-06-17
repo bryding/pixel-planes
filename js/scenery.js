@@ -28,7 +28,8 @@ function blob(ctx, x, y, r) {
 // One puffy cartoon cloud built from several white blobs.
 function drawCloud(ctx, x, y, s, seed) {
   const uni = (typeof mode !== 'undefined' && mode === 'unicorn');
-  ctx.fillStyle = uni ? '#ffd1ec' : '#f9f2e2'; // cotton candy / cream
+  const storm = (typeof mode !== 'undefined' && mode === 'badweather');
+  ctx.fillStyle = uni ? '#ffd1ec' : (storm ? '#4a4f5e' : '#f9f2e2'); // dark / candy / cream
   const lobes = 3 + Math.floor(sceneRand(seed * 3.1) * 3); // 3..5 puffs in a row
   for (let k = 0; k < lobes; k++) {
     const lx = x + (k - (lobes - 1) / 2) * (16 * s);
@@ -37,7 +38,7 @@ function drawCloud(ctx, x, y, s, seed) {
   }
   blob(ctx, x - 8 * s, y - 10 * s, 11 * s); // a couple of higher puffs
   blob(ctx, x + 9 * s, y - 8 * s, 10 * s);
-  ctx.fillStyle = uni ? '#f7b8de' : '#e7d9bd'; // soft bottom shadow
+  ctx.fillStyle = uni ? '#f7b8de' : (storm ? '#3a3f4c' : '#e7d9bd'); // bottom shadow
   ctx.fillRect(x - 22 * s, y + 7 * s, 44 * s, 4 * s);
 }
 
@@ -156,7 +157,8 @@ const SCENERY = (function () {
 // Draw all the ground scenery for whatever part of the world is on screen.
 function drawGroundScenery(ctx) {
   const by = CONFIG.GROUND_Y - camera.y;
-  drawGrassDetail(ctx, by); // lush grass tufts + little wildflowers first
+  if (typeof mode !== 'undefined' && mode === 'badweather') drawPuddles(ctx, by);
+  else drawGrassDetail(ctx, by); // lush grass tufts + little wildflowers
   for (const item of SCENERY) {
     const sx = worldToScreenX(item.x);
     if (sx < -80 || sx > CONFIG.GAME_W + 80) continue; // off screen, skip
@@ -170,6 +172,22 @@ function drawGroundScenery(ctx) {
   // The big rescue barn in the middle.
   const bx = worldToScreenX(BARN_X);
   if (bx > -160 && bx < CONFIG.GAME_W + 160) drawBigBarn(ctx, bx, by);
+}
+
+// Muddy water puddles scattered along the ground (Bad Weather).
+function drawPuddles(ctx, by) {
+  const step = 140;
+  const start = Math.floor(camera.x / step) - 1;
+  const end = Math.ceil((camera.x + CONFIG.GAME_W) / step) + 1;
+  for (let i = start; i <= end; i++) {
+    if (sceneRand(i * 4.4) < 0.5) continue; // not in every slot
+    const sx = worldToScreenX(i * step + (sceneRand(i * 2.2) - 0.5) * 80);
+    const w = 24 + sceneRand(i * 3) * 34;
+    ctx.fillStyle = 'rgba(60,90,120,0.7)';
+    ctx.beginPath(); ctx.ellipse(sx, by + 6, w / 2, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(160,190,220,0.5)';
+    ctx.fillRect(sx - w / 5, by + 4, w / 4, 1); // a glint
+  }
 }
 
 // A carpet of little grass blades and wildflowers across the visible ground.

@@ -129,6 +129,11 @@ const CONFIG = {
   WIDE_SHOT_SPREAD: 0.14,  // angle between the 5 wide-shot bullets
   FREEZE_TIME: 300,        // skull: frozen (no control) for 5 seconds
 
+  // ---- Bad Weather Mode ----
+  BW_WIND: 0.05,            // wind blows right: faster flying right, slower left
+  BW_TAILWIND_MULT: 1.9,    // top-speed multiplier when you're flying right
+  BW_LIGHTNING_INTERVAL: 300, // frames between lightning strikes (~5 seconds)
+
   // ---- Off-screen enemy arrows (point toward enemies you can't see) ----
   SHOW_ENEMY_ARROWS: true, // turn the edge arrows on or off
   ARROW_MARGIN: 12,        // how far the arrows sit in from the screen edge

@@ -209,5 +209,13 @@ function drawPlaneSprite(ctx, set, x, y, angle, spin, flashing) {
   ctx.fillStyle = flashing ? '#ffffff' : '#1a1a1a';
   ctx.fillRect(21, -blade, 2, blade * 2);
 
+  // Bad Weather: mud spots and water droplets on the plane.
+  if (typeof mode !== 'undefined' && mode === 'badweather') {
+    ctx.fillStyle = '#4a3a22';
+    ctx.fillRect(-5, 1, 3, 2); ctx.fillRect(7, -2, 2, 2); ctx.fillRect(0, 2, 2, 2);
+    ctx.fillStyle = 'rgba(180,205,235,0.85)';
+    ctx.fillRect(-2, -3, 1, 2); ctx.fillRect(10, 0, 1, 2); ctx.fillRect(-9, 0, 1, 2);
+  }
+
   ctx.restore();
 }
