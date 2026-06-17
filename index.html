@@ -16,11 +16,17 @@
     <div id="modMenu" style="display:none">
       <button onclick="addBot(); this.blur();">+ Add Plane</button>
       <button onclick="removeBot(); this.blur();">- Remove Plane</button>
+      <button onclick="addManyBots(50); this.blur();">+ Add 50 Planes</button>
+      <button onclick="removeAllBots(); this.blur();">Remove ALL Planes</button>
       <button onclick="setHalfSpeed(this); this.blur();">0.5x Speed</button>
       <button onclick="setDoubleSpeed(this); this.blur();">2x Speed</button>
-      <button onclick="giveShield(); this.blur();">Add Shield Power</button>
-      <button onclick="giveBullet(); this.blur();">Add Bullet Power</button>
-      <button onclick="giveFreeze(); this.blur();">Add Freeze Power</button>
+      <button onclick="spawnShieldBubble(); this.blur();">Spawn Shield Bubble</button>
+      <button onclick="spawnBulletBubble(); this.blur();">Spawn Bullet Bubble</button>
+      <button onclick="spawnFreezeBubble(); this.blur();">Spawn Freeze Bubble</button>
+      <button onclick="giveShield(); this.blur();">Give Me Shield</button>
+      <button onclick="giveBullet(); this.blur();">Give Me Bullet Power</button>
+      <button onclick="giveFreeze(); this.blur();">Give Me Freeze</button>
+      <button onclick="giveAllBotsPower(); this.blur();">Give Bots All Powers</button>
       <button onclick="this.textContent='∞ Health: '+(toggleInfHealth()?'ON':'OFF'); this.blur();">∞ Health: OFF</button>
       <button onclick="this.textContent='∞ Missiles: '+(toggleInfMissiles()?'ON':'OFF'); this.blur();">∞ Missiles: OFF</button>
     </div>

@@ -95,6 +95,17 @@ function removeBot() {
   if (idx >= 0) planes.splice(idx, 1);
 }
 
+// Add a whole swarm of bots at once.
+function addManyBots(n) {
+  for (let i = 0; i < n; i++) addBot();
+}
+
+// Remove every bot (leaving just the player).
+function removeAllBots() {
+  enemies.length = 0;
+  planes.length = 1; // planes[0] is the player; drop the rest
+}
+
 // ---- Modifier / cheat menu state & actions ----
 let timeScale = 1;          // game-speed multiplier (0.5 = slow, 2 = fast)
 let infiniteHealth = false;
@@ -105,16 +116,36 @@ function toggleModMenu() {
   m.style.display = (m.style.display === 'none' || !m.style.display) ? 'flex' : 'none';
 }
 function setHalfSpeed(btn) {
-  timeScale = (timeScale === 0.5) ? 1 : 0.5;
-  btn.textContent = (timeScale === 0.5) ? '0.5x Speed (ON)' : '0.5x Speed';
+  timeScale = Math.max(0.125, timeScale * 0.5);   // stacks: 1 -> .5 -> .25 ...
+  btn.textContent = '0.5x Speed (now ' + timeScale + 'x)';
 }
 function setDoubleSpeed(btn) {
-  timeScale = (timeScale === 2) ? 1 : 2;
-  btn.textContent = (timeScale === 2) ? '2x Speed (ON)' : '2x Speed';
+  timeScale = Math.min(16, timeScale * 2);        // stacks: 1 -> 2 -> 4 ...
+  btn.textContent = '2x Speed (now ' + timeScale + 'x)';
 }
-function giveShield()  { player.invincibleTimer = CONFIG.SHIELD_TIME; }
-function giveBullet()  { player.wideTimer = CONFIG.WIDE_SHOT_TIME; }
-function giveFreeze()  { player.frozenTimer = CONFIG.FREEZE_TIME; }
+// Spawn a power-up BUBBLE of a chosen kind somewhere on the map.
+function spawnPowerUpAt(type) {
+  const px = Math.random() * CONFIG.WORLD_WIDTH;
+  const py = 70 + Math.random() * (CONFIG.GROUND_Y - 160);
+  powerups.push(new PowerUp(px, py, type));
+}
+function spawnShieldBubble() { spawnPowerUpAt('shield'); }
+function spawnBulletBubble() { spawnPowerUpAt('turret'); }
+function spawnFreezeBubble() { spawnPowerUpAt('skull'); }
+
+// Give the power straight to the player. Timers STACK (add up) if you press
+// the button again while it's still active.
+function giveShield()  { player.invincibleTimer += CONFIG.SHIELD_TIME; }
+function giveBullet()  { player.wideTimer += CONFIG.WIDE_SHOT_TIME; }
+function giveFreeze()  { player.frozenTimer += CONFIG.FREEZE_TIME; }
+
+// Give EVERY bot both good powers (shield + wide shot) at once.
+function giveAllBotsPower() {
+  for (const e of enemies) {
+    e.invincibleTimer += CONFIG.SHIELD_TIME;
+    e.wideTimer += CONFIG.WIDE_SHOT_TIME;
+  }
+}
 function toggleInfHealth()   { infiniteHealth = !infiniteHealth; return infiniteHealth; }
 function toggleInfMissiles() { infiniteMissiles = !infiniteMissiles; return infiniteMissiles; }
 
@@ -530,9 +561,9 @@ function spawnPowerUp() {
 
 // Give a bot the power-up it flew into.
 function applyPowerUpToBot(e, type) {
-  if (type === 'shield') e.invincibleTimer = CONFIG.SHIELD_TIME;
-  else if (type === 'turret') e.wideTimer = CONFIG.WIDE_SHOT_TIME;
-  else { e.frozenTimer = CONFIG.FREEZE_TIME; e.health = Math.max(1, Math.ceil(e.health / 2)); e.flash = 6; }
+  if (type === 'shield') e.invincibleTimer += CONFIG.SHIELD_TIME;
+  else if (type === 'turret') e.wideTimer += CONFIG.WIDE_SHOT_TIME;
+  else { e.frozenTimer += CONFIG.FREEZE_TIME; e.health = Math.max(1, Math.ceil(e.health / 2)); e.flash = 6; }
   const col = type === 'shield' ? '#5bc0ff' : type === 'turret' ? '#e0a93a' : '#c0392b';
   explosions.push(new Explosion(e.x, e.y, col));
 }
@@ -540,15 +571,15 @@ function applyPowerUpToBot(e, type) {
 // Apply a power-up's effect to the player when collected.
 function applyPowerUp(type) {
   if (type === 'shield') {
-    player.invincibleTimer = CONFIG.SHIELD_TIME;
+    player.invincibleTimer += CONFIG.SHIELD_TIME;
     pushKill('🛡️ YOU grabbed a SHIELD', '#5bc0ff');
     explosions.push(new Explosion(player.x, player.y, '#5bc0ff'));
   } else if (type === 'turret') {
-    player.wideTimer = CONFIG.WIDE_SHOT_TIME;
+    player.wideTimer += CONFIG.WIDE_SHOT_TIME;
     pushKill('🔫 YOU grabbed WIDE SHOT', '#e0a93a');
     explosions.push(new Explosion(player.x, player.y, '#e0a93a'));
   } else { // skull -- bad!
-    player.frozenTimer = CONFIG.FREEZE_TIME;
+    player.frozenTimer += CONFIG.FREEZE_TIME;
     player.health = Math.max(1, Math.ceil(player.health / 2)); // lose half health
     player.flash = 8;
     pushKill('☠️ BAD bubble! frozen + half health', '#ff8a65');

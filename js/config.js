@@ -38,7 +38,7 @@ const CONFIG = {
   WEATHERVANE: 0.03,   // How fast the nose swings to follow the airflow.
   DRAG_AOA: 0.02,      // Extra drag when the nose isn't lined up with travel.
 
-  THROTTLE_RATE: 0.03,    // How quickly the throttle drops when you ease off.
+  THROTTLE_RATE: 0.015,   // How quickly the throttle drops when you ease off.
   THROTTLE_UP_RATE: 0.005, // How quickly the throttle BUILDS up (slow, so it
                           // doesn't just race straight to full speed).
   START_THROTTLE: 0.6, // How much gas the plane starts with.
@@ -62,8 +62,8 @@ const CONFIG = {
   // stall too. Dive to get your speed (and control) back.
   CEILING: -2200,      // the very top of the sky -- you can't fly past this.
   STALL_ALT: -700,     // above this height the air thins out and lift fades.
-  STALL_SPEED: 2.5,    // stall when level (~1/4 of the throttle/speed bar).
-  STALL_SPEED_UP: 3.3, // stall when pointed up (~1/3 of the throttle/speed bar).
+  STALL_SPEED: 1.5,    // you stall at 1.5 no matter which way you're pointed.
+  STALL_SPEED_UP: 1.5, // same as STALL_SPEED -> stall speed is constant.
   STALL_DRAG: 0.05,    // small extra brake from a badly-stalled (sideways) wing.
   TURN_FULL_SPEED: 4,  // reference speed for control.
 

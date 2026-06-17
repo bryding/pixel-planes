@@ -34,9 +34,10 @@ html, body {
 }
 #modMenu {
   display: flex;
-  flex-direction: column;
+  flex-flow: column wrap;   /* fill a column, then start a new one */
+  max-height: 290px;        /* about 7 buttons tall before it wraps */
   gap: 5px;
-  align-items: stretch;
+  align-content: center;
 }
 #topBar button {
   font-family: monospace;
