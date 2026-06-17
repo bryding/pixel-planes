@@ -1,9 +1,11 @@
 // ===========================================================================
 //  PILOT  --  Press C once to EJECT: the pilot free-falls out of the plane.
-//  Press C AGAIN to pop the parachute (which slows you down). Steer left/right
-//  with the arrows; on the ground you can walk. Reach the big barn to get
-//  rescued and keep your points. (If you splat before opening the chute, you
-//  die.)
+//  After that, press C to TOGGLE the parachute: open it to drift down gently,
+//  press C again to close it and free-fall fast, press C to reopen it... as
+//  many times as you like. Steer left/right with the arrows; on the ground you
+//  can walk. Reach the big barn to get rescued and keep your points. (If you
+//  hit the ground while the chute is CLOSED, you splat and die -- so make sure
+//  it's open before you land!)
 // ===========================================================================
 
 class Pilot {
@@ -17,12 +19,11 @@ class Pilot {
     this.swing = 0;             // gentle parachute sway
   }
 
-  // Press C a second time to pop the parachute.
-  deploy() {
-    if (!this.chuteOpen && !this.landed) {
-      this.chuteOpen = true;
-      this.vy *= 0.3; // the chute jerks you to a gentle sink
-    }
+  // Press C (after ejecting) to TOGGLE the parachute open or closed.
+  toggleChute() {
+    if (this.landed) return;           // can't use the chute once you've landed
+    this.chuteOpen = !this.chuteOpen;
+    if (this.chuteOpen) this.vy *= 0.3; // opening jerks you to a gentle sink
   }
 
   update() {

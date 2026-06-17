@@ -479,7 +479,7 @@ function update() {
       if (ejectPressed && mode !== 'ww2') eject();
     }
   } else if (playerState === 'chute') {
-    if (ejectPressed) pilot.deploy(); // press C AGAIN to pop the parachute
+    if (ejectPressed) pilot.toggleChute(); // press C to open/close the parachute
     pilot.update();
     const inv = player.invincibleTimer > 0; // shield = can't die from anything
     // Reach the big barn (drifting OR walking) -> rescued, keep your points.
@@ -500,8 +500,13 @@ function update() {
     if (playerRespawn <= 0) spawnPlane(camera.x + CONFIG.GAME_W / 2);
   }
 
-  // Cheats from the modifier menu.
-  if (infiniteHealth) player.health = CONFIG.PLAYER_HEALTH;
+  // Cheats from the modifier menu. Infinite Health = TRULY unkillable: we keep
+  // health full AND keep the invincibility flag on, which already blocks bullets,
+  // missiles, crashes, lightning, pilot death -- and (in UFO Tag) being tagged.
+  if (infiniteHealth) {
+    player.health = CONFIG.PLAYER_HEALTH;
+    if (player.invincibleTimer < 2) player.invincibleTimer = 2;
+  }
   if (infiniteMissiles) { player.missiles = CONFIG.MISSILE_MAX; player.missileTimer = 0; }
 
   // --- The bots (each one thinks for itself; they can fire missiles too) ---
@@ -1248,6 +1253,7 @@ function alienTagStep() {
     if (!u.isUfo) continue;
     for (const r of all) {
       if (r.isUfo) continue;
+      if (r.invincibleTimer > 0) continue; // invincible (e.g. ∞ Health) = can't be tagged
       if (hits(u, r, CONFIG.UFO_TAG_RANGE)) { r.isUfo = true; explosions.push(new Explosion(r.x, r.y, '#7CFC00')); }
     }
   }
