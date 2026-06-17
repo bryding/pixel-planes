@@ -1184,14 +1184,12 @@ let alienWinner = null, alienWinTimer = 0;
 
 function startAlien() {
   spawnPlane(100);
-  // Everyone starts already flying in the air (it's an aerial game of tag).
-  player.y = CONFIG.GROUND_Y - 700;
-  player.vx = 2; player.vy = 0; player.angle = 0;
-  playerState = 'flying';
+  playerState = 'flying';                 // everyone starts already in the air
   const all = [player, ...enemies];
   all.forEach(p => { p.isUfo = false; });
   const alive = all.filter(p => p.alive !== false);
   alive[Math.floor(Math.random() * alive.length)].isUfo = true; // random first UFO
+  placeAlienRound();
   alienWinner = null; alienWinTimer = 0;
 }
 function newAlienRound() {
@@ -1199,7 +1197,34 @@ function newAlienRound() {
   all.forEach(p => { p.isUfo = false; });
   if (alienWinner) alienWinner.isUfo = true;                    // winner is "it"
   else all[Math.floor(Math.random() * all.length)].isUfo = true;
+  placeAlienRound();
   alienWinner = null;
+}
+
+// Set everyone's starting spot for a round so NOBODY gets tagged instantly:
+// the UFO teleports to the MIDDLE of the map, and the runners spread out across
+// the far half (around the world's edges), as far from the middle as possible.
+function placeAlienRound() {
+  const all = [player, ...enemies];
+  const ufo = all.find(p => p.isUfo);
+  if (ufo) {
+    ufo.x = BARN_X;                       // dead center of the world
+    ufo.y = CONFIG.GROUND_Y - 700;
+    ufo.vx = 0; ufo.vy = 0; ufo.angle = 0;
+  }
+  // Runners get spread evenly across the half of the world OPPOSITE the middle
+  // (centered on the wrap seam), so they all begin well away from the UFO.
+  const runners = all.filter(p => !p.isUfo);
+  const bandStart = BARN_X + CONFIG.WORLD_WIDTH * 0.25;
+  const bandWidth = CONFIG.WORLD_WIDTH * 0.5;
+  const n = runners.length;
+  runners.forEach((p, i) => {
+    const t = (n > 1) ? i / (n - 1) : 0.5;
+    p.x = wrapX(bandStart + t * bandWidth);
+    p.y = CONFIG.GROUND_Y - (520 + (i % 3) * 160); // a few staggered heights
+    p.vx = 2; p.vy = 0; p.angle = 0;
+    p.stalling = false; p.hitGround = false;
+  });
 }
 // Bot behaviour in tag mode. A UFO FLOATS freely (no gravity) straight toward
 // the nearest runner. A runner flies like a normal plane, steering away from
