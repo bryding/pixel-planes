@@ -70,6 +70,7 @@ class Enemy {
     this.team = team;          // every bot has a unique team number
     this.faction = 'green';    // WW2 Mode team ('green' / 'black'); set on entry
     this.isUfo = false;        // Alien Invasion (tag) mode: is this a UFO?
+    this.tagTarget = null;     // which runner this UFO is assigned to chase
     this.isPlayer = false;
     this.bodyColor = color;    // its color (used for bullets, arrows, sprite)
     this.style = style;        // its flying personality

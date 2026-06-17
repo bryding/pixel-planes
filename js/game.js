@@ -509,6 +509,9 @@ function update() {
   }
   if (infiniteMissiles) { player.missiles = CONFIG.MISSILE_MAX; player.missileTimer = 0; }
 
+  // Alien Invasion: spread the UFO bots across different runners first.
+  if (mode === 'alien') assignUfoTargets();
+
   // --- The bots (each one thinks for itself; they can fire missiles too) ---
   for (const enemy of enemies) {
     enemy.update(planes, bullets, missiles, powerups);
@@ -1019,10 +1022,13 @@ function drawOffscreenIndicators() {
     const iy = cy + dy * dist;
 
     // Draw a small triangle pointing toward the enemy, in its team color.
+    // In Alien Invasion the color shows who's "it": green = UFO, blue = runner.
+    let arrowColor = enemy.bodyColor;
+    if (mode === 'alien') arrowColor = enemy.isUfo ? '#2ecc40' : '#3b9bff';
     ctx.save();
     ctx.translate(ix, iy);
     ctx.rotate(angle);
-    ctx.fillStyle = enemy.bodyColor;
+    ctx.fillStyle = arrowColor;
     ctx.beginPath();
     ctx.moveTo(size, 0);       // the pointy tip (points at the enemy)
     ctx.lineTo(-size, -size);  // back corner
@@ -1226,8 +1232,32 @@ function placeAlienRound() {
     p.stalling = false; p.hitGround = false;
   });
 }
+// Spread the UFO bots out so they each chase a DIFFERENT runner instead of all
+// piling onto one. Each runner can only be chased by a fair share of UFOs; once
+// it's "full", extra UFOs go after the next-nearest free runner. Runs once per
+// frame (before the bots move). The player's UFO is steered by hand, so it's
+// left out of the assignment.
+function assignUfoTargets() {
+  const ufos = enemies.filter(e => e.alive && e.isUfo);
+  const runners = planes.filter(p => p.alive && !p.isUfo);
+  if (!runners.length) { ufos.forEach(u => u.tagTarget = null); return; }
+  const cap = Math.ceil(ufos.length / runners.length); // max UFOs per runner
+  const count = new Map(runners.map(r => [r, 0]));
+  for (const u of ufos) {
+    let best = null, bd = Infinity;
+    for (const r of runners) {
+      if (count.get(r) >= cap) continue;        // this runner already has enough chasers
+      const dx = wrapDX(r.x - u.x), dy = r.y - u.y, d = dx * dx + dy * dy;
+      if (d < bd) { bd = d; best = r; }
+    }
+    if (!best) best = runners[0];               // safety net (shouldn't happen)
+    u.tagTarget = best;
+    count.set(best, count.get(best) + 1);
+  }
+}
+
 // Bot behaviour in tag mode. A UFO FLOATS freely (no gravity) straight toward
-// the nearest runner. A runner flies like a normal plane, steering away from
+// its assigned runner. A runner flies like a normal plane, steering away from
 // the nearest UFO. Nobody shoots.
 function alienBotFly(b) {
   // Find the nearest plane of the OTHER type (runner if I'm a UFO, vice versa).
@@ -1240,9 +1270,11 @@ function alienBotFly(b) {
   }
 
   if (b.isUfo) {
-    // --- UFO: glide directly toward the nearest runner (free movement) ---
-    let dx = best ? wrapDX(best.x - b.x) : Math.cos(b.angle);
-    let dy = best ? (best.y - b.y) : 0;
+    // --- UFO: glide toward its ASSIGNED runner so the UFOs spread out and
+    // don't all pile on one target. Falls back to the nearest runner. ---
+    const target = (b.tagTarget && b.tagTarget.alive && !b.tagTarget.isUfo) ? b.tagTarget : best;
+    let dx = target ? wrapDX(target.x - b.x) : Math.cos(b.angle);
+    let dy = target ? (target.y - b.y) : 0;
     const len = Math.hypot(dx, dy) || 1;
     b.vx = (dx / len) * CONFIG.UFO_SPEED;
     b.vy = (dy / len) * CONFIG.UFO_SPEED;
