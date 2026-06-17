@@ -69,6 +69,8 @@ class Enemy {
 
     this.team = team;          // every bot has a unique team number
     this.faction = 'green';    // WW2 Mode team ('green' / 'black'); set on entry
+    this.isUfo = false;        // Alien Invasion (tag) mode: is this a UFO?
+    this.isPlayer = false;
     this.bodyColor = color;    // its color (used for bullets, arrows, sprite)
     this.style = style;        // its flying personality
     this.name = name;          // its goofy leaderboard name
@@ -99,6 +101,7 @@ class Enemy {
     }
 
     if (this.flash > 0) this.flash -= 1;
+    if (mode === 'alien') { alienBotFly(this); return; }  // tag mode: chase/flee, no shooting
     if (this.fireCooldown > 0) this.fireCooldown -= 1;
     if (this.missileCooldown > 0) this.missileCooldown -= 1;
     if (this.invincibleTimer > 0) this.invincibleTimer -= 1;
@@ -267,6 +270,18 @@ class Enemy {
   draw(ctx) {
     if (!this.alive) return;
     const sx = worldToScreenX(this.x), sy = this.y - camera.y;
+
+    // Alien Invasion: UFOs (the "it" bots) fly saucers instead of planes.
+    if (mode === 'alien' && this.isUfo) {
+      drawUfoCraft(ctx, sx, sy, this.propSpin, false);
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#7CFC00';
+      ctx.fillText(this.name + ' 👽', sx, sy - 22);
+      ctx.textAlign = 'left';
+      return;
+    }
+
     let set = this.sprite;
     if (mode === 'unicorn') set = this.uniSprite;
     else if (mode === 'ww2') set = WW2_SPRITES[this.faction];

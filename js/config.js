@@ -61,6 +61,11 @@ const CONFIG = {
   // engine weakens, so you STALL and sink back down. Fly too SLOW and you
   // stall too. Dive to get your speed (and control) back.
   CEILING: -2200,      // the very top of the sky -- you can't fly past this.
+
+  // --- Alien Invasion (tag) mode ---
+  UFO_SPEED: 8,        // how fast a UFO flies (it floats freely, no gravity).
+  UFO_TAG_RANGE: 30,   // how close a UFO must get to TAG a runner.
+
   STALL_ALT: -700,     // above this height the air thins out and lift fades.
   STALL_SPEED: 1.5,    // you stall at 1.5 no matter which way you're pointed.
   STALL_SPEED_UP: 1.5, // same as STALL_SPEED -> stall speed is constant.

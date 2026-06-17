@@ -416,7 +416,6 @@ function drawLeaderboard() {
 //  UPDATE  --  move everything (runs every frame)
 // =========================================================================
 function update() {
-  if (mode === 'alien') { alienUpdate(); return; }   // moon musical-chairs game
   // Work out "fresh press" of X (missile) and C (eject).
   const missilePressed = Input.missile && !missileWasDown;
   const ejectPressed = Input.eject && !ejectWasDown;
@@ -439,18 +438,40 @@ function update() {
       }
     }
     if (player.y <= CONFIG.GROUND_Y - 55) playerState = 'flying'; // airborne!
+  } else if (playerState === 'flying' && mode === 'alien' && player.isUfo) {
+    // --- Alien Invasion: YOU are the UFO. It does NOT fly like a plane --
+    // the arrow keys move it straight up/down/left/right. Touching a runner
+    // tags them (handled in alienTagStep). No guns, no crashing.
+    let dx = 0, dy = 0;
+    if (Input.left)  dx -= 1;
+    if (Input.right) dx += 1;
+    if (Input.up)    dy -= 1;
+    if (Input.down)  dy += 1;
+    if (dx || dy) {
+      const len = Math.hypot(dx, dy);
+      player.vx = (dx / len) * CONFIG.UFO_SPEED;
+      player.vy = (dy / len) * CONFIG.UFO_SPEED;
+    } else {
+      player.vx *= 0.8; player.vy *= 0.8;   // coast to a stop when no key held
+    }
+    player.x = wrapX(player.x + player.vx);
+    player.y += player.vy;
+    if (player.y > CONFIG.GROUND_Y - 6) { player.y = CONFIG.GROUND_Y - 6; player.vy = 0; }
+    if (player.y < CONFIG.CEILING) { player.y = CONFIG.CEILING; player.vy = 0; }
+    player.propSpin += 1;
   } else if (playerState === 'flying') {
     player.update();
     // Touching the ground: a gentle, level touchdown is a safe landing (you
     // just roll); coming in too fast or too steep is a fatal crash.
-    const hardLanding = player.hitGround && player.invincibleTimer <= 0 &&
+    // In Alien Invasion (tag) mode nobody can crash, shoot, missile, or eject.
+    const hardLanding = mode !== 'alien' && player.hitGround && player.invincibleTimer <= 0 &&
       (player.impactVy >= CONFIG.LAND_MAX_VY ||
        Math.abs(angleDiff(player.angle, 0)) >= CONFIG.LAND_MAX_ANGLE);
     if (hardLanding) {
       bigExplosion(player.x, CONFIG.GROUND_Y - 6);
       pushKill('🛩️ YOU crashed 💥', '#ff8a65');
       playerDies(player.x, CONFIG.GROUND_Y - 6, 'CRASHED!');
-    } else if (player.frozenTimer <= 0) {
+    } else if (player.frozenTimer <= 0 && mode !== 'alien') {
       // Flying (or safely rolling on the ground): normal controls.
       // WW2 mode has NO missiles and NO ejecting.
       if (Input.fire) player.tryShoot(bullets);
@@ -488,6 +509,9 @@ function update() {
     enemy.update(planes, bullets, missiles, powerups);
   }
 
+  // Alien Invasion: UFOs tag nearby flyers, then check for a round winner.
+  if (mode === 'alien') alienTagStep();
+
   // --- Bullets: move them and check if they hit any plane ---
   for (const bullet of bullets) {
     bullet.update();
@@ -524,9 +548,9 @@ function update() {
     }
   }
 
-  // --- Power-ups: spawn over time, float, and get collected ---
+  // --- Power-ups: spawn over time, float, and get collected (not in tag mode) ---
   powerupTimer -= 1;
-  if (powerupTimer <= 0) { spawnPowerUp(); powerupTimer = CONFIG.POWERUP_INTERVAL; }
+  if (powerupTimer <= 0 && mode !== 'alien') { spawnPowerUp(); powerupTimer = CONFIG.POWERUP_INTERVAL; }
   for (const p of powerups) p.update();
   if (playerState === 'flying' || playerState === 'takeoff') {
     for (const p of powerups) {
@@ -611,21 +635,25 @@ function update() {
 //  DRAW  --  paint everything onto the screen (runs every frame)
 // =========================================================================
 function draw() {
-  if (mode === 'alien') { drawAlien(); return; }   // moon scene
   const C = CONFIG.COLORS;
 
   const uni = (mode === 'unicorn');
   const night = (mode === 'night');
+  const alien = (mode === 'alien');
 
-  // --- Sky (candy / stormy / night / day) ---
+  // --- Sky (candy / stormy / night / space / day) ---
   const storm = (mode === 'badweather');
   const sky = ctx.createLinearGradient(0, 0, 0, CONFIG.GAME_H);
   if (uni) { sky.addColorStop(0, '#bfe3ff'); sky.addColorStop(1, '#ffe1f3'); }
   else if (storm) { sky.addColorStop(0, '#262d3a'); sky.addColorStop(1, '#3c4452'); }
   else if (night) { sky.addColorStop(0, '#0a1230'); sky.addColorStop(1, '#1b2848'); }
+  else if (alien) { sky.addColorStop(0, '#03020a'); sky.addColorStop(1, '#0b0820'); }
   else { sky.addColorStop(0, C.skyTop); sky.addColorStop(1, C.skyBottom); }
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
+
+  // --- Alien Invasion: deep space -- lots of stars, a crescent moon, planets ---
+  if (alien) drawSpaceSky();
 
   // --- Night: stars and a crescent moon ---
   if (night) {
@@ -658,8 +686,8 @@ function draw() {
     ctx.globalAlpha = 1;
   }
 
-  // --- Soft vintage sun with a warm glow (hidden during storm and at night) ---
-  if (!storm && !night) {
+  // --- Soft vintage sun with a warm glow (hidden during storm/night/space) ---
+  if (!storm && !night && !alien) {
     const sunX = CONFIG.GAME_W * 0.80, sunY = CONFIG.GAME_H * 0.20;
     const glow = ctx.createRadialGradient(sunX, sunY, 8, sunX, sunY, 240);
     glow.addColorStop(0, 'rgba(255,246,214,0.95)');
@@ -671,26 +699,30 @@ function draw() {
     ctx.beginPath(); ctx.arc(sunX, sunY, 28, 0, Math.PI * 2); ctx.fill();
   }
 
-  // --- Clouds, far hills, and the treeline on the horizon ---
-  drawBackgroundScenery(ctx, camera);
+  // --- Clouds, far hills, and the treeline on the horizon (not in space) ---
+  if (!alien) drawBackgroundScenery(ctx, camera);
 
-  // --- Ground (candy pink / muddy / battlefield-dirt by mode) ---
+  // --- Ground. In Alien mode it's a cratered moon surface; otherwise grass. ---
   const ww2 = (mode === 'ww2');
   const groundScreenY = CONFIG.GROUND_Y - camera.y;
-  ctx.fillStyle = uni ? '#f7a8d8' : (storm ? '#5a4632' : (ww2 ? '#6f6a40' : (night ? '#2e3d2a' : C.ground)));
-  ctx.fillRect(0, groundScreenY, CONFIG.GAME_W, CONFIG.GAME_H);
-  ctx.fillStyle = uni ? '#e87bbf' : (storm ? '#43341f' : (ww2 ? '#55502f' : (night ? '#223020' : C.groundDark)));
-  ctx.fillRect(0, groundScreenY, CONFIG.GAME_W, 4);
+  if (alien) {
+    drawMoonGround(groundScreenY);
+  } else {
+    ctx.fillStyle = uni ? '#f7a8d8' : (storm ? '#5a4632' : (ww2 ? '#6f6a40' : (night ? '#2e3d2a' : C.ground)));
+    ctx.fillRect(0, groundScreenY, CONFIG.GAME_W, CONFIG.GAME_H);
+    ctx.fillStyle = uni ? '#e87bbf' : (storm ? '#43341f' : (ww2 ? '#55502f' : (night ? '#223020' : C.groundDark)));
+    ctx.fillRect(0, groundScreenY, CONFIG.GAME_W, 4);
 
-  // Some ground stripes that scroll by so you can feel the speed.
-  ctx.fillStyle = C.groundDark;
-  for (let i = -1; i < CONFIG.GAME_W / 60 + 2; i++) {
-    const stripeX = (i * 60 - (camera.x % 60));
-    ctx.fillRect(stripeX, groundScreenY + 14, 30, 3);
+    // Some ground stripes that scroll by so you can feel the speed.
+    ctx.fillStyle = C.groundDark;
+    for (let i = -1; i < CONFIG.GAME_W / 60 + 2; i++) {
+      const stripeX = (i * 60 - (camera.x % 60));
+      ctx.fillRect(stripeX, groundScreenY + 14, 30, 3);
+    }
+
+    // --- Trees, bushes, haybales and barns sitting on the grass ---
+    drawGroundScenery(ctx);
   }
-
-  // --- Trees, bushes, haybales and barns sitting on the grass ---
-  drawGroundScenery(ctx);
 
   // --- The bots ---
   for (const enemy of enemies) {
@@ -747,14 +779,52 @@ function draw() {
   if (mode === 'badweather') drawBadWeather();
 
   // --- HUD (the info text on top) ---
-  drawHud();
-  if (mode === 'ww2') {
-    drawTeamScores();           // green vs black, no names
+  if (alien) {
+    drawAlienHud();
   } else {
-    drawLeaderboard();
-    drawKillFeed();
+    drawHud();
+    if (mode === 'ww2') {
+      drawTeamScores();           // green vs black, no names
+    } else {
+      drawLeaderboard();
+      drawKillFeed();
+    }
   }
   drawMinimap();
+}
+
+// Alien Invasion HUD: tells you if YOU are the UFO, how many runners are left,
+// and shows the winner banner between rounds.
+function drawAlienHud() {
+  const runners = planes.filter(p => p.alive && !p.isUfo).length;
+  const ufos = planes.filter(p => p.alive && p.isUfo).length;
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 30px monospace';
+  ctx.fillStyle = '#9be7ff';
+  ctx.fillText('👽 ALIEN TAG  —  Runners left: ' + runners, CONFIG.GAME_W / 2, 46);
+
+  ctx.font = '22px monospace';
+  if (player.alive && player.isUfo) {
+    ctx.fillStyle = '#7CFC00';
+    ctx.fillText('YOU are the UFO — go TAG everyone!', CONFIG.GAME_W / 2, 80);
+  } else if (player.alive) {
+    ctx.fillStyle = '#ffd24a';
+    ctx.fillText('RUN! Don\'t let a UFO touch you!', CONFIG.GAME_W / 2, 80);
+  }
+
+  // Winner banner during the short pause before the next round.
+  if (alienWinTimer > 0) {
+    ctx.font = 'bold 64px monospace';
+    ctx.fillStyle = '#ffffff';
+    const who = alienWinner
+      ? (alienWinner.isPlayer ? 'YOU WIN!' : (alienWinner.name || 'A pilot') + ' WINS!')
+      : 'Everyone caught!';
+    ctx.fillText('🏆 ' + who, CONFIG.GAME_W / 2, CONFIG.GAME_H / 2 - 40);
+    ctx.font = '26px monospace';
+    ctx.fillStyle = '#9be7ff';
+    ctx.fillText('Winner becomes the UFO next round...', CONFIG.GAME_W / 2, CONFIG.GAME_H / 2 + 6);
+  }
+  ctx.textAlign = 'left';
 }
 
 // WW2 team scores: GREEN top-left, BLACK top-right (no names anywhere).
@@ -1100,153 +1170,164 @@ function drawHud() {
 }
 
 // =========================================================================
-//  ALIEN INVASION MODE -- musical chairs on the moon. Everyone walks; when
-//  the SHED RUSH starts there's one fewer shed than players, and whoever
-//  doesn't grab one gets abducted by a UFO. Last one standing wins.
+//  ALIEN INVASION MODE -- aerial TAG over the moon. Everyone flies normal
+//  planes; one is randomly turned into a UFO. The UFO can't shoot, eject, or
+//  crash -- it just chases and TAGS others, who turn into UFOs too. The last
+//  un-tagged flyer wins the round and becomes the UFO for the next round.
 // =========================================================================
-let alienParts = [];
-let alienSheds = [];
-let alienPhase = 'walk';   // 'walk' | 'rush' | 'grab' | 'win'
-let alienTimer = 0;
-let alienMsg = '';
-const alienUfo = { active: false, x: 0, y: -80, victim: null, phase: 'descend' };
-const ALIEN_WALK = 3.2;
-function alienGroundY() { return CONFIG.GAME_H - 130; }
+let alienWinner = null, alienWinTimer = 0;
 
 function startAlien() {
-  alienParts = [];
-  alienParts.push({ x: CONFIG.GAME_W * 0.5, vx: 0, isPlayer: true, color: '#3d8fd6', alive: true, safe: false, walk: 0 });
-  const n = Math.min(8, Math.max(4, enemies.length));
-  for (let i = 0; i < n; i++) {
-    alienParts.push({ x: 50 + Math.random() * (CONFIG.GAME_W - 100), vx: 0, isPlayer: false,
-                      color: BOT_COLORS[i % BOT_COLORS.length], alive: true, safe: false, walk: 0 });
+  spawnPlane(100);
+  // Everyone starts already flying in the air (it's an aerial game of tag).
+  player.y = CONFIG.GROUND_Y - 700;
+  player.vx = 2; player.vy = 0; player.angle = 0;
+  playerState = 'flying';
+  const all = [player, ...enemies];
+  all.forEach(p => { p.isUfo = false; });
+  const alive = all.filter(p => p.alive !== false);
+  alive[Math.floor(Math.random() * alive.length)].isUfo = true; // random first UFO
+  alienWinner = null; alienWinTimer = 0;
+}
+function newAlienRound() {
+  const all = [player, ...enemies];
+  all.forEach(p => { p.isUfo = false; });
+  if (alienWinner) alienWinner.isUfo = true;                    // winner is "it"
+  else all[Math.floor(Math.random() * all.length)].isUfo = true;
+  alienWinner = null;
+}
+// Bot behaviour in tag mode. A UFO FLOATS freely (no gravity) straight toward
+// the nearest runner. A runner flies like a normal plane, steering away from
+// the nearest UFO. Nobody shoots.
+function alienBotFly(b) {
+  // Find the nearest plane of the OTHER type (runner if I'm a UFO, vice versa).
+  let best = null, bd = Infinity;
+  for (const p of planes) {
+    if (p === b || !p.alive) continue;
+    if (p.isUfo === b.isUfo) continue;
+    const dx = wrapDX(p.x - b.x), dy = p.y - b.y, d = dx * dx + dy * dy;
+    if (d < bd) { bd = d; best = p; }
   }
-  alienUfo.active = false; alienUfo.victim = null;
-  alienPhase = 'walk'; alienTimer = 240;
-  alienMsg = 'Walk around... get ready for the SHED RUSH!';
-  layoutSheds();
+
+  if (b.isUfo) {
+    // --- UFO: glide directly toward the nearest runner (free movement) ---
+    let dx = best ? wrapDX(best.x - b.x) : Math.cos(b.angle);
+    let dy = best ? (best.y - b.y) : 0;
+    const len = Math.hypot(dx, dy) || 1;
+    b.vx = (dx / len) * CONFIG.UFO_SPEED;
+    b.vy = (dy / len) * CONFIG.UFO_SPEED;
+    b.x = wrapX(b.x + b.vx); b.y += b.vy;
+    if (b.y > CONFIG.GROUND_Y - 6) b.y = CONFIG.GROUND_Y - 6;
+    if (b.y < CONFIG.CEILING) b.y = CONFIG.CEILING;
+    b.angle = Math.atan2(b.vy, b.vx);   // (only used for math; UFO draws flat)
+    b.propSpin += 1;
+    return;
+  }
+
+  // --- Runner: fly like a plane and steer AWAY from the nearest UFO ---
+  let want = b.angle;
+  if (best) {
+    const dx = wrapDX(best.x - b.x), dy = best.y - b.y;
+    want = Math.atan2(-dy, -dx);
+  }
+  if (b.y > CONFIG.GROUND_Y - 40) want = -Math.PI / 2;
+  if (b.y < CONFIG.CEILING + 80) want = Math.PI / 2;
+  const diff = angleDiff(want, b.angle);
+  if (diff > 0.02) b.angle += b.style.turn; else if (diff < -0.02) b.angle -= b.style.turn;
+  applyFlightPhysics(b, b.style.thrust);
+  b.x = wrapX(b.x + b.vx); b.y += b.vy;
+  if (b.y > CONFIG.GROUND_Y - 6) { b.y = CONFIG.GROUND_Y - 6; b.vy = 0; }
+  if (b.y < CONFIG.CEILING) { b.y = CONFIG.CEILING; b.vy = 0; }
+  b.propSpin += 1;
 }
-function layoutSheds() {
-  const alive = alienParts.filter(p => p.alive).length;
-  const count = Math.max(0, alive - 1);          // one fewer shed than players
-  alienSheds = [];
-  for (let i = 0; i < count; i++) alienSheds.push({ x: (CONFIG.GAME_W * (i + 1)) / (count + 1), claimedBy: null });
-}
-function startGrab(loser) {
-  alienPhase = 'grab';
-  alienUfo.active = true; alienUfo.victim = loser; alienUfo.x = loser.x; alienUfo.y = -80; alienUfo.phase = 'descend';
-  alienMsg = (loser.isPlayer ? 'YOU' : 'That player') + ' missed a shed -- here comes the UFO!';
-}
-function updateUfo() {
-  const v = alienUfo.victim;
-  if (alienUfo.phase === 'descend') {
-    alienUfo.x = v.x; alienUfo.y += 4;
-    if (alienUfo.y >= alienGroundY() - 44) { alienUfo.y = alienGroundY() - 44; alienUfo.phase = 'rise'; }
-  } else {
-    alienUfo.y -= 3.2; alienUfo.x = v.x;
-    if (alienUfo.y < -80) {
-      v.alive = false; alienUfo.active = false;
-      layoutSheds();
-      const alive = alienParts.filter(p => p.alive);
-      if (alive.length <= 1) { alienPhase = 'win'; }
-      else { alienPhase = 'walk'; alienTimer = 240; alienMsg = 'Walk around... get ready for the SHED RUSH!'; }
+// Each frame: UFOs tag nearby runners; check for a winner.
+function alienTagStep() {
+  if (alienWinTimer > 0) { alienWinTimer -= 1; if (alienWinTimer === 0) newAlienRound(); return; }
+  const all = planes.filter(p => p.alive);
+  for (const u of all) {
+    if (!u.isUfo) continue;
+    for (const r of all) {
+      if (r.isUfo) continue;
+      if (hits(u, r, CONFIG.UFO_TAG_RANGE)) { r.isUfo = true; explosions.push(new Explosion(r.x, r.y, '#7CFC00')); }
     }
   }
+  const runners = all.filter(p => !p.isUfo);
+  if (runners.length <= 1) { alienWinner = runners[0] || null; alienWinTimer = 180; }
 }
-function alienUpdate() {
-  camera.x = 0; camera.y = 0;
-  const alive = alienParts.filter(p => p.alive);
-  if (alive.length <= 1 && alienPhase !== 'grab') { alienPhase = 'win'; return; }
-  const cx = x => Math.max(30, Math.min(CONFIG.GAME_W - 30, x));
 
-  if (alienPhase === 'walk') {
-    for (const p of alive) {
-      if (p.isPlayer) p.vx = ((Input.right ? 1 : 0) - (Input.left ? 1 : 0)) * ALIEN_WALK;
-      else if (alienTimer < 90) {
-        // Smart bots pre-position next to the nearest shed before the rush.
-        let best = -1, bd = Infinity;
-        for (let i = 0; i < alienSheds.length; i++) { const d = Math.abs(alienSheds[i].x - p.x); if (d < bd) { bd = d; best = i; } }
-        p.vx = (best >= 0 && bd > 4) ? Math.sign(alienSheds[best].x - p.x) * ALIEN_WALK : 0;
-      } else {
-        p.vx += (Math.random() - 0.5) * 0.9;
-        p.vx = Math.max(-ALIEN_WALK, Math.min(ALIEN_WALK, p.vx)); // full speed, same as you
-      }
-      p.x = cx(p.x + p.vx); p.walk += Math.abs(p.vx) * 0.2;
-    }
-    alienTimer -= 1;
-    if (alienTimer <= 0) { alienPhase = 'rush'; alienTimer = 600; alienSheds.forEach(s => s.claimedBy = null); alive.forEach(p => p.safe = false); alienMsg = 'RUN TO A SHED!! (arrows)'; }
-  } else if (alienPhase === 'rush') {
-    for (const p of alive) {
-      if (p.safe) continue;
-      let best = -1, bd = Infinity;
-      for (let i = 0; i < alienSheds.length; i++) { if (alienSheds[i].claimedBy) continue; const d = Math.abs(alienSheds[i].x - p.x); if (d < bd) { bd = d; best = i; } }
-      if (p.isPlayer) p.vx = ((Input.right ? 1 : 0) - (Input.left ? 1 : 0)) * ALIEN_WALK;
-      else if (best >= 0) p.vx = Math.sign(alienSheds[best].x - p.x) * ALIEN_WALK;
-      else p.vx = 0;
-      p.x = cx(p.x + p.vx); p.walk += Math.abs(p.vx) * 0.2;
-      for (let i = 0; i < alienSheds.length; i++) { if (!alienSheds[i].claimedBy && Math.abs(p.x - alienSheds[i].x) < 20) { alienSheds[i].claimedBy = p; p.safe = true; break; } }
-    }
-    const claimed = alienSheds.filter(s => s.claimedBy).length;
-    if (alienSheds.length > 0 && claimed >= alienSheds.length) { const l = alive.find(p => !p.safe); if (l) startGrab(l); }
-    alienTimer -= 1;
-    if (alienTimer <= 0) { const l = alive.find(p => !p.safe); if (l) startGrab(l); else { alienPhase = 'walk'; alienTimer = 240; } }
-  } else if (alienPhase === 'grab') {
-    updateUfo();
+// Deep-space backdrop: hundreds of stars (twinkling), a couple of planets, and
+// a big crescent moon. Stars drift slowly with the camera for a parallax feel.
+function drawSpaceSky() {
+  const shift = camera.x * 0.2;
+  for (let i = 0; i < 320; i++) {
+    let x = ((i * 137) - shift) % CONFIG.GAME_W;
+    if (x < 0) x += CONFIG.GAME_W;
+    const y = (i * 89) % Math.floor(CONFIG.GAME_H * 0.85);
+    const tw = (Math.sin(frameCount * 0.05 + i) + 1) * 0.5;   // 0..1 twinkle
+    const s = (i % 7 === 0) ? 3 : 2;
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.35 + tw * 0.6) + ')';
+    ctx.fillRect(x, y, s, s);
   }
+  // The planets and moon are anchored to real WORLD positions (using
+  // worldToScreenX), so they stay put in the sky and scroll past as you fly --
+  // they don't follow the camera. Their height tracks the camera so they hang
+  // up high in the sky.
+  const skyY = CONFIG.GAME_H * 0.18 - (camera.y - (CONFIG.GROUND_Y - 700)) * 0.4;
+
+  // A blue-green planet (like Earth from afar).
+  const ex = worldToScreenX(900), ey = skyY + 30;
+  ctx.fillStyle = '#3b6fd6';
+  ctx.beginPath(); ctx.arc(ex, ey, 46, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#46b06a';                 // continents
+  ctx.beginPath(); ctx.arc(ex - 14, ey - 8, 16, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ex + 18, ey + 12, 12, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.18)'; // a soft glow
+  ctx.beginPath(); ctx.arc(ex, ey, 54, 0, Math.PI * 2); ctx.fill();
+
+  // A small ringed planet.
+  const px = worldToScreenX(5200), py = skyY - 20;
+  ctx.fillStyle = '#d9a441';
+  ctx.beginPath(); ctx.arc(px, py, 24, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(230,210,150,0.8)';
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.ellipse(px, py, 42, 12, -0.4, 0, Math.PI * 2); ctx.stroke();
+
+  // Big crescent moon up high.
+  const mx = worldToScreenX(3000), my = skyY - 10;
+  ctx.fillStyle = '#e9ead2';
+  ctx.beginPath(); ctx.arc(mx, my, 40, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#0b0820';                 // carve crescent with sky color
+  ctx.beginPath(); ctx.arc(mx + 16, my - 6, 38, 0, Math.PI * 2); ctx.fill();
 }
 
-// ---- Alien mode drawing ----
-function drawAlien() {
-  const W = CONFIG.GAME_W, H = CONFIG.GAME_H, gy = alienGroundY();
-  ctx.fillStyle = '#0a0a18'; ctx.fillRect(0, 0, W, H);          // space
-  ctx.fillStyle = '#ffffff';
-  for (let i = 0; i < 130; i++) { ctx.fillRect((i * 173) % W, (i * 97) % Math.floor(H * 0.7), 2, 2); } // stars
-  ctx.fillStyle = '#3a6ea5'; ctx.beginPath(); ctx.arc(W * 0.85, H * 0.16, 60, 0, Math.PI * 2); ctx.fill(); // Earth
-  ctx.fillStyle = '#4a9a5a'; ctx.beginPath(); ctx.arc(W * 0.85 - 22, H * 0.16 - 8, 22, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#9a9aa0'; ctx.fillRect(0, gy, W, H - gy);    // moon ground
-  ctx.fillStyle = '#7e7e86';
-  for (let i = 0; i < 16; i++) { const ccx = (i * 211) % W; ctx.beginPath(); ctx.arc(ccx, gy + 26 + (i * 53) % (H - gy - 36), 10 + (i * 7) % 12, 0, Math.PI * 2); ctx.fill(); }
+// The cratered moon surface along the ground. Craters are placed by a fixed
+// pattern (tied to world position) so they scroll naturally with the camera.
+function drawMoonGround(groundY) {
+  ctx.fillStyle = '#9a9aa3';                 // grey moon dust
+  ctx.fillRect(0, groundY, CONFIG.GAME_W, CONFIG.GAME_H);
+  ctx.fillStyle = '#c7c7d0';                 // lighter rim line on top
+  ctx.fillRect(0, groundY, CONFIG.GAME_W, 5);
 
-  for (const s of alienSheds) drawShed(s.x, gy);
-  for (const p of alienParts) {
-    if (!p.alive) continue;
-    let py = gy;
-    if (alienUfo.active && alienUfo.victim === p && alienUfo.phase === 'rise') py = alienUfo.y + 40;
-    drawWalker(p, py);
+  // Craters: ovals with a darker inside and a bright top rim.
+  for (let i = 0; i < 60; i++) {
+    let wx = i * 420 + (i % 3) * 90;          // spread across the world
+    let sx = worldToScreenX(wx);
+    const r = 26 + (i % 4) * 14;
+    const cy = groundY + 30 + (i % 5) * 22;
+    ctx.fillStyle = '#76767f';                // crater bowl
+    ctx.beginPath(); ctx.ellipse(sx, cy, r, r * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#5e5e66';                // deeper center
+    ctx.beginPath(); ctx.ellipse(sx, cy + 2, r * 0.6, r * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#bcbcc6';              // sunlit rim
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(sx, cy - 2, r, r * 0.5, 0, Math.PI, Math.PI * 2); ctx.stroke();
   }
-  if (alienUfo.active) drawUfo(alienUfo);
-
-  ctx.fillStyle = '#ffffff'; ctx.font = '20px monospace'; ctx.textAlign = 'center';
-  if (alienPhase === 'win') {
-    const w = alienParts.find(p => p.alive);
-    ctx.fillStyle = '#ffe066';
-    ctx.fillText((w && w.isPlayer ? '🏆 YOU WIN!' : 'A bot wins!') + ' Last one standing!', W / 2, 112);
-  } else {
-    ctx.fillText(alienMsg, W / 2, 108);
-    ctx.font = '14px monospace';
-    ctx.fillText('sheds: ' + alienSheds.length + '   players left: ' + alienParts.filter(p => p.alive).length, W / 2, 130);
+  // A few scattered small rocks/pebbles.
+  ctx.fillStyle = '#83838c';
+  for (let i = 0; i < 40; i++) {
+    let sx = worldToScreenX(i * 610 + 120);
+    ctx.fillRect(sx, groundY + 12 + (i % 6) * 30, 6, 4);
   }
-  ctx.textAlign = 'left';
-}
-function drawShed(x, gy) {
-  ctx.fillStyle = '#8a5a3a'; ctx.fillRect(x - 16, gy - 22, 32, 22);
-  ctx.fillStyle = '#6b4226'; ctx.beginPath(); ctx.moveTo(x - 19, gy - 22); ctx.lineTo(x, gy - 34); ctx.lineTo(x + 19, gy - 22); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#3a2a1a'; ctx.fillRect(x - 6, gy - 14, 12, 14);
-}
-function drawWalker(p, feetY) {
-  const x = p.x, bob = Math.sin(p.walk) * 1.5;
-  ctx.fillStyle = p.color; ctx.fillRect(x - 4, feetY - 16, 8, 12);     // body
-  ctx.fillStyle = '#dfe6ee'; ctx.beginPath(); ctx.arc(x, feetY - 20, 5, 0, Math.PI * 2); ctx.fill(); // helmet
-  ctx.fillStyle = '#9fd8ff'; ctx.fillRect(x - 3, feetY - 22, 6, 4);    // visor
-  ctx.fillStyle = p.color; ctx.fillRect(x - 3, feetY - 4, 2, 4 + bob); ctx.fillRect(x + 1, feetY - 4, 2, 4 - bob); // legs
-  if (p.isPlayer) { ctx.fillStyle = '#ffe066'; ctx.beginPath(); ctx.moveTo(x, feetY - 30); ctx.lineTo(x - 5, feetY - 38); ctx.lineTo(x + 5, feetY - 38); ctx.closePath(); ctx.fill(); }
-}
-function drawUfo(u) {
-  ctx.fillStyle = 'rgba(120,255,160,0.22)';
-  ctx.beginPath(); ctx.moveTo(u.x - 10, u.y); ctx.lineTo(u.x - 42, u.y + 130); ctx.lineTo(u.x + 42, u.y + 130); ctx.lineTo(u.x + 10, u.y); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#9aa3a7'; ctx.beginPath(); ctx.ellipse(u.x, u.y, 36, 13, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#cfd8dc'; ctx.beginPath(); ctx.ellipse(u.x, u.y - 7, 17, 11, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#7CFC00'; for (let i = -2; i <= 2; i++) ctx.fillRect(u.x + i * 11 - 1, u.y + 5, 3, 3);
 }
 
 // =========================================================================

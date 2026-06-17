@@ -31,6 +31,9 @@ class Plane {
     this.team = 0;
     // In WW2 Mode planes belong to a faction ('green' / 'black') instead.
     this.faction = 'green';
+    // In Alien Invasion (tag) mode, true means this plane is a UFO ("it").
+    this.isUfo = false;
+    this.isPlayer = true;
 
     // Health: how many hits left. alive = false means shot down (respawning).
     this.health = CONFIG.PLAYER_HEALTH;
@@ -218,6 +221,12 @@ class Plane {
       ctx.beginPath(); ctx.arc(fx + Math.sin(frameCount * 0.6) * 2, fy, 4, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#ffce54';
       ctx.beginPath(); ctx.arc(fx, fy - 1, 2.4, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Alien Invasion: the "it" player flies a UFO instead of a plane.
+    if (mode === 'alien' && this.isUfo) {
+      drawUfoCraft(ctx, sx, sy, this.propSpin, true);
+      return;
     }
 
     let set = PLANE_SPRITES.player;

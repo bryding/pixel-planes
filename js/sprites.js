@@ -200,6 +200,49 @@ const PLANE_SPRITES = {
 
 // Stamp a plane sprite onto the screen, rotated to its flying angle,
 // with a spinning propeller drawn on the nose.
+// A flying saucer for Alien Invasion (tag) mode. It does NOT rotate with the
+// nose like a plane -- it's a hovering UFO that always sits flat. "spin" is used
+// to animate the ring of blinking lights and a gentle bob.
+function drawUfoCraft(ctx, x, y, spin, isPlayer) {
+  ctx.save();
+  ctx.translate(x, y + Math.sin(spin * 0.1) * 2); // gentle hover bob
+
+  // Soft tractor-beam glow underneath.
+  const glow = ctx.createRadialGradient(0, 14, 2, 0, 14, 30);
+  glow.addColorStop(0, 'rgba(120,255,140,0.5)');
+  glow.addColorStop(1, 'rgba(120,255,140,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.moveTo(-8, 6); ctx.lineTo(8, 6); ctx.lineTo(20, 30); ctx.lineTo(-20, 30); ctx.closePath(); ctx.fill();
+
+  // Saucer body (a flat ellipse).
+  ctx.fillStyle = '#9aa3b0';
+  ctx.beginPath(); ctx.ellipse(0, 4, 22, 8, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#6b7280';
+  ctx.beginPath(); ctx.ellipse(0, 6, 22, 5, 0, 0, Math.PI); ctx.fill();
+
+  // Glass dome on top.
+  ctx.fillStyle = '#bfe9ff';
+  ctx.beginPath(); ctx.ellipse(0, 0, 11, 9, 0, Math.PI, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#7ad0a0';                 // a little green pilot inside
+  ctx.beginPath(); ctx.arc(0, -2, 4, 0, Math.PI * 2); ctx.fill();
+
+  // Ring of blinking colored lights around the rim.
+  const cols = ['#ff4d4d', '#ffd24a', '#4dff6a', '#5bc0ff'];
+  for (let i = 0; i < 6; i++) {
+    const on = (Math.floor(spin * 0.2) + i) % 2 === 0;
+    ctx.fillStyle = on ? cols[i % cols.length] : '#3a3f48';
+    ctx.fillRect(-18 + i * 7, 6, 4, 4);
+  }
+
+  // The player's UFO gets a small white outline so you can spot yourself.
+  if (isPlayer) {
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(0, 4, 23, 9, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawPlaneSprite(ctx, set, x, y, angle, spin, flashing) {
   const spr = flashing ? set.flash : set.normal;
 
