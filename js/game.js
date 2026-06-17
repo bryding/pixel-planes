@@ -120,6 +120,7 @@ function removeAllBots() {
 let mode = 'classic';
 let greenScore = 0, blackScore = 0; // WW2 team scores
 function setMode(m) {
+  const prev = mode;
   mode = m;
   // "No Mod Mode" hides the whole Modifier Menu and turns the cheats off.
   const modGroup = document.getElementById('modGroup');
@@ -130,6 +131,8 @@ function setMode(m) {
     infiniteMissiles = false;
   }
   if (m === 'ww2') assignWW2Factions();
+  if (m === 'alien') startAlien();
+  if (prev === 'alien' && m !== 'alien') spawnPlane(100); // back to flying
 }
 
 // Put the player on GREEN and split the bots: the first few are BLACK,
@@ -410,6 +413,7 @@ function drawLeaderboard() {
 //  UPDATE  --  move everything (runs every frame)
 // =========================================================================
 function update() {
+  if (mode === 'alien') { alienUpdate(); return; }   // moon musical-chairs game
   // Work out "fresh press" of X (missile) and C (eject).
   const missilePressed = Input.missile && !missileWasDown;
   const ejectPressed = Input.eject && !ejectWasDown;
@@ -601,6 +605,7 @@ function update() {
 //  DRAW  --  paint everything onto the screen (runs every frame)
 // =========================================================================
 function draw() {
+  if (mode === 'alien') { drawAlien(); return; }   // moon scene
   const C = CONFIG.COLORS;
 
   const uni = (mode === 'unicorn');
@@ -1065,6 +1070,148 @@ function drawHud() {
   ctx.fillText('Arrows: fly    Space: guns    X: missile    C: eject',
                CONFIG.GAME_W / 2, CONFIG.GAME_H - 14);
   ctx.textAlign = 'left';
+}
+
+// =========================================================================
+//  ALIEN INVASION MODE -- musical chairs on the moon. Everyone walks; when
+//  the SHED RUSH starts there's one fewer shed than players, and whoever
+//  doesn't grab one gets abducted by a UFO. Last one standing wins.
+// =========================================================================
+let alienParts = [];
+let alienSheds = [];
+let alienPhase = 'walk';   // 'walk' | 'rush' | 'grab' | 'win'
+let alienTimer = 0;
+let alienMsg = '';
+const alienUfo = { active: false, x: 0, y: -80, victim: null, phase: 'descend' };
+const ALIEN_WALK = 3.2;
+function alienGroundY() { return CONFIG.GAME_H - 130; }
+
+function startAlien() {
+  alienParts = [];
+  alienParts.push({ x: CONFIG.GAME_W * 0.5, vx: 0, isPlayer: true, color: '#3d8fd6', alive: true, safe: false, walk: 0 });
+  const n = Math.min(8, Math.max(4, enemies.length));
+  for (let i = 0; i < n; i++) {
+    alienParts.push({ x: 50 + Math.random() * (CONFIG.GAME_W - 100), vx: 0, isPlayer: false,
+                      color: BOT_COLORS[i % BOT_COLORS.length], alive: true, safe: false, walk: 0 });
+  }
+  alienUfo.active = false; alienUfo.victim = null;
+  alienPhase = 'walk'; alienTimer = 240;
+  alienMsg = 'Walk around... get ready for the SHED RUSH!';
+  layoutSheds();
+}
+function layoutSheds() {
+  const alive = alienParts.filter(p => p.alive).length;
+  const count = Math.max(0, alive - 1);          // one fewer shed than players
+  alienSheds = [];
+  for (let i = 0; i < count; i++) alienSheds.push({ x: (CONFIG.GAME_W * (i + 1)) / (count + 1), claimedBy: null });
+}
+function startGrab(loser) {
+  alienPhase = 'grab';
+  alienUfo.active = true; alienUfo.victim = loser; alienUfo.x = loser.x; alienUfo.y = -80; alienUfo.phase = 'descend';
+  alienMsg = (loser.isPlayer ? 'YOU' : 'That player') + ' missed a shed -- here comes the UFO!';
+}
+function updateUfo() {
+  const v = alienUfo.victim;
+  if (alienUfo.phase === 'descend') {
+    alienUfo.x = v.x; alienUfo.y += 4;
+    if (alienUfo.y >= alienGroundY() - 44) { alienUfo.y = alienGroundY() - 44; alienUfo.phase = 'rise'; }
+  } else {
+    alienUfo.y -= 3.2; alienUfo.x = v.x;
+    if (alienUfo.y < -80) {
+      v.alive = false; alienUfo.active = false;
+      layoutSheds();
+      const alive = alienParts.filter(p => p.alive);
+      if (alive.length <= 1) { alienPhase = 'win'; }
+      else { alienPhase = 'walk'; alienTimer = 240; alienMsg = 'Walk around... get ready for the SHED RUSH!'; }
+    }
+  }
+}
+function alienUpdate() {
+  camera.x = 0; camera.y = 0;
+  const alive = alienParts.filter(p => p.alive);
+  if (alive.length <= 1 && alienPhase !== 'grab') { alienPhase = 'win'; return; }
+  const cx = x => Math.max(30, Math.min(CONFIG.GAME_W - 30, x));
+
+  if (alienPhase === 'walk') {
+    for (const p of alive) {
+      if (p.isPlayer) p.vx = ((Input.right ? 1 : 0) - (Input.left ? 1 : 0)) * ALIEN_WALK;
+      else { p.vx += (Math.random() - 0.5) * 0.7; p.vx = Math.max(-ALIEN_WALK * 0.7, Math.min(ALIEN_WALK * 0.7, p.vx)); }
+      p.x = cx(p.x + p.vx); p.walk += Math.abs(p.vx) * 0.2;
+    }
+    alienTimer -= 1;
+    if (alienTimer <= 0) { alienPhase = 'rush'; alienTimer = 600; alienSheds.forEach(s => s.claimedBy = null); alive.forEach(p => p.safe = false); alienMsg = 'RUN TO A SHED!! (arrows)'; }
+  } else if (alienPhase === 'rush') {
+    for (const p of alive) {
+      if (p.safe) continue;
+      let best = -1, bd = Infinity;
+      for (let i = 0; i < alienSheds.length; i++) { if (alienSheds[i].claimedBy) continue; const d = Math.abs(alienSheds[i].x - p.x); if (d < bd) { bd = d; best = i; } }
+      if (p.isPlayer) p.vx = ((Input.right ? 1 : 0) - (Input.left ? 1 : 0)) * ALIEN_WALK;
+      else if (best >= 0) p.vx = Math.sign(alienSheds[best].x - p.x) * ALIEN_WALK;
+      else p.vx = 0;
+      p.x = cx(p.x + p.vx); p.walk += Math.abs(p.vx) * 0.2;
+      for (let i = 0; i < alienSheds.length; i++) { if (!alienSheds[i].claimedBy && Math.abs(p.x - alienSheds[i].x) < 20) { alienSheds[i].claimedBy = p; p.safe = true; break; } }
+    }
+    const claimed = alienSheds.filter(s => s.claimedBy).length;
+    if (alienSheds.length > 0 && claimed >= alienSheds.length) { const l = alive.find(p => !p.safe); if (l) startGrab(l); }
+    alienTimer -= 1;
+    if (alienTimer <= 0) { const l = alive.find(p => !p.safe); if (l) startGrab(l); else { alienPhase = 'walk'; alienTimer = 240; } }
+  } else if (alienPhase === 'grab') {
+    updateUfo();
+  }
+}
+
+// ---- Alien mode drawing ----
+function drawAlien() {
+  const W = CONFIG.GAME_W, H = CONFIG.GAME_H, gy = alienGroundY();
+  ctx.fillStyle = '#0a0a18'; ctx.fillRect(0, 0, W, H);          // space
+  ctx.fillStyle = '#ffffff';
+  for (let i = 0; i < 130; i++) { ctx.fillRect((i * 173) % W, (i * 97) % Math.floor(H * 0.7), 2, 2); } // stars
+  ctx.fillStyle = '#3a6ea5'; ctx.beginPath(); ctx.arc(W * 0.85, H * 0.16, 60, 0, Math.PI * 2); ctx.fill(); // Earth
+  ctx.fillStyle = '#4a9a5a'; ctx.beginPath(); ctx.arc(W * 0.85 - 22, H * 0.16 - 8, 22, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#9a9aa0'; ctx.fillRect(0, gy, W, H - gy);    // moon ground
+  ctx.fillStyle = '#7e7e86';
+  for (let i = 0; i < 16; i++) { const ccx = (i * 211) % W; ctx.beginPath(); ctx.arc(ccx, gy + 26 + (i * 53) % (H - gy - 36), 10 + (i * 7) % 12, 0, Math.PI * 2); ctx.fill(); }
+
+  for (const s of alienSheds) drawShed(s.x, gy);
+  for (const p of alienParts) {
+    if (!p.alive) continue;
+    let py = gy;
+    if (alienUfo.active && alienUfo.victim === p && alienUfo.phase === 'rise') py = alienUfo.y + 40;
+    drawWalker(p, py);
+  }
+  if (alienUfo.active) drawUfo(alienUfo);
+
+  ctx.fillStyle = '#ffffff'; ctx.font = '20px monospace'; ctx.textAlign = 'center';
+  if (alienPhase === 'win') {
+    const w = alienParts.find(p => p.alive);
+    ctx.fillStyle = '#ffe066';
+    ctx.fillText((w && w.isPlayer ? '🏆 YOU WIN!' : 'A bot wins!') + ' Last one standing!', W / 2, 112);
+  } else {
+    ctx.fillText(alienMsg, W / 2, 108);
+    ctx.font = '14px monospace';
+    ctx.fillText('sheds: ' + alienSheds.length + '   players left: ' + alienParts.filter(p => p.alive).length, W / 2, 130);
+  }
+  ctx.textAlign = 'left';
+}
+function drawShed(x, gy) {
+  ctx.fillStyle = '#8a5a3a'; ctx.fillRect(x - 16, gy - 22, 32, 22);
+  ctx.fillStyle = '#6b4226'; ctx.beginPath(); ctx.moveTo(x - 19, gy - 22); ctx.lineTo(x, gy - 34); ctx.lineTo(x + 19, gy - 22); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#3a2a1a'; ctx.fillRect(x - 6, gy - 14, 12, 14);
+}
+function drawWalker(p, feetY) {
+  const x = p.x, bob = Math.sin(p.walk) * 1.5;
+  ctx.fillStyle = p.color; ctx.fillRect(x - 4, feetY - 16, 8, 12);     // body
+  ctx.fillStyle = '#dfe6ee'; ctx.beginPath(); ctx.arc(x, feetY - 20, 5, 0, Math.PI * 2); ctx.fill(); // helmet
+  ctx.fillStyle = '#9fd8ff'; ctx.fillRect(x - 3, feetY - 22, 6, 4);    // visor
+  ctx.fillStyle = p.color; ctx.fillRect(x - 3, feetY - 4, 2, 4 + bob); ctx.fillRect(x + 1, feetY - 4, 2, 4 - bob); // legs
+  if (p.isPlayer) { ctx.fillStyle = '#ffe066'; ctx.beginPath(); ctx.moveTo(x, feetY - 30); ctx.lineTo(x - 5, feetY - 38); ctx.lineTo(x + 5, feetY - 38); ctx.closePath(); ctx.fill(); }
+}
+function drawUfo(u) {
+  ctx.fillStyle = 'rgba(120,255,160,0.22)';
+  ctx.beginPath(); ctx.moveTo(u.x - 10, u.y); ctx.lineTo(u.x - 42, u.y + 130); ctx.lineTo(u.x + 42, u.y + 130); ctx.lineTo(u.x + 10, u.y); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#9aa3a7'; ctx.beginPath(); ctx.ellipse(u.x, u.y, 36, 13, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#cfd8dc'; ctx.beginPath(); ctx.ellipse(u.x, u.y - 7, 17, 11, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#7CFC00'; for (let i = -2; i <= 2; i++) ctx.fillRect(u.x + i * 11 - 1, u.y + 5, 3, 3);
 }
 
 // =========================================================================
