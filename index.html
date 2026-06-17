@@ -12,7 +12,7 @@
 
   <!-- Top-middle modifier / cheat menu -->
   <div id="topBar">
-   <div class="menuGroup">
+   <div class="menuGroup" id="modGroup">
     <button id="modBtn" onclick="toggleModMenu(); this.blur();">⚙ Modifier Menu</button>
     <div id="modMenu" style="display:none">
       <button onclick="addBot(); this.blur();">+ Add Plane</button>
@@ -41,6 +41,7 @@
     <div id="modeMenu" style="display:none">
       <button onclick="setMode('classic'); this.blur();">Classic Mode</button>
       <button onclick="setMode('unicorn'); this.blur();">🦄 Unicorn Mode</button>
+      <button onclick="setMode('nomod'); this.blur();">No Mod Mode</button>
     </div>
    </div>
   </div>

@@ -112,9 +112,19 @@ function removeAllBots() {
   planes.length = 1; // planes[0] is the player; drop the rest
 }
 
-// ---- Game mode (Classic / Unicorn) ----
+// ---- Game mode (Classic / Unicorn / No-Mod) ----
 let mode = 'classic';
-function setMode(m) { mode = m; }
+function setMode(m) {
+  mode = m;
+  // "No Mod Mode" hides the whole Modifier Menu and turns the cheats off.
+  const modGroup = document.getElementById('modGroup');
+  if (modGroup) modGroup.style.display = (m === 'nomod') ? 'none' : 'flex';
+  if (m === 'nomod') {
+    timeScale = 1;
+    infiniteHealth = false;
+    infiniteMissiles = false;
+  }
+}
 function toggleModeMenu() {
   const m = document.getElementById('modeMenu');
   m.style.display = (m.style.display === 'none' || !m.style.display) ? 'flex' : 'none';
