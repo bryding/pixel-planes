@@ -104,6 +104,12 @@ let playerState = 'flying';
 let pilot = null;        // the parachuting pilot, when ejected
 let playerRespawn = 0;   // counts down while dead, then a fresh plane flies in
 let frameCount = 0;      // ticks up every frame (used for blinking warnings)
+let paused = false;      // ESC pauses/unpauses the game
+
+// ESC toggles pause. (e.repeat guard so holding the key doesn't flicker it.)
+window.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && !e.repeat) paused = !paused;
+});
 let deathMsg = 'SHOT DOWN!'; // what the middle-of-screen death message says
 
 // The "who killed who" kill feed (newest first). Each entry fades out.
@@ -762,10 +768,26 @@ function drawHud() {
 //  THE GAME LOOP  --  this calls update() then draw(), over and over.
 // =========================================================================
 function loop() {
-  frameCount += 1;
-  update();
+  if (!paused) {
+    frameCount += 1;
+    update();
+  }
   draw();
+  if (paused) drawPauseOverlay();
   requestAnimationFrame(loop); // ask the browser to run loop again next frame
+}
+
+// A dark "PAUSED" overlay shown while the game is frozen.
+function drawPauseOverlay() {
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.font = '44px monospace';
+  ctx.fillText('PAUSED', CONFIG.GAME_W / 2, CONFIG.GAME_H / 2);
+  ctx.font = '16px monospace';
+  ctx.fillText('press ESC to resume', CONFIG.GAME_W / 2, CONFIG.GAME_H / 2 + 36);
+  ctx.textAlign = 'left';
 }
 
 loop(); // start the game!
