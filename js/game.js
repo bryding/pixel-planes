@@ -132,10 +132,8 @@ function setMode(m) {
   }
   if (m === 'ww2') assignWW2Factions();
   if (m === 'alien') startAlien();
-  if (m === 'dirtbike') startDirtbike();
-  // Leaving a "ground" mini-game -> put a flying plane back.
-  const ground = x => (x === 'alien' || x === 'dirtbike');
-  if (ground(prev) && !ground(m)) spawnPlane(100);
+  // Leaving the moon mini-game -> put a flying plane back.
+  if (prev === 'alien' && m !== 'alien') spawnPlane(100);
 }
 
 // Put the player on GREEN and split the bots: the first few are BLACK,
@@ -161,7 +159,8 @@ let lightningFlash = 0;
 function lightningStrike() {
   const safeTop = CONFIG.CEILING + 160; // above this height = safe from lightning
   const cands = [];
-  if (playerState === 'flying' && player.y > safeTop) cands.push(player);
+  // A shielded/invincible player is never picked.
+  if (playerState === 'flying' && player.y > safeTop && player.invincibleTimer <= 0) cands.push(player);
   for (const e of enemies) if (e.alive && e.y > safeTop) cands.push(e);
   if (!cands.length) return;
 
@@ -316,7 +315,8 @@ function bigExplosion(x, y) {
 // Press C to bail out: the plane is lost and the pilot floats down.
 function eject() {
   // In Bad Weather, bailing out gets you struck by lightning instantly!
-  if (mode === 'badweather') {
+  // (unless you have a shield -- then nothing can kill you.)
+  if (mode === 'badweather' && player.invincibleTimer <= 0) {
     lightnings.push({ x: player.x, y: player.y, life: 14 });
     lightningFlash = 8;
     bigExplosion(player.x, player.y);
@@ -417,7 +417,6 @@ function drawLeaderboard() {
 // =========================================================================
 function update() {
   if (mode === 'alien') { alienUpdate(); return; }   // moon musical-chairs game
-  if (mode === 'dirtbike') { dirtUpdate(); return; } // motocross ramps game
   // Work out "fresh press" of X (missile) and C (eject).
   const missilePressed = Input.missile && !missileWasDown;
   const ejectPressed = Input.eject && !ejectWasDown;
@@ -461,9 +460,12 @@ function update() {
   } else if (playerState === 'chute') {
     if (ejectPressed) pilot.deploy(); // press C AGAIN to pop the parachute
     pilot.update();
+    const inv = player.invincibleTimer > 0; // shield = can't die from anything
     // Reach the big barn (drifting OR walking) -> rescued, keep your points.
     if (Math.abs(wrapDX(pilot.x - BARN_X)) < CONFIG.BARN_RESCUE_RANGE) {
       rescueAtBarn();
+    } else if (inv) {
+      if (pilot.landed) rescueAtBarn(); // shielded pilots always make it
     } else if (pilot.landed && !pilot.chuteOpen) {
       // Splat -- hit the ground before opening the parachute.
       bigExplosion(pilot.x, pilot.y);
@@ -610,19 +612,33 @@ function update() {
 // =========================================================================
 function draw() {
   if (mode === 'alien') { drawAlien(); return; }   // moon scene
-  if (mode === 'dirtbike') { dirtDraw(); return; } // motocross scene
   const C = CONFIG.COLORS;
 
   const uni = (mode === 'unicorn');
+  const night = (mode === 'night');
 
-  // --- Sky (pastel candy in Unicorn Mode, dark & stormy in Bad Weather) ---
+  // --- Sky (candy / stormy / night / day) ---
   const storm = (mode === 'badweather');
   const sky = ctx.createLinearGradient(0, 0, 0, CONFIG.GAME_H);
   if (uni) { sky.addColorStop(0, '#bfe3ff'); sky.addColorStop(1, '#ffe1f3'); }
   else if (storm) { sky.addColorStop(0, '#262d3a'); sky.addColorStop(1, '#3c4452'); }
+  else if (night) { sky.addColorStop(0, '#0a1230'); sky.addColorStop(1, '#1b2848'); }
   else { sky.addColorStop(0, C.skyTop); sky.addColorStop(1, C.skyBottom); }
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
+
+  // --- Night: stars and a crescent moon ---
+  if (night) {
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 150; i++) {
+      ctx.fillRect((i * 173) % CONFIG.GAME_W, (i * 97) % Math.floor(CONFIG.GAME_H * 0.7), 2, 2);
+    }
+    const mx = CONFIG.GAME_W * 0.82, my = CONFIG.GAME_H * 0.18;
+    ctx.fillStyle = '#eef0d8';
+    ctx.beginPath(); ctx.arc(mx, my, 42, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#0a1230'; // carve the crescent with the sky color
+    ctx.beginPath(); ctx.arc(mx + 16, my - 8, 40, 0, Math.PI * 2); ctx.fill();
+  }
 
   // --- Unicorn Mode: a big rainbow planted over the big barn (it stays put
   // in the world; the barn sits at the bottom-middle of it) ---
@@ -642,8 +658,8 @@ function draw() {
     ctx.globalAlpha = 1;
   }
 
-  // --- Soft vintage sun with a warm glow (hidden during the storm) ---
-  if (!storm) {
+  // --- Soft vintage sun with a warm glow (hidden during storm and at night) ---
+  if (!storm && !night) {
     const sunX = CONFIG.GAME_W * 0.80, sunY = CONFIG.GAME_H * 0.20;
     const glow = ctx.createRadialGradient(sunX, sunY, 8, sunX, sunY, 240);
     glow.addColorStop(0, 'rgba(255,246,214,0.95)');
@@ -661,9 +677,9 @@ function draw() {
   // --- Ground (candy pink / muddy / battlefield-dirt by mode) ---
   const ww2 = (mode === 'ww2');
   const groundScreenY = CONFIG.GROUND_Y - camera.y;
-  ctx.fillStyle = uni ? '#f7a8d8' : (storm ? '#5a4632' : (ww2 ? '#6f6a40' : C.ground));
+  ctx.fillStyle = uni ? '#f7a8d8' : (storm ? '#5a4632' : (ww2 ? '#6f6a40' : (night ? '#2e3d2a' : C.ground)));
   ctx.fillRect(0, groundScreenY, CONFIG.GAME_W, CONFIG.GAME_H);
-  ctx.fillStyle = uni ? '#e87bbf' : (storm ? '#43341f' : (ww2 ? '#55502f' : C.groundDark));
+  ctx.fillStyle = uni ? '#e87bbf' : (storm ? '#43341f' : (ww2 ? '#55502f' : (night ? '#223020' : C.groundDark)));
   ctx.fillRect(0, groundScreenY, CONFIG.GAME_W, 4);
 
   // Some ground stripes that scroll by so you can feel the speed.
@@ -721,6 +737,12 @@ function draw() {
   ctx.fillStyle = vg;
   ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
 
+  // --- Night: darken the whole scene so the lights stand out ---
+  if (night) {
+    ctx.fillStyle = 'rgba(10,16,40,0.4)';
+    ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
+  }
+
   // --- Bad Weather: rain, storm darkening, and lightning over the world ---
   if (mode === 'badweather') drawBadWeather();
 
@@ -740,10 +762,10 @@ function drawTeamScores() {
   ctx.font = '20px monospace';
   ctx.fillStyle = '#7ed957';
   ctx.textAlign = 'left';
-  ctx.fillText('GREEN  ' + greenScore, 14, 56);
+  ctx.fillText('GREEN (YOU)  ' + greenScore, 14, 56);
   ctx.fillStyle = '#cfcfcf';
   ctx.textAlign = 'right';
-  ctx.fillText('BLACK  ' + blackScore, CONFIG.GAME_W - 14, 30);
+  ctx.fillText('BLACK (enemy)  ' + blackScore, CONFIG.GAME_W - 14, 30);
   ctx.textAlign = 'left';
 }
 
@@ -1140,7 +1162,15 @@ function alienUpdate() {
   if (alienPhase === 'walk') {
     for (const p of alive) {
       if (p.isPlayer) p.vx = ((Input.right ? 1 : 0) - (Input.left ? 1 : 0)) * ALIEN_WALK;
-      else { p.vx += (Math.random() - 0.5) * 0.7; p.vx = Math.max(-ALIEN_WALK * 0.7, Math.min(ALIEN_WALK * 0.7, p.vx)); }
+      else if (alienTimer < 90) {
+        // Smart bots pre-position next to the nearest shed before the rush.
+        let best = -1, bd = Infinity;
+        for (let i = 0; i < alienSheds.length; i++) { const d = Math.abs(alienSheds[i].x - p.x); if (d < bd) { bd = d; best = i; } }
+        p.vx = (best >= 0 && bd > 4) ? Math.sign(alienSheds[best].x - p.x) * ALIEN_WALK : 0;
+      } else {
+        p.vx += (Math.random() - 0.5) * 0.9;
+        p.vx = Math.max(-ALIEN_WALK, Math.min(ALIEN_WALK, p.vx)); // full speed, same as you
+      }
       p.x = cx(p.x + p.vx); p.walk += Math.abs(p.vx) * 0.2;
     }
     alienTimer -= 1;
@@ -1217,130 +1247,6 @@ function drawUfo(u) {
   ctx.fillStyle = '#9aa3a7'; ctx.beginPath(); ctx.ellipse(u.x, u.y, 36, 13, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#cfd8dc'; ctx.beginPath(); ctx.ellipse(u.x, u.y - 7, 17, 11, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#7CFC00'; for (let i = -2; i <= 2; i++) ctx.fillRect(u.x + i * 11 - 1, u.y + 5, 3, 3);
-}
-
-// =========================================================================
-//  DIRTBIKE MODE -- ride a motocross bike, hit 7 kinds of ramps, do flips,
-//  and DON'T land upside down (or you crash).
-// =========================================================================
-// 7 ramp types: different heights/power and 3 visual styles (0 triangle,
-// 1 curved kicker, 2 tabletop).
-const DIRT_RAMPS = [
-  { h: 30, power: 8,  style: 0 }, { h: 45, power: 10, style: 1 },
-  { h: 60, power: 12, style: 2 }, { h: 25, power: 7,  style: 0 },
-  { h: 78, power: 14, style: 1 }, { h: 52, power: 11, style: 2 },
-  { h: 95, power: 16, style: 0 },
-];
-let dirtBike = null;
-let dirtRamps = [];
-let dirtMsg = '', dirtMsgTimer = 0;
-function dirtGY() { return CONFIG.GROUND_Y - 14; } // where the wheels rest
-
-function startDirtbike() {
-  dirtBike = { x: 100, y: dirtGY(), vx: 0, vy: 0, angle: 0, onGround: true };
-  dirtRamps = [];
-  let x = 500;
-  for (let i = 0; x < CONFIG.WORLD_WIDTH - 300; i++) {
-    const t = DIRT_RAMPS[i % DIRT_RAMPS.length];
-    dirtRamps.push({ x: x, h: t.h, power: t.power, style: t.style, w: 44 + t.h * 0.8 });
-    x += 620 + (i % 3) * 180;
-  }
-  dirtMsg = ''; dirtMsgTimer = 0;
-}
-function dirtCrash() {
-  bigExplosion(dirtBike.x, dirtBike.y);
-  dirtMsg = 'CRASHED -- landed upside down!'; dirtMsgTimer = 120;
-  // reset the bike where it is, back upright and stopped
-  dirtBike.vx = 0; dirtBike.vy = 0; dirtBike.angle = 0; dirtBike.y = dirtGY(); dirtBike.onGround = true;
-}
-function dirtUpdate() {
-  const b = dirtBike, gy = dirtGY();
-  if (dirtMsgTimer > 0) dirtMsgTimer -= 1; else dirtMsg = '';
-
-  if (b.onGround) {
-    if (Input.up) b.vx += 0.25;       // gas
-    if (Input.down) b.vx -= 0.22;     // brake
-    b.vx *= 0.992; b.vx = Math.max(0, Math.min(15, b.vx));
-    b.angle *= 0.7; if (Math.abs(b.angle) < 0.02) b.angle = 0;  // level out
-    b.y = gy; b.vy = 0;
-    b.x = wrapX(b.x + b.vx);
-    for (const r of dirtRamps) {       // hit a ramp -> launch into the air
-      if (Math.abs(wrapDX(r.x - b.x)) < r.w * 0.5 && b.vx > 2.5) {
-        b.vy = -r.power * (0.6 + b.vx / 15);
-        b.onGround = false;
-        b.angle = -0.5;                // pops nose-up off the ramp
-        break;
-      }
-    }
-  } else {
-    b.vy += 0.45;                      // gravity
-    if (Input.left) b.angle -= 0.06;   // backflip
-    if (Input.right) b.angle += 0.06;  // frontflip
-    if (Input.up) b.vx += 0.05;        // a little air control
-    b.x = wrapX(b.x + b.vx);
-    b.y += b.vy;
-    if (b.y >= gy) {                   // landing!
-      b.y = gy;
-      const a = Math.atan2(Math.sin(b.angle), Math.cos(b.angle)); // -PI..PI
-      if (Math.abs(a) < 1.2) { b.onGround = true; b.angle = 0; b.vy = 0; } // upright = safe
-      else dirtCrash();                // upside down = crash
-    }
-  }
-
-  const targetX = b.x - CONFIG.GAME_W * 0.35;
-  camera.x += wrapDX(targetX - camera.x) * 0.1;
-  const targetY = Math.min(CONFIG.GROUND_Y - CONFIG.GAME_H + 200, b.y - CONFIG.GAME_H * 0.62);
-  camera.y += (targetY - camera.y) * 0.12;
-}
-
-function dirtDraw() {
-  const W = CONFIG.GAME_W, H = CONFIG.GAME_H;
-  const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, '#6fb7e8'); sky.addColorStop(1, '#cfe9f7');
-  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-  const by = CONFIG.GROUND_Y - camera.y;
-  ctx.fillStyle = '#8a5a32'; ctx.fillRect(0, by, W, H - by);   // dirt
-  ctx.fillStyle = '#6e4524'; ctx.fillRect(0, by, W, 4);
-  for (const r of dirtRamps) drawRamp(r);
-  drawBike(dirtBike);
-  ctx.fillStyle = '#ffffff'; ctx.font = '18px monospace'; ctx.textAlign = 'center';
-  ctx.fillText('DIRTBIKE!  Up = gas, Left/Right = flip in the air -- don\'t land upside down!', W / 2, 108);
-  ctx.fillText('Speed ' + dirtBike.vx.toFixed(1), W / 2, 130);
-  if (dirtMsgTimer > 0) { ctx.fillStyle = '#ff5a4a'; ctx.font = '24px monospace'; ctx.fillText(dirtMsg, W / 2, 168); }
-  ctx.textAlign = 'left';
-}
-function drawRamp(r) {
-  const sx = worldToScreenX(r.x), by = CONFIG.GROUND_Y - camera.y;
-  if (sx < -120 || sx > CONFIG.GAME_W + 120) return;
-  const w = r.w, h = r.h;
-  ctx.fillStyle = '#7a5230';
-  ctx.beginPath();
-  if (r.style === 2) {               // tabletop
-    ctx.moveTo(sx - w / 2, by); ctx.lineTo(sx - w / 4, by - h);
-    ctx.lineTo(sx + w / 4, by - h); ctx.lineTo(sx + w / 2, by);
-  } else if (r.style === 1) {        // curved kicker
-    ctx.moveTo(sx - w / 2, by); ctx.quadraticCurveTo(sx + w / 2, by, sx + w / 2, by - h);
-    ctx.lineTo(sx + w / 2, by);
-  } else {                           // triangle
-    ctx.moveTo(sx - w / 2, by); ctx.lineTo(sx + w / 2, by - h); ctx.lineTo(sx + w / 2, by);
-  }
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#5a3b22'; ctx.fillRect(sx - w / 2, by - 2, w, 3);
-}
-function drawBike(b) {
-  const sx = worldToScreenX(b.x), sy = b.y - camera.y;
-  ctx.save(); ctx.translate(sx, sy); ctx.rotate(b.angle);
-  ctx.fillStyle = '#111111';
-  ctx.beginPath(); ctx.arc(-12, 6, 8, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(12, 6, 8, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#666666';
-  ctx.beginPath(); ctx.arc(-12, 6, 3, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(12, 6, 3, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#e0413a'; ctx.fillRect(-12, 0, 24, 5);        // frame
-  ctx.fillRect(9, -7, 4, 9);                                     // handlebars
-  ctx.fillStyle = '#2c4a7a'; ctx.fillRect(-5, -12, 9, 11);       // rider body
-  ctx.fillStyle = '#dfe6ee'; ctx.beginPath(); ctx.arc(2, -15, 4, 0, Math.PI * 2); ctx.fill(); // helmet
-  ctx.restore();
 }
 
 // =========================================================================

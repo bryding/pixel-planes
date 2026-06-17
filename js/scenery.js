@@ -449,4 +449,13 @@ function drawBigBarn(ctx, sx, by) {
   // Flag on the roof peak so it reads as the goal
   ctx.fillStyle = '#5a3b2e'; ctx.fillRect(sx - 1, by - h - 30, 2, 16);
   ctx.fillStyle = '#2ecc71'; ctx.fillRect(sx + 1, by - h - 30, 14, 8);
+
+  // Night Mode: a bright light on the roof.
+  if (typeof mode !== 'undefined' && mode === 'night') {
+    const ly = by - h - 20;
+    ctx.fillStyle = 'rgba(255,240,150,0.45)';
+    ctx.beginPath(); ctx.arc(sx, ly, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff7c0';
+    ctx.beginPath(); ctx.arc(sx, ly, 5, 0, Math.PI * 2); ctx.fill();
+  }
 }

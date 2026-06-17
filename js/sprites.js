@@ -223,5 +223,12 @@ function drawPlaneSprite(ctx, set, x, y, angle, spin, flashing) {
     ctx.fillRect(-2, -3, 1, 2); ctx.fillRect(10, 0, 1, 2); ctx.fillRect(-9, 0, 1, 2);
   }
 
+  // Night Mode: the plane's lights are on (headlight + red/green nav lights).
+  if (typeof mode !== 'undefined' && mode === 'night') {
+    ctx.fillStyle = '#fff7c0'; ctx.fillRect(17, -2, 3, 3);   // white headlight
+    ctx.fillStyle = '#ff4d4d'; ctx.fillRect(-12, 2, 2, 2);   // red nav light
+    ctx.fillStyle = '#4dff6a'; ctx.fillRect(12, 2, 2, 2);    // green nav light
+  }
+
   ctx.restore();
 }
