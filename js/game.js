@@ -132,8 +132,9 @@ function setMode(m) {
   }
   if (m === 'ww2') assignWW2Factions();
   if (m === 'alien') startAlien();
-  // Leaving the moon mini-game -> put a flying plane back.
-  if (prev === 'alien' && m !== 'alien') spawnPlane(100);
+  if (m === 'blackhole') startBlackHole();
+  // Leaving a space mini-game -> put a normal flying plane back.
+  if ((prev === 'alien' || prev === 'blackhole') && m !== 'alien' && m !== 'blackhole') spawnPlane(100);
 }
 
 // Put the player on GREEN and split the bots: the first few are BLACK,
@@ -463,8 +464,8 @@ function update() {
     player.update();
     // Touching the ground: a gentle, level touchdown is a safe landing (you
     // just roll); coming in too fast or too steep is a fatal crash.
-    // In Alien Invasion (tag) mode nobody can crash, shoot, missile, or eject.
-    const hardLanding = mode !== 'alien' && player.hitGround && player.invincibleTimer <= 0 &&
+    // No ground crashes in the space modes (Alien tag / Black Hole).
+    const hardLanding = mode !== 'alien' && mode !== 'blackhole' && player.hitGround && player.invincibleTimer <= 0 &&
       (player.impactVy >= CONFIG.LAND_MAX_VY ||
        Math.abs(angleDiff(player.angle, 0)) >= CONFIG.LAND_MAX_ANGLE);
     if (hardLanding) {
@@ -519,6 +520,9 @@ function update() {
 
   // Alien Invasion: UFOs tag nearby flyers, then check for a round winner.
   if (mode === 'alien') alienTagStep();
+
+  // Black Hole: pull everything toward the hole and crush whatever falls in.
+  if (mode === 'blackhole') blackHoleStep();
 
   // --- Bullets: move them and check if they hit any plane ---
   for (const bullet of bullets) {
@@ -648,6 +652,8 @@ function draw() {
   const uni = (mode === 'unicorn');
   const night = (mode === 'night');
   const alien = (mode === 'alien');
+  const bh = (mode === 'blackhole');
+  const space = alien || bh;            // modes with no ground & a starry void
 
   // --- Sky (candy / stormy / night / space / day) ---
   const storm = (mode === 'badweather');
@@ -656,12 +662,15 @@ function draw() {
   else if (storm) { sky.addColorStop(0, '#262d3a'); sky.addColorStop(1, '#3c4452'); }
   else if (night) { sky.addColorStop(0, '#0a1230'); sky.addColorStop(1, '#1b2848'); }
   else if (alien) { sky.addColorStop(0, '#03020a'); sky.addColorStop(1, '#0b0820'); }
+  else if (bh) { sky.addColorStop(0, '#060312'); sky.addColorStop(1, '#0e0524'); }
   else { sky.addColorStop(0, C.skyTop); sky.addColorStop(1, C.skyBottom); }
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
 
   // --- Alien Invasion: deep space -- lots of stars, a crescent moon, planets ---
   if (alien) drawSpaceSky();
+  // --- Black Hole: stars + the swirling accretion disk (behind the planes) ---
+  if (bh) drawBlackHoleGlow();
 
   // --- Night: stars and a crescent moon ---
   if (night) {
@@ -695,7 +704,7 @@ function draw() {
   }
 
   // --- Soft vintage sun with a warm glow (hidden during storm/night/space) ---
-  if (!storm && !night && !alien) {
+  if (!storm && !night && !space) {
     const sunX = CONFIG.GAME_W * 0.80, sunY = CONFIG.GAME_H * 0.20;
     const glow = ctx.createRadialGradient(sunX, sunY, 8, sunX, sunY, 240);
     glow.addColorStop(0, 'rgba(255,246,214,0.95)');
@@ -708,12 +717,15 @@ function draw() {
   }
 
   // --- Clouds, far hills, and the treeline on the horizon (not in space) ---
-  if (!alien) drawBackgroundScenery(ctx, camera);
+  if (!space) drawBackgroundScenery(ctx, camera);
 
-  // --- Ground. In Alien mode it's a cratered moon surface; otherwise grass. ---
+  // --- Ground. Alien = cratered moon; Black Hole = empty space (no ground);
+  // otherwise grass. ---
   const ww2 = (mode === 'ww2');
   const groundScreenY = CONFIG.GROUND_Y - camera.y;
-  if (alien) {
+  if (bh) {
+    /* Black Hole: pure void -- no ground drawn. */
+  } else if (alien) {
     drawMoonGround(groundScreenY);
   } else {
     ctx.fillStyle = uni ? '#f7a8d8' : (storm ? '#5a4632' : (ww2 ? '#6f6a40' : (night ? '#2e3d2a' : C.ground)));
@@ -764,18 +776,24 @@ function draw() {
   if (playerState === 'flying' || playerState === 'takeoff') player.draw(ctx);
   else if (playerState === 'chute' && pilot) pilot.draw(ctx);
 
+  // --- Black Hole: the event horizon, drawn IN FRONT so planes vanish into it ---
+  if (bh) drawBlackHoleCore();
+
   // --- Arrows pointing at bots (and the barn while parachuting) ---
   drawOffscreenIndicators();
   if (playerState === 'chute') drawBarnArrow();
 
-  // --- Vintage sepia vignette: warm, darkened corners like an old photo ---
-  const vg = ctx.createRadialGradient(
-    CONFIG.GAME_W / 2, CONFIG.GAME_H / 2, CONFIG.GAME_H * 0.4,
-    CONFIG.GAME_W / 2, CONFIG.GAME_H / 2, CONFIG.GAME_W * 0.72);
-  vg.addColorStop(0, 'rgba(60,40,15,0)');
-  vg.addColorStop(1, 'rgba(45,28,8,0.34)');
-  ctx.fillStyle = vg;
-  ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
+  // --- Vintage sepia vignette: warm, darkened corners like an old photo
+  // (skipped in the cold, starry space modes). ---
+  if (!space) {
+    const vg = ctx.createRadialGradient(
+      CONFIG.GAME_W / 2, CONFIG.GAME_H / 2, CONFIG.GAME_H * 0.4,
+      CONFIG.GAME_W / 2, CONFIG.GAME_H / 2, CONFIG.GAME_W * 0.72);
+    vg.addColorStop(0, 'rgba(60,40,15,0)');
+    vg.addColorStop(1, 'rgba(45,28,8,0.34)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
+  }
 
   // --- Night: darken the whole scene so the lights stand out ---
   if (night) {
@@ -797,6 +815,7 @@ function draw() {
       drawLeaderboard();
       drawKillFeed();
     }
+    if (bh) drawBlackHoleHud();   // flashing "gravity pull" warning
   }
   drawMinimap();
 }
@@ -942,7 +961,9 @@ function drawMinimap() {
   // The map is now TALL: side-to-side shows where you are across the world,
   // and up-and-down shows your HEIGHT, from the ground up to the ceiling. So
   // the higher you fly, the higher your marker sits in the box.
-  const mw = 240, mh = 120, mx = 12, my = 12;
+  // Sit the map in the gap between the kill feed (far left) and the Modifier
+  // Menu (top-center), roughly halfway between them.
+  const mw = 240, mh = 120, mx = Math.round(CONFIG.GAME_W * 0.25) - mw / 2, my = 12;
   const W = CONFIG.WORLD_WIDTH;
   const top = CONFIG.CEILING, bot = CONFIG.GROUND_Y, H = bot - top;
   const innerH = mh - 4;
@@ -964,7 +985,7 @@ function drawMinimap() {
   for (const e of enemies) {
     if (!e.alive) continue;
     ctx.fillStyle = (mode === 'alien') ? (e.isUfo ? '#2ecc40' : '#3b9bff') : e.bodyColor;
-    ctx.fillRect(mapX(e.x) - 1, mapY(e.y) - 1, 2, 2);
+    ctx.fillRect(mapX(e.x) - 3, mapY(e.y) - 3, 6, 6); // same size as your marker
   }
 
   // Green flag = the rescue barn (sits on the ground)
@@ -1426,6 +1447,135 @@ function drawMoonGround(groundY) {
   for (let i = 0; i < 40; i++) {
     let sx = worldToScreenX(i * 610 + 120);
     ctx.fillRect(sx, groundY + 12 + (i % 6) * 30, 6, 4);
+  }
+}
+
+// =========================================================================
+//  BLACK HOLE MODE  --  a black hole hangs in the middle of space and pulls
+//  EVERYTHING toward it (planes, bullets, even your aim). Get pulled past the
+//  event horizon and you're crushed. Fight the pull with throttle and angle;
+//  it's a normal dogfight, but the hole is always trying to eat you.
+// =========================================================================
+const BH_X = BARN_X;                                   // centered over the map
+const BH_Y = (CONFIG.CEILING + CONFIG.GROUND_Y) / 2;   // halfway up the sky
+
+function startBlackHole() {
+  spawnPlane(BARN_X - 1900);
+  player.y = BH_Y; player.vx = 4; player.vy = 0; player.angle = 0;
+  playerState = 'flying';
+  // Scatter the bots in a big ring around the hole so nobody starts inside it.
+  enemies.forEach((e, i) => {
+    e.alive = true; e.health = CONFIG.ENEMY_HEALTH;
+    const ang = (i / Math.max(1, enemies.length)) * Math.PI * 2;
+    e.x = wrapX(BH_X + Math.cos(ang) * 1900);
+    e.y = BH_Y + Math.sin(ang) * 1300;
+    e.vx = 0; e.vy = 0;
+  });
+}
+
+// Add one frame of gravity toward the hole. Returns the distance to the center
+// (so callers can check the event horizon). `scale` lets bullets be pulled a
+// different amount than planes.
+function applyBlackHolePull(o, scale) {
+  const dx = wrapDX(BH_X - o.x), dy = BH_Y - o.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  if (dist > CONFIG.BH_RANGE) return dist;
+  const t = 1 - dist / CONFIG.BH_RANGE;          // 0 at the edge .. 1 at center
+  const pull = CONFIG.BH_PULL * t * t * (scale || 1);  // mild far away, fierce near
+  const ux = dx / dist, uy = dy / dist;
+  o.vx += ux * pull;                             // straight toward the hole...
+  o.vy += uy * pull;
+  o.vx += -uy * pull * CONFIG.BH_SWIRL;          // ...plus a swirl, so it spirals in
+  o.vy += ux * pull * CONFIG.BH_SWIRL;
+  return dist;
+}
+
+// A purple implosion for anything crushed by the hole.
+function implodeAt(x, y) {
+  explosions.push(new Explosion(x, y, '#b388ff', true));
+  explosions.push(new Explosion(x, y, '#7c4dff'));
+  explosions.push(new Explosion(x, y, '#ffffff'));
+}
+
+// Run the hole each frame: pull everything, and crush whatever crosses in.
+function blackHoleStep() {
+  if (playerState === 'flying' || playerState === 'takeoff') {
+    const d = applyBlackHolePull(player, 1);
+    if (d < CONFIG.BH_HORIZON && player.invincibleTimer <= 0) {
+      implodeAt(player.x, player.y);
+      pushKill('🕳️ the black hole crushed YOU', '#b388ff');
+      playerDies(player.x, player.y, 'SPAGHETTIFIED!');
+    }
+  }
+  for (const e of enemies) {
+    if (!e.alive) continue;
+    const d = applyBlackHolePull(e, 1);
+    if (d < CONFIG.BH_HORIZON && e.invincibleTimer <= 0) {
+      implodeAt(e.x, e.y);
+      pushKill('🕳️ ' + e.name + ' fell into the black hole', '#b388ff');
+      e.alive = false; e.respawnTimer = CONFIG.ENEMY_RESPAWN; e.score = 0;
+    }
+  }
+  for (const b of bullets) applyBlackHolePull(b, 1);  // shots curve toward the hole
+}
+
+// The stars + glowing, swirling accretion disk (drawn BEHIND the planes).
+function drawBlackHoleGlow() {
+  const shift = camera.x * 0.15;                 // slow star parallax
+  for (let i = 0; i < 280; i++) {
+    let x = ((i * 151) - shift) % CONFIG.GAME_W; if (x < 0) x += CONFIG.GAME_W;
+    const y = (i * 83) % CONFIG.GAME_H;
+    const tw = (Math.sin(frameCount * 0.05 + i) + 1) * 0.5;
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.3 + tw * 0.5) + ')';
+    ctx.fillRect(x, y, 2, 2);
+  }
+  const cx = worldToScreenX(BH_X), cy = BH_Y - camera.y;
+  const R = CONFIG.BH_DISK_R;
+  // outer gravity glow (gravitational lensing halo)
+  const g = ctx.createRadialGradient(cx, cy, R * 0.25, cx, cy, R * 1.9);
+  g.addColorStop(0, 'rgba(150,90,255,0.40)');
+  g.addColorStop(0.5, 'rgba(90,60,200,0.18)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, R * 1.9, 0, Math.PI * 2); ctx.fill();
+  // swirling disk: hot rings as flattened, rotating ellipse arcs
+  ctx.save(); ctx.translate(cx, cy);
+  const cols = ['#fff3b0', '#ffb347', '#ff6b3d', '#ff3d6e', '#b15bff', '#5b8bff'];
+  for (let i = 0; i < cols.length; i++) {
+    const rr = R - i * (R * 0.12);
+    ctx.strokeStyle = cols[i];
+    ctx.globalAlpha = 0.85;
+    ctx.lineWidth = R * 0.07;
+    const a0 = frameCount * (0.03 + i * 0.006);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, rr, rr * 0.42, 0, a0, a0 + Math.PI * 1.5);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1; ctx.restore();
+}
+
+// The pure-black event horizon + bright photon ring (drawn IN FRONT of planes,
+// so anything spiralling in vanishes behind it).
+function drawBlackHoleCore() {
+  const cx = worldToScreenX(BH_X), cy = BH_Y - camera.y;
+  const h = CONFIG.BH_HORIZON;
+  ctx.strokeStyle = 'rgba(255,240,200,0.9)'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.arc(cx, cy, h + 7, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = '#000000';
+  ctx.beginPath(); ctx.arc(cx, cy, h, 0, Math.PI * 2); ctx.fill();
+}
+
+// A flashing warning when you're getting dangerously close to the hole.
+function drawBlackHoleHud() {
+  const dx = wrapDX(BH_X - player.x), dy = BH_Y - player.y;
+  const dist = Math.hypot(dx, dy);
+  if (playerState !== 'flying' || dist > CONFIG.BH_WARN_DIST) return;
+  if ((frameCount >> 3) & 1) {                   // blink
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 34px monospace';
+    ctx.fillStyle = '#ff5b7e';
+    ctx.fillText('⚠ GRAVITY PULL — POWER AWAY!', CONFIG.GAME_W / 2, 120);
+    ctx.textAlign = 'left';
   }
 }
 

@@ -175,7 +175,17 @@ class Enemy {
     applyFlightPhysics(this, S.thrust);
     this.x = wrapX(this.x + this.vx);
     this.y += this.vy;
-    if (this.y > CONFIG.GROUND_Y - 6) { this.y = CONFIG.GROUND_Y - 6; this.vy = 0; }
+    // Hitting the ground: a bot CRASHES if it comes in too fast or too steep --
+    // the very same rule the player has. A gentle, level touch is a safe roll.
+    if (this.y > CONFIG.GROUND_Y - 6) {
+      const impactVy = this.vy;
+      const crash = this.invincibleTimer <= 0 && mode !== 'alien' && mode !== 'blackhole' &&
+        (impactVy >= CONFIG.LAND_MAX_VY ||
+         Math.abs(angleDiff(this.angle, 0)) >= CONFIG.LAND_MAX_ANGLE);
+      this.y = CONFIG.GROUND_Y - 6;
+      if (this.vy > 0) this.vy = 0;
+      if (crash) this.crashIntoGround();
+    }
     if (this.y < CONFIG.CEILING) { this.y = CONFIG.CEILING; this.vy = 0; }
 
     // Shoot if we have a target, it's close, and we're aimed at it.
@@ -241,6 +251,16 @@ class Enemy {
       bullets.push(new Bullet(nx, ny, this.angle, this.vx, this.vy, this.team, col, this.faction));
     }
     this.fireCooldown = this.style.fireCd;
+  }
+
+  // Slammed into the ground: explode, lose your score, and respawn -- exactly
+  // like the player crashing.
+  crashIntoGround() {
+    bigExplosion(this.x, CONFIG.GROUND_Y - 6);
+    pushKill('🛩️ ' + this.name + ' crashed 💥', '#ff8a65');
+    this.alive = false;
+    this.respawnTimer = CONFIG.ENEMY_RESPAWN;
+    this.score = 0;
   }
 
   takeHit(damage = 1) {

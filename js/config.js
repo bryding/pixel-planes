@@ -69,6 +69,15 @@ const CONFIG = {
                        // speed (MAX_SPEED=10), so it's a fair, even chase.
   UFO_TAG_RANGE: 30,   // how close a UFO must get to TAG a runner.
 
+  // --- Black Hole mode ---
+  // A black hole hangs in the middle of space and pulls EVERYTHING toward it.
+  BH_PULL: 0.45,       // how hard it pulls (the pull-accel right at the center).
+  BH_RANGE: 3000,      // how far the pull reaches out into the sky.
+  BH_SWIRL: 0.55,      // sideways swirl so things SPIRAL in instead of straight.
+  BH_HORIZON: 130,     // event-horizon radius -- cross it and you're crushed.
+  BH_DISK_R: 460,      // size of the glowing accretion disk (looks only).
+  BH_WARN_DIST: 900,   // how close before the "PULL!" warning flashes.
+
   STALL_ALT: -700,     // above this height the air thins out and lift fades.
   // The throttle bar tops out at MAX_SPEED (10). Flying level you can go as
   // slow as 1/8 of the bar before stalling; climbing straight up needs 1/4.
