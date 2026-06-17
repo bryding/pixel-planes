@@ -288,7 +288,57 @@ function drawHaybales(ctx, sx, by) {
   bale(sx - 4, by - 9, 11, 8);
 }
 
+// A red-and-white striped candy cane (used on the big gingerbread house).
+function candyCane(ctx, x, baseY, height) {
+  for (let y = 0; y < height; y += 4) {
+    ctx.fillStyle = (Math.floor(y / 4) % 2 === 0) ? '#e74c3c' : '#ffffff';
+    ctx.fillRect(x, baseY - y - 4, 5, 4);
+  }
+  const topY = baseY - height;            // little hook at the top
+  ctx.fillStyle = '#e74c3c'; ctx.fillRect(x, topY - 4, 9, 4);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 5, topY - 4, 4, 4);
+  ctx.fillStyle = '#e74c3c'; ctx.fillRect(x + 9, topY, 5, 4);
+}
+
+// A small gingerbread house (replaces barns in Unicorn Mode).
+function drawGingerbread(ctx, sx, by) {
+  const w = 28, h = 20;
+  ctx.fillStyle = '#a86b3a'; ctx.fillRect(sx - w / 2, by - h, w, h);
+  ctx.fillStyle = '#8a5630'; ctx.fillRect(sx - w / 2, by - h, 4, h);
+  ctx.fillStyle = '#ffffff';                 // icing roof
+  ctx.beginPath();
+  ctx.moveTo(sx - w / 2 - 3, by - h); ctx.lineTo(sx, by - h - 12);
+  ctx.lineTo(sx + w / 2 + 3, by - h); ctx.closePath(); ctx.fill();
+  for (let i = -2; i <= 2; i++) ctx.fillRect(sx + i * 6 - 1, by - h, 3, 3); // drips
+  ctx.fillStyle = '#5a3b2e'; ctx.fillRect(sx - 4, by - 10, 8, 10); // door
+  const cols = ['#e74c3c', '#2ecc71', '#3498db', '#f1c40f'];
+  ctx.fillStyle = cols[0]; ctx.fillRect(sx - 10, by - 14, 3, 3);
+  ctx.fillStyle = cols[1]; ctx.fillRect(sx + 7, by - 14, 3, 3);
+  ctx.fillStyle = cols[2]; ctx.fillRect(sx - 10, by - 6, 3, 3);
+  ctx.fillStyle = cols[3]; ctx.fillRect(sx + 7, by - 6, 3, 3);
+}
+
+// The BIG gingerbread house with candy canes on each side (rescue barn).
+function drawBigGingerbread(ctx, sx, by) {
+  const w = 96, h = 58;
+  candyCane(ctx, sx - w / 2 - 20, by, 70);
+  candyCane(ctx, sx + w / 2 + 12, by, 70);
+  ctx.fillStyle = '#a86b3a'; ctx.fillRect(sx - w / 2, by - h, w, h);
+  ctx.fillStyle = '#8a5630'; ctx.fillRect(sx - w / 2, by - h, 6, h);
+  ctx.fillStyle = '#ffffff';                 // icing roof
+  ctx.beginPath();
+  ctx.moveTo(sx - w / 2 - 8, by - h); ctx.lineTo(sx, by - h - 26);
+  ctx.lineTo(sx + w / 2 + 8, by - h); ctx.closePath(); ctx.fill();
+  for (let i = -7; i <= 7; i++) ctx.fillRect(sx + i * 6 - 1, by - h, 4, 5); // drips
+  ctx.fillStyle = '#5a3b2e'; ctx.fillRect(sx - 16, by - 34, 32, 34); // doors
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(sx - 1, by - 34, 2, 34);
+  const cols = ['#e74c3c', '#2ecc71', '#3498db', '#f1c40f', '#9b59b6'];
+  for (let i = 0; i < 5; i++) { ctx.fillStyle = cols[i]; ctx.fillRect(sx - w / 2 + 12 + i * 16, by - h + 10, 8, 8); }
+  for (let i = 0; i < 6; i++) { ctx.fillStyle = cols[i % 5]; ctx.fillRect(sx - w / 2 + 8 + i * 16, by - 8, 4, 4); }
+}
+
 function drawBarn(ctx, sx, by) {
+  if (typeof mode !== 'undefined' && mode === 'unicorn') { drawGingerbread(ctx, sx, by); return; }
   const C = CONFIG.COLORS;
   const w = 30, h = 22;
   ctx.fillStyle = C.barnWall; ctx.fillRect(sx - w / 2, by - h, w, h);
@@ -303,6 +353,7 @@ function drawBarn(ctx, sx, by) {
 
 // The big landmark barn in the middle of the world -- fly your parachute here!
 function drawBigBarn(ctx, sx, by) {
+  if (typeof mode !== 'undefined' && mode === 'unicorn') { drawBigGingerbread(ctx, sx, by); return; }
   const C = CONFIG.COLORS;
   const w = 96, h = 64;
 

@@ -522,17 +522,19 @@ function draw() {
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
 
-  // --- Unicorn Mode: a big rainbow arching across the whole screen ---
+  // --- Unicorn Mode: a big rainbow planted over the big barn (it stays put
+  // in the world; the barn sits at the bottom-middle of it) ---
   if (uni) {
-    const rcx = CONFIG.GAME_W / 2, rcy = CONFIG.GAME_H * 0.95;
+    const rcx = worldToScreenX(BARN_X);            // centered on the big barn
+    const rcy = CONFIG.GROUND_Y - camera.y;         // rooted at the ground
     const rain = ['#e74c3c', '#f39c12', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'];
     const baseR = CONFIG.GAME_W * 0.45;
-    ctx.lineWidth = 16;
-    ctx.globalAlpha = 0.45;
+    ctx.lineWidth = 18;
+    ctx.globalAlpha = 0.55;
     rain.forEach((col, i) => {
       ctx.strokeStyle = col;
       ctx.beginPath();
-      ctx.arc(rcx, rcy, baseR - i * 16, Math.PI, Math.PI * 2);
+      ctx.arc(rcx, rcy, baseR - i * 18, Math.PI, Math.PI * 2);
       ctx.stroke();
     });
     ctx.globalAlpha = 1;
