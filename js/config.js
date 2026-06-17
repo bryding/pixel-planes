@@ -75,6 +75,8 @@ const CONFIG = {
   STALL_SPEED: 1.25,   // level (horizontal) stall speed = 1/8 of the bar.
   STALL_SPEED_UP: 2.5, // straight-up stall speed = 1/4 of the bar.
   STALL_DRAG: 0.05,    // small extra brake from a badly-stalled (sideways) wing.
+  STALL_SPIN: 0.16,    // when stalled the plane TUMBLES -- how fast it spins
+                       // (radians per frame). Bigger = a wilder, faster spin.
   TURN_FULL_SPEED: 4,  // reference speed for control.
 
   // ---- Guns & bullets ----

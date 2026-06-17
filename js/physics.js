@@ -122,9 +122,26 @@ function applyFlightPhysics(o, push, liftScale) {
     o.angle += angleDiff(vdir, o.angle) * CONFIG.WEATHERVANE;
 
     o.stalling = speed < effStall;
+    o._vdir = vdir;                 // remembered so a stall spins the natural way
   } else {
     o.stalling = true;
   }
+
+  // --- Stall spin ---
+  // The stall SPEED is unchanged -- but once the wing quits, the plane loses
+  // control and TUMBLES. The spin winds UP while stalling and winds back DOWN
+  // as you recover flying speed, so a dive (or throttle) still saves you.
+  if (o.stalling) {
+    if (!o.spinDir) {                              // pick a spin direction once
+      const vd = (o._vdir !== undefined) ? o._vdir : o.angle;
+      o.spinDir = (angleDiff(o.angle, vd) >= 0) ? 1 : -1;
+    }
+    o.stallSpin = (o.stallSpin || 0) + (CONFIG.STALL_SPIN - (o.stallSpin || 0)) * 0.12;
+  } else {
+    o.stallSpin = (o.stallSpin || 0) * 0.85;       // ease out as it recovers
+    if (o.stallSpin < 0.004) { o.stallSpin = 0; o.spinDir = 0; }
+  }
+  o.angle += o.stallSpin * (o.spinDir || 1);
 
   // Don't go faster than the top speed (boosted when flying right in a tailwind).
   speed = Math.hypot(o.vx, o.vy);
