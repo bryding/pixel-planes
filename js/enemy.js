@@ -68,6 +68,7 @@ class Enemy {
     this.angle = Math.PI;
 
     this.team = team;          // every bot has a unique team number
+    this.faction = 'green';    // WW2 Mode team ('green' / 'black'); set on entry
     this.bodyColor = color;    // its color (used for bullets, arrows, sprite)
     this.style = style;        // its flying personality
     this.name = name;          // its goofy leaderboard name
@@ -160,10 +161,11 @@ class Enemy {
     if (this.y > CONFIG.GROUND_Y - 40) wantAngle = -Math.PI / 2;
     if (this.y < CONFIG.CEILING + 80) wantAngle = Math.PI / 2;
 
-    // Turn the nose smoothly toward where we want to go.
+    // Turn the nose smoothly toward where we want to go (slower in WW2).
+    const tm = (mode === 'ww2') ? CONFIG.WW2_TURN_MULT : 1;
     const diff = angleDiff(wantAngle, this.angle);
-    if (diff > 0.02) this.angle += S.turn;
-    else if (diff < -0.02) this.angle -= S.turn;
+    if (diff > 0.02) this.angle += S.turn * tm;
+    else if (diff < -0.02) this.angle -= S.turn * tm;
 
     // Fly (same realistic physics as the player) and loop around the world.
     applyFlightPhysics(this, S.thrust);
@@ -181,8 +183,8 @@ class Enemy {
       if (this.fireCooldown <= 0 && dist < S.fireRange && aimErr < S.aim) {
         this.shoot(bullets);
       }
-      // Launch a homing missile now and then when lined up at longer range.
-      if (this.missileCooldown <= 0 && dist < S.fireRange * 2.2 && aimErr < S.aim * 1.5) {
+      // Launch a homing missile now and then (no missiles in WW2 mode).
+      if (mode !== 'ww2' && this.missileCooldown <= 0 && dist < S.fireRange * 2.2 && aimErr < S.aim * 1.5) {
         missiles.push(new Missile(
           this.x + Math.cos(this.angle) * 17,
           this.y + Math.sin(this.angle) * 17,
@@ -207,11 +209,14 @@ class Enemy {
     return best;
   }
 
-  // Find the closest ALIVE plane that isn't on our team (everyone else!).
+  // Find the closest ALIVE plane we're allowed to attack. In WW2 mode that's
+  // anyone on the OTHER faction; otherwise it's anyone not on our team.
   findTarget(planes) {
+    const ww2 = (typeof mode !== 'undefined' && mode === 'ww2');
     let best = null, bestDist = Infinity;
     for (const p of planes) {
-      if (p === this || !p.alive || p.team === this.team) continue;
+      if (p === this || !p.alive) continue;
+      if (ww2 ? (p.faction === this.faction) : (p.team === this.team)) continue;
       const dx = wrapDX(p.x - this.x), dy = p.y - this.y;
       const d = dx * dx + dy * dy;
       if (d < bestDist) { bestDist = d; best = p; }
@@ -226,10 +231,10 @@ class Enemy {
     if (this.wideTimer > 0) { // turret power-up: 5-bullet wide shot
       for (let i = -2; i <= 2; i++) {
         bullets.push(new Bullet(nx, ny, this.angle + i * CONFIG.WIDE_SHOT_SPREAD,
-                                this.vx, this.vy, this.team, col));
+                                this.vx, this.vy, this.team, col, this.faction));
       }
     } else {
-      bullets.push(new Bullet(nx, ny, this.angle, this.vx, this.vy, this.team, col));
+      bullets.push(new Bullet(nx, ny, this.angle, this.vx, this.vy, this.team, col, this.faction));
     }
     this.fireCooldown = this.style.fireCd;
   }
@@ -262,17 +267,21 @@ class Enemy {
   draw(ctx) {
     if (!this.alive) return;
     const sx = worldToScreenX(this.x), sy = this.y - camera.y;
-    const set = (mode === 'unicorn') ? this.uniSprite : this.sprite;
+    let set = this.sprite;
+    if (mode === 'unicorn') set = this.uniSprite;
+    else if (mode === 'ww2') set = WW2_SPRITES[this.faction];
     drawPlaneSprite(ctx, set, sx, sy, this.angle, this.propSpin, this.flash > 0);
 
-    // Nametag floating above the plane, so you know who's who (and who got you).
-    ctx.font = '11px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';        // dark outline for readability
-    ctx.fillText(this.name, sx + 1, sy - 21);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(this.name, sx, sy - 22);
-    ctx.textAlign = 'left';
+    // Nametag floating above the plane (WW2 mode has NO names).
+    if (mode !== 'ww2') {
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';        // dark outline for readability
+      ctx.fillText(this.name, sx + 1, sy - 21);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(this.name, sx, sy - 22);
+      ctx.textAlign = 'left';
+    }
 
     // Shield bubble while this bot is invincible.
     if (this.invincibleTimer > 0) {

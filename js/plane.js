@@ -29,6 +29,8 @@ class Plane {
 
     // The player is on "team 0". Bullets only hurt planes on a DIFFERENT team.
     this.team = 0;
+    // In WW2 Mode planes belong to a faction ('green' / 'black') instead.
+    this.faction = 'green';
 
     // Health: how many hits left. alive = false means shot down (respawning).
     this.health = CONFIG.PLAYER_HEALTH;
@@ -76,8 +78,9 @@ class Plane {
       // Keep the throttle between 0 (off) and 1 (full power).
       this.throttle = Math.max(0, Math.min(1, this.throttle));
 
-      if (Input.left)  this.angle -= CONFIG.TURN_SPEED;
-      if (Input.right) this.angle += CONFIG.TURN_SPEED;
+      const tm = (mode === 'ww2') ? CONFIG.WW2_TURN_MULT : 1; // WW2 planes turn slowly
+      if (Input.left)  this.angle -= CONFIG.TURN_SPEED * tm;
+      if (Input.right) this.angle += CONFIG.TURN_SPEED * tm;
     }
 
     // --- 2. Realistic flight. Lift scales with throttle, so cutting the
@@ -181,11 +184,11 @@ class Plane {
       for (let i = -2; i <= 2; i++) {
         const a = this.angle + i * CONFIG.WIDE_SHOT_SPREAD;
         bullets.push(new Bullet(noseX, noseY, a, this.vx, this.vy,
-                                this.team, CONFIG.COLORS.bullet));
+                                this.team, CONFIG.COLORS.bullet, this.faction));
       }
     } else {
       bullets.push(new Bullet(noseX, noseY, this.angle, this.vx, this.vy,
-                              this.team, CONFIG.COLORS.bullet));
+                              this.team, CONFIG.COLORS.bullet, this.faction));
     }
 
     // Start the cooldown so the next shot has to wait a bit.
@@ -217,7 +220,9 @@ class Plane {
       ctx.beginPath(); ctx.arc(fx, fy - 1, 2.4, 0, Math.PI * 2); ctx.fill();
     }
 
-    const set = (mode === 'unicorn') ? UNICORN_SPRITES.player : PLANE_SPRITES.player;
+    let set = PLANE_SPRITES.player;
+    if (mode === 'unicorn') set = UNICORN_SPRITES.player;
+    else if (mode === 'ww2') set = WW2_SPRITES[this.faction];
     drawPlaneSprite(ctx, set, sx, sy, this.angle, this.propSpin, this.flash > 0);
 
     // Shield bubble while invincible.

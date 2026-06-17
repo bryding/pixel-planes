@@ -87,7 +87,7 @@ const CONFIG = {
   MISSILE_DAMAGE: 10,        // a missile takes off 10 health (so 2 missiles = dead)
 
   // ---- The player's health & eject ----
-  PLAYER_HEALTH: 20,   // 20 bullets (or 2 missiles) to be shot down.
+  PLAYER_HEALTH: 10,   // 10 bullets to be shot down.
   PLAYER_RESPAWN: 90,  // Frames before you fly back in after being shot down.
   // Press C to EJECT: you bail out and float down on a parachute. If you
   // steer your parachute to the big barn in the middle you respawn and KEEP
@@ -109,7 +109,7 @@ const CONFIG = {
   ENEMY_COUNT: 10,        // How many enemy planes are in the sky at once.
   ENEMY_THRUST: 0.11,     // Engine power for enemies (yours is THRUST above).
   ENEMY_TURN: 0.045,      // How fast enemies turn their nose. Bigger = nimbler.
-  ENEMY_HEALTH: 20,       // 20 bullets (or 2 missiles) to pop a bot, same as you.
+  ENEMY_HEALTH: 10,       // 10 bullets to pop a bot, same as you.
   ENEMY_FIRE_RANGE: 175,  // How close an enemy must be before it shoots.
   ENEMY_AIM: 0.26,        // How well-aimed it must be to fire (bigger = sloppier).
   ENEMY_FIRE_COOLDOWN: 36,// Frames between an enemy's shots (bigger = shoots less).
@@ -128,6 +128,10 @@ const CONFIG = {
   WIDE_SHOT_TIME: 600,     // turret: 10 seconds of the wide 5-bullet shot
   WIDE_SHOT_SPREAD: 0.14,  // angle between the 5 wide-shot bullets
   FREEZE_TIME: 300,        // skull: frozen (no control) for 5 seconds
+
+  // ---- WW2 Mode ----
+  WW2_TURN_MULT: 0.5,   // planes turn much slower in WW2 mode
+  WW2_BLACK_COUNT: 5,   // the black team has this many planes
 
   // ---- Bad Weather Mode ----
   BW_WIND: 0.05,            // wind blows right: faster flying right, slower left

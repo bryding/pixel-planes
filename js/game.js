@@ -89,6 +89,10 @@ function addBot() {
   const e = new Enemy(ex, ey, nextTeam, BOT_COLORS[i % BOT_COLORS.length],
                       makeBotStyle(i), BOT_NAMES[i % BOT_NAMES.length]);
   nextTeam += 1;
+  if (mode === 'ww2') { // keep the black team topped up to its size
+    const blacks = enemies.filter(x => x.faction === 'black').length;
+    e.faction = (blacks < CONFIG.WW2_BLACK_COUNT) ? 'black' : 'green';
+  }
   enemies.push(e);
   planes.push(e);
 }
@@ -112,8 +116,9 @@ function removeAllBots() {
   planes.length = 1; // planes[0] is the player; drop the rest
 }
 
-// ---- Game mode (Classic / Unicorn / No-Mod) ----
+// ---- Game mode (Classic / Unicorn / Bad Weather / WW2 / No-Mod) ----
 let mode = 'classic';
+let greenScore = 0, blackScore = 0; // WW2 team scores
 function setMode(m) {
   mode = m;
   // "No Mod Mode" hides the whole Modifier Menu and turns the cheats off.
@@ -124,6 +129,16 @@ function setMode(m) {
     infiniteHealth = false;
     infiniteMissiles = false;
   }
+  if (m === 'ww2') assignWW2Factions();
+}
+
+// Put the player on GREEN and split the bots: the first few are BLACK,
+// the rest GREEN. Reset the team scores.
+function assignWW2Factions() {
+  player.faction = 'green';
+  greenScore = 0;
+  blackScore = 0;
+  enemies.forEach((e, i) => { e.faction = (i < CONFIG.WW2_BLACK_COUNT) ? 'black' : 'green'; });
 }
 function toggleModeMenu() {
   const m = document.getElementById('modeMenu');
@@ -342,19 +357,23 @@ function checkPilotHit() {
 
 // Called when any plane is popped. Adds a boom, scores it if YOU did it, and
 // handles your own death (points reset).
-function onPlanePopped(target, shooterTeam) {
+function onPlanePopped(target, shooterTeam, shooterFaction) {
   bigExplosion(target.x, target.y);
-  // Figure out the names/colors for the kill feed.
-  const victimName = (target === player) ? '🛩️ YOU' : target.name;
-  let killerName = '🛩️ YOU', killerColor = '#7fbdef';
-  // Award the kill to whoever fired (you, or one of the bots).
-  if (shooterTeam === 0) {
-    score += 1;
+  if (mode === 'ww2') {
+    // Team scoring; no names/kill feed in WW2.
+    if (shooterFaction === 'green') greenScore += 1;
+    else if (shooterFaction === 'black') blackScore += 1;
   } else {
-    const shooter = enemies.find(e => e.team === shooterTeam);
-    if (shooter) { shooter.score += 1; killerName = shooter.name; killerColor = shooter.bodyColor; }
+    const victimName = (target === player) ? '🛩️ YOU' : target.name;
+    let killerName = '🛩️ YOU', killerColor = '#7fbdef';
+    if (shooterTeam === 0) {
+      score += 1;
+    } else {
+      const shooter = enemies.find(e => e.team === shooterTeam);
+      if (shooter) { shooter.score += 1; killerName = shooter.name; killerColor = shooter.bodyColor; }
+    }
+    pushKill(killerName + '  ›❌  ' + victimName, killerColor);
   }
-  pushKill(killerName + '  ›❌  ' + victimName, killerColor);
 
   if (target === player) {
     playerDies(player.x, player.y, 'SHOT DOWN!'); // your points reset
@@ -426,9 +445,10 @@ function update() {
       playerDies(player.x, CONFIG.GROUND_Y - 6, 'CRASHED!');
     } else if (player.frozenTimer <= 0) {
       // Flying (or safely rolling on the ground): normal controls.
+      // WW2 mode has NO missiles and NO ejecting.
       if (Input.fire) player.tryShoot(bullets);
-      if (missilePressed) player.fireMissile(missiles, planes);
-      if (ejectPressed) eject();
+      if (missilePressed && mode !== 'ww2') player.fireMissile(missiles, planes);
+      if (ejectPressed && mode !== 'ww2') eject();
     }
   } else if (playerState === 'chute') {
     if (ejectPressed) pilot.deploy(); // press C AGAIN to pop the parachute
@@ -464,11 +484,14 @@ function update() {
 
     for (const target of planes) {
       if (!target.alive) continue;               // can't hit a downed plane
-      if (target.team === bullet.team) continue; // bullets don't hit teammates
+      // Friendly fire is off for your own team (WW2 = faction; otherwise team).
+      const friendly = (mode === 'ww2') ? (target.faction === bullet.faction)
+                                        : (target.team === bullet.team);
+      if (friendly) continue;
       if (hits(bullet, target, 14)) {
         bullet.dead = true;
         const popped = target.takeHit();
-        if (popped) onPlanePopped(target, bullet.team);
+        if (popped) onPlanePopped(target, bullet.team, bullet.faction);
         break;
       }
     }
@@ -625,11 +648,12 @@ function draw() {
   // --- Clouds, far hills, and the treeline on the horizon ---
   drawBackgroundScenery(ctx, camera);
 
-  // --- Ground (candy pink in Unicorn, muddy brown in Bad Weather) ---
+  // --- Ground (candy pink / muddy / battlefield-dirt by mode) ---
+  const ww2 = (mode === 'ww2');
   const groundScreenY = CONFIG.GROUND_Y - camera.y;
-  ctx.fillStyle = uni ? '#f7a8d8' : (storm ? '#5a4632' : C.ground);
+  ctx.fillStyle = uni ? '#f7a8d8' : (storm ? '#5a4632' : (ww2 ? '#6f6a40' : C.ground));
   ctx.fillRect(0, groundScreenY, CONFIG.GAME_W, CONFIG.GAME_H);
-  ctx.fillStyle = uni ? '#e87bbf' : (storm ? '#43341f' : C.groundDark);
+  ctx.fillStyle = uni ? '#e87bbf' : (storm ? '#43341f' : (ww2 ? '#55502f' : C.groundDark));
   ctx.fillRect(0, groundScreenY, CONFIG.GAME_W, 4);
 
   // Some ground stripes that scroll by so you can feel the speed.
@@ -692,9 +716,25 @@ function draw() {
 
   // --- HUD (the info text on top) ---
   drawHud();
-  drawLeaderboard();
-  drawKillFeed();
+  if (mode === 'ww2') {
+    drawTeamScores();           // green vs black, no names
+  } else {
+    drawLeaderboard();
+    drawKillFeed();
+  }
   drawMinimap();
+}
+
+// WW2 team scores: GREEN top-left, BLACK top-right (no names anywhere).
+function drawTeamScores() {
+  ctx.font = '20px monospace';
+  ctx.fillStyle = '#7ed957';
+  ctx.textAlign = 'left';
+  ctx.fillText('GREEN  ' + greenScore, 14, 56);
+  ctx.fillStyle = '#cfcfcf';
+  ctx.textAlign = 'right';
+  ctx.fillText('BLACK  ' + blackScore, CONFIG.GAME_W - 14, 30);
+  ctx.textAlign = 'left';
 }
 
 // Spawn a power-up bubble, keeping 3 of EACH kind spread across the whole map.
@@ -989,11 +1029,13 @@ function drawHud() {
   }
   ctx.textAlign = 'left';
 
-  // Score (how many targets popped)
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.fillRect(CONFIG.GAME_W - 80, 6, 74, 16);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText('SCORE ' + score, CONFIG.GAME_W - 74, 17);
+  // Score (how many targets popped) -- hidden in WW2 (team scores shown instead)
+  if (mode !== 'ww2') {
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(CONFIG.GAME_W - 80, 6, 74, 16);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('SCORE ' + score, CONFIG.GAME_W - 74, 17);
+  }
 
   // Altitude gauge on the right edge. Top = the ceiling, bottom = the ground.
   // The red band at the top is the "thin air" stall zone.

@@ -7,16 +7,19 @@ class Bullet {
   // We make a bullet at the plane's nose, flying in the way the nose points.
   // "team" says who fired it, so it only hurts planes on OTHER teams.
   // "color" is just how it looks (your bullets are yellow, enemies' are red).
-  constructor(x, y, angle, ownerSpeedX, ownerSpeedY, team, color) {
+  constructor(x, y, angle, ownerSpeedX, ownerSpeedY, team, color, faction) {
     this.x = x;
     this.y = y;
     this.team = team;
+    this.faction = faction; // used for team friendly-fire in WW2 mode
     this.color = color;
 
     // The bullet flies in the nose direction. We ALSO add a little of the
     // plane's own speed so bullets feel like they really came off the plane.
-    this.vx = Math.cos(angle) * CONFIG.BULLET_SPEED + ownerSpeedX * 0.3;
-    this.vy = Math.sin(angle) * CONFIG.BULLET_SPEED + ownerSpeedY * 0.3;
+    // Bullets fly twice as fast in WW2 mode.
+    const spd = CONFIG.BULLET_SPEED * ((typeof mode !== 'undefined' && mode === 'ww2') ? 2 : 1);
+    this.vx = Math.cos(angle) * spd + ownerSpeedX * 0.3;
+    this.vy = Math.sin(angle) * spd + ownerSpeedY * 0.3;
 
     // How many frames until this bullet disappears (so they don't fly forever).
     this.life = CONFIG.BULLET_LIFE;

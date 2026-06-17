@@ -157,7 +157,9 @@ const SCENERY = (function () {
 // Draw all the ground scenery for whatever part of the world is on screen.
 function drawGroundScenery(ctx) {
   const by = CONFIG.GROUND_Y - camera.y;
-  if (typeof mode !== 'undefined' && mode === 'badweather') drawPuddles(ctx, by);
+  const m = (typeof mode !== 'undefined') ? mode : 'classic';
+  if (m === 'ww2') drawRunway(ctx, by);
+  else if (m === 'badweather') drawPuddles(ctx, by);
   else drawGrassDetail(ctx, by); // lush grass tufts + little wildflowers
   for (const item of SCENERY) {
     const sx = worldToScreenX(item.x);
@@ -355,8 +357,44 @@ function drawBigGingerbread(ctx, sx, by) {
   for (let i = 0; i < 6; i++) { ctx.fillStyle = cols[i % 5]; ctx.fillRect(sx - w / 2 + 8 + i * 16, by - 8, 4, 4); }
 }
 
+// A concrete runway strip along the ground (WW2 Mode), with a dashed center line.
+function drawRunway(ctx, by) {
+  ctx.fillStyle = '#9a9a90'; ctx.fillRect(0, by, CONFIG.GAME_W, 12);
+  ctx.fillStyle = '#b3b3a8'; ctx.fillRect(0, by, CONFIG.GAME_W, 2);
+  ctx.fillStyle = '#e8e3c8';
+  for (let i = -1; i < CONFIG.GAME_W / 60 + 2; i++) {
+    const x = i * 60 - (camera.x % 60);
+    ctx.fillRect(x, by + 6, 30, 2);
+  }
+}
+
+// A metal hangar (Quonset hut) -- replaces barns in WW2 Mode.
+function drawHangar(ctx, sx, by) {
+  const w = 40, h = 18;
+  ctx.fillStyle = '#6b7280';
+  ctx.beginPath(); ctx.arc(sx, by - h, w / 2, Math.PI, Math.PI * 2); ctx.fill(); // arched roof
+  ctx.fillRect(sx - w / 2, by - h, w, h);
+  ctx.fillStyle = '#565c66'; ctx.fillRect(sx - w / 2, by - h, 4, h); // shade
+  ctx.fillStyle = '#7d8590';                  // corrugation ridges
+  for (let i = -w / 2 + 5; i < w / 2; i += 6) ctx.fillRect(sx + i, by - h - 2, 2, h + 2);
+  ctx.fillStyle = '#23262c'; ctx.fillRect(sx - 9, by - 15, 18, 15); // big door
+}
+
+function drawBigHangar(ctx, sx, by) {
+  const w = 90, h = 30;
+  ctx.fillStyle = '#6b7280';
+  ctx.beginPath(); ctx.arc(sx, by - h, w / 2, Math.PI, Math.PI * 2); ctx.fill();
+  ctx.fillRect(sx - w / 2, by - h, w, h);
+  ctx.fillStyle = '#565c66'; ctx.fillRect(sx - w / 2, by - h, 6, h);
+  ctx.fillStyle = '#7d8590';
+  for (let i = -w / 2 + 6; i < w / 2; i += 8) ctx.fillRect(sx + i, by - h - 3, 3, h + 3);
+  ctx.fillStyle = '#23262c'; ctx.fillRect(sx - 22, by - 26, 44, 26); // big hangar door
+  ctx.fillStyle = '#3a3f47'; ctx.fillRect(sx - 1, by - 26, 2, 26);   // door split
+}
+
 function drawBarn(ctx, sx, by) {
   if (typeof mode !== 'undefined' && mode === 'unicorn') { drawGingerbread(ctx, sx, by); return; }
+  if (typeof mode !== 'undefined' && mode === 'ww2') { drawHangar(ctx, sx, by); return; }
   const C = CONFIG.COLORS;
   const w = 30, h = 22;
   ctx.fillStyle = C.barnWall; ctx.fillRect(sx - w / 2, by - h, w, h);
@@ -372,6 +410,7 @@ function drawBarn(ctx, sx, by) {
 // The big landmark barn in the middle of the world -- fly your parachute here!
 function drawBigBarn(ctx, sx, by) {
   if (typeof mode !== 'undefined' && mode === 'unicorn') { drawBigGingerbread(ctx, sx, by); return; }
+  if (typeof mode !== 'undefined' && mode === 'ww2') { drawBigHangar(ctx, sx, by); return; }
   const C = CONFIG.COLORS;
   const w = 96, h = 64;
 

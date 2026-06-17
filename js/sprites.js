@@ -184,6 +184,12 @@ const UNICORN_SPRITES = {
   player: makeUnicornSet({ body: '#3d8fd6', lt: '#7fbdef', dk: '#2466a0' }),
 };
 
+// WW2 Mode team planes (green vs black).
+const WW2_SPRITES = {
+  green: makePlaneSetFromColor('#4a7a36'),
+  black: makePlaneSetFromColor('#2b2b2b'),
+};
+
 // Pre-build every plane's pictures once, when the game starts.
 // (Keyed by team: 'player' = blue, 1 = purple enemies, 2 = orange enemies.)
 const PLANE_SPRITES = {
