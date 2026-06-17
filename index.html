@@ -10,10 +10,20 @@
   <!-- This is the box the whole game is drawn onto -->
   <canvas id="game"></canvas>
 
-  <!-- Buttons at the top-middle to add or remove a fighting plane -->
-  <div id="botButtons">
-    <button onclick="addBot(); this.blur();">+ Add Plane</button>
-    <button onclick="removeBot(); this.blur();">- Remove Plane</button>
+  <!-- Top-middle modifier / cheat menu -->
+  <div id="topBar">
+    <button id="modBtn" onclick="toggleModMenu(); this.blur();">⚙ Modifier Menu</button>
+    <div id="modMenu" style="display:none">
+      <button onclick="addBot(); this.blur();">+ Add Plane</button>
+      <button onclick="removeBot(); this.blur();">- Remove Plane</button>
+      <button onclick="setHalfSpeed(this); this.blur();">0.5x Speed</button>
+      <button onclick="setDoubleSpeed(this); this.blur();">2x Speed</button>
+      <button onclick="giveShield(); this.blur();">Add Shield Power</button>
+      <button onclick="giveBullet(); this.blur();">Add Bullet Power</button>
+      <button onclick="giveFreeze(); this.blur();">Add Freeze Power</button>
+      <button onclick="this.textContent='∞ Health: '+(toggleInfHealth()?'ON':'OFF'); this.blur();">∞ Health: OFF</button>
+      <button onclick="this.textContent='∞ Missiles: '+(toggleInfMissiles()?'ON':'OFF'); this.blur();">∞ Missiles: OFF</button>
+    </div>
   </div>
 
   <!-- The scripts run top to bottom, so order matters here -->

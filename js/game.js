@@ -95,6 +95,29 @@ function removeBot() {
   if (idx >= 0) planes.splice(idx, 1);
 }
 
+// ---- Modifier / cheat menu state & actions ----
+let timeScale = 1;          // game-speed multiplier (0.5 = slow, 2 = fast)
+let infiniteHealth = false;
+let infiniteMissiles = false;
+
+function toggleModMenu() {
+  const m = document.getElementById('modMenu');
+  m.style.display = (m.style.display === 'none' || !m.style.display) ? 'flex' : 'none';
+}
+function setHalfSpeed(btn) {
+  timeScale = (timeScale === 0.5) ? 1 : 0.5;
+  btn.textContent = (timeScale === 0.5) ? '0.5x Speed (ON)' : '0.5x Speed';
+}
+function setDoubleSpeed(btn) {
+  timeScale = (timeScale === 2) ? 1 : 2;
+  btn.textContent = (timeScale === 2) ? '2x Speed (ON)' : '2x Speed';
+}
+function giveShield()  { player.invincibleTimer = CONFIG.SHIELD_TIME; }
+function giveBullet()  { player.wideTimer = CONFIG.WIDE_SHOT_TIME; }
+function giveFreeze()  { player.frozenTimer = CONFIG.FREEZE_TIME; }
+function toggleInfHealth()   { infiniteHealth = !infiniteHealth; return infiniteHealth; }
+function toggleInfMissiles() { infiniteMissiles = !infiniteMissiles; return infiniteMissiles; }
+
 // Your points. They grow when you shoot bots down. They RESET if you die,
 // but you keep them if you eject and parachute safely to the barn.
 let score = 0;
@@ -298,6 +321,10 @@ function update() {
     playerRespawn -= 1;
     if (playerRespawn <= 0) spawnPlane(camera.x + CONFIG.GAME_W / 2);
   }
+
+  // Cheats from the modifier menu.
+  if (infiniteHealth) player.health = CONFIG.PLAYER_HEALTH;
+  if (infiniteMissiles) { player.missiles = CONFIG.MISSILE_MAX; player.missileTimer = 0; }
 
   // --- The bots (each one thinks for itself; they can fire missiles too) ---
   for (const enemy of enemies) {
@@ -767,10 +794,16 @@ function drawHud() {
 // =========================================================================
 //  THE GAME LOOP  --  this calls update() then draw(), over and over.
 // =========================================================================
+let speedAccum = 0;
 function loop() {
   if (!paused) {
-    frameCount += 1;
-    update();
+    // timeScale lets the modifier menu run the game at 0.5x or 2x speed.
+    speedAccum += timeScale;
+    while (speedAccum >= 1) {
+      frameCount += 1;
+      update();
+      speedAccum -= 1;
+    }
   }
   draw();
   if (paused) drawPauseOverlay();

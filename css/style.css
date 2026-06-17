@@ -20,27 +20,39 @@ html, body {
   /* The size on screen is set by JavaScript so it always fits the window. */
 }
 
-/* The Add/Remove Plane buttons, floating at the very top-middle. */
-#botButtons {
+/* The modifier/cheat menu, floating at the very top-middle. */
+#topBar {
   position: fixed;
   top: 8px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
-#botButtons button {
+#modMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: stretch;
+}
+#topBar button {
   font-family: monospace;
   font-size: 14px;
   font-weight: bold;
   color: #ffffff;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.6);
   border: 2px solid #ffffff;
   border-radius: 6px;
   padding: 6px 12px;
   cursor: pointer;
+  white-space: nowrap;
 }
-#botButtons button:hover {
-  background: rgba(40, 80, 120, 0.85);
+#topBar button:hover {
+  background: rgba(40, 80, 120, 0.9);
+}
+#modBtn {
+  background: rgba(20, 40, 70, 0.85);
 }
