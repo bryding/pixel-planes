@@ -67,8 +67,10 @@ const CONFIG = {
   UFO_TAG_RANGE: 30,   // how close a UFO must get to TAG a runner.
 
   STALL_ALT: -700,     // above this height the air thins out and lift fades.
-  STALL_SPEED: 1.5,    // you stall at 1.5 no matter which way you're pointed.
-  STALL_SPEED_UP: 1.5, // same as STALL_SPEED -> stall speed is constant.
+  // The throttle bar tops out at MAX_SPEED (10). Flying level you can go as
+  // slow as 1/8 of the bar before stalling; climbing straight up needs 1/4.
+  STALL_SPEED: 1.25,   // level (horizontal) stall speed = 1/8 of the bar.
+  STALL_SPEED_UP: 2.5, // straight-up stall speed = 1/4 of the bar.
   STALL_DRAG: 0.05,    // small extra brake from a badly-stalled (sideways) wing.
   TURN_FULL_SPEED: 4,  // reference speed for control.
 
@@ -89,7 +91,7 @@ const CONFIG = {
   MISSILE_TURN: 0.15,        // sharp turn: smallest turn circle ~3 biplanes wide
   MISSILE_FUEL: 600,         // it chases for about 10 seconds, then flies straight
   MISSILE_LIFE: 720,         // frames before it fizzles out completely
-  MISSILE_DAMAGE: 10,        // a missile takes off 10 health (so 2 missiles = dead)
+  MISSILE_DAMAGE: 4,         // a missile takes off 4 health (so 3 missiles = dead)
 
   // ---- The player's health & eject ----
   PLAYER_HEALTH: 10,   // 10 bullets to be shot down.
