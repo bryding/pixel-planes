@@ -10,14 +10,39 @@
   <!-- This is the box the whole game is drawn onto -->
   <canvas id="game"></canvas>
 
-  <!-- Pause menu (shown when you press ESC): choose 1-player or 2-player split -->
+  <!-- Pause menu (shown when you press ESC) -->
   <div id="pauseMenu" style="display:none">
-    <div class="pauseInner">
+    <!-- main pause screen -->
+    <div class="pauseInner" id="pauseMain">
       <h1>PAUSED</h1>
       <button onclick="resumeGame(); this.blur();">▶ Resume</button>
       <button onclick="chooseNormal(); this.blur();">🎮 1 Player (Normal)</button>
       <button onclick="chooseSplit(); this.blur();">👥 2 Player — Split Screen</button>
-      <p class="pauseHint">Split: LEFT = WASD + Q/E (red) &nbsp;•&nbsp; RIGHT = Arrows + M/N (blue)</p>
+      <button onclick="showCreateRoom(); this.blur();">➕ Create Room</button>
+      <button onclick="showJoinRoom(); this.blur();">🔑 Join Room Code</button>
+      <p class="pauseHint">Split: LEFT = WASD Q E F &nbsp;•&nbsp; RIGHT = Arrows B N M</p>
+    </div>
+
+    <!-- create a room: pick a code (CAPITALS + numbers only, no spaces) -->
+    <div class="pauseInner" id="createRoom" style="display:none">
+      <h1>CREATE ROOM</h1>
+      <p class="roomHint">Pick a room code — CAPITAL letters and numbers only, no spaces.</p>
+      <input id="createCode" class="roomInput" maxlength="8" placeholder="E.G. SKY42"
+             oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" />
+      <button onclick="doCreateRoom(); this.blur();">Continue ▶</button>
+      <p id="createMsg" class="roomMsg"></p>
+      <button onclick="backToPause(); this.blur();">◀ Back</button>
+    </div>
+
+    <!-- join a room by code -->
+    <div class="pauseInner" id="joinRoom" style="display:none">
+      <h1>JOIN ROOM</h1>
+      <p class="roomHint">Type the room code to join.</p>
+      <input id="joinCode" class="roomInput" maxlength="8" placeholder="ENTER CODE"
+             oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" />
+      <button onclick="doJoinRoom(); this.blur();">Join ▶</button>
+      <p id="joinMsg" class="roomMsg"></p>
+      <button onclick="backToPause(); this.blur();">◀ Back</button>
     </div>
   </div>
 

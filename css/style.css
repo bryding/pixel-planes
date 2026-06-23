@@ -211,3 +211,36 @@ html, body {
   color: rgba(255, 255, 255, 0.75);
   margin-top: 4px;
 }
+
+/* ---- Room (Create / Join) panels in the pause menu ---- */
+.roomHint {
+  font-family: monospace;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 4px 0;
+  max-width: 360px;
+  text-align: center;
+}
+.roomInput {
+  font-family: monospace;
+  font-size: 26px;
+  font-weight: bold;
+  letter-spacing: 6px;
+  text-align: center;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid #ffffff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  width: 300px;
+  outline: none;
+}
+.roomInput::placeholder { color: rgba(255, 255, 255, 0.35); letter-spacing: 2px; }
+.roomMsg {
+  font-family: monospace;
+  font-size: 14px;
+  min-height: 18px;
+  margin: 2px 0;
+  text-align: center;
+}

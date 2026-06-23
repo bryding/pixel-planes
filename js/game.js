@@ -307,15 +307,80 @@ let paused = false;      // ESC pauses/unpauses the game
 window.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && !e.repeat) { paused = !paused; updatePauseMenu(); }
 });
-// Show or hide the HTML pause menu to match the paused flag.
+// Show or hide the HTML pause menu to match the paused flag. Always reopen on
+// the MAIN screen (not a leftover Create/Join sub-panel).
 function updatePauseMenu() {
   const m = document.getElementById('pauseMenu');
   if (m) m.style.display = paused ? 'flex' : 'none';
+  if (paused) backToPause();
 }
 // Pause-menu buttons.
 function resumeGame()  { paused = false; updatePauseMenu(); }
 function chooseNormal() { setSplitScreen(false); paused = false; updatePauseMenu(); }
 function chooseSplit()  { setSplitScreen(true);  paused = false; updatePauseMenu(); }
+
+// ---- Room menu (Create / Join). Foundation for online multiplayer. ----
+// Switch which pause panel is showing.
+function showPausePanel(id) {
+  ['pauseMain', 'createRoom', 'joinRoom'].forEach(p => {
+    const el = document.getElementById(p);
+    if (el) el.style.display = (p === id) ? 'flex' : 'none';
+  });
+}
+function backToPause()    { showPausePanel('pauseMain'); }
+function showCreateRoom() {
+  showPausePanel('createRoom');
+  const i = document.getElementById('createCode'); if (i) { i.value = ''; i.focus(); }
+  const m = document.getElementById('createMsg'); if (m) m.textContent = '';
+}
+function showJoinRoom() {
+  showPausePanel('joinRoom');
+  const i = document.getElementById('joinCode'); if (i) { i.value = ''; i.focus(); }
+  const m = document.getElementById('joinMsg'); if (m) m.textContent = '';
+}
+
+// The list of room codes that already exist (saved in this browser for now;
+// real cross-player rooms will need the online server -- that's the next step).
+function getRooms() {
+  try { return JSON.parse(localStorage.getItem('pp_rooms') || '[]'); }
+  catch (e) { return []; }
+}
+function saveRooms(list) {
+  try { localStorage.setItem('pp_rooms', JSON.stringify(list)); } catch (e) {}
+}
+
+// Create a room: the code must be CAPITAL letters + numbers only (no spaces),
+// and you can't reuse a code that already exists.
+function doCreateRoom() {
+  const input = document.getElementById('createCode');
+  const msg = document.getElementById('createMsg');
+  const code = (input.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!code) { msg.style.color = '#ffd24a'; msg.textContent = 'Please type a room code first.'; return; }
+  const rooms = getRooms();
+  if (rooms.includes(code)) {
+    msg.style.color = '#ff6b6b';
+    msg.textContent = '❌ "' + code + '" is taken — pick a different code.';
+    return;
+  }
+  rooms.push(code); saveRooms(rooms);
+  msg.style.color = '#7ee07e';
+  msg.textContent = '✅ Room "' + code + '" created!';
+}
+
+// Join a room by code (format-checked for now; live joining needs the server).
+function doJoinRoom() {
+  const input = document.getElementById('joinCode');
+  const msg = document.getElementById('joinMsg');
+  const code = (input.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!code) { msg.style.color = '#ffd24a'; msg.textContent = 'Please type a room code.'; return; }
+  if (getRooms().includes(code)) {
+    msg.style.color = '#7ee07e';
+    msg.textContent = '✅ Found room "' + code + '".';
+  } else {
+    msg.style.color = '#ff6b6b';
+    msg.textContent = '❌ No room "' + code + '" found.';
+  }
+}
 
 // ---- Mobile touch controls ----
 // On-screen buttons drive the SAME Input flags the keyboard does, so all the
