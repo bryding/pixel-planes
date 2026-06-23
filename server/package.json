@@ -1,0 +1,12 @@
+{
+  "name": "pixel-planes-server",
+  "version": "1.0.0",
+  "description": "Online server for Pixel Planes (server list + rooms + relay).",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

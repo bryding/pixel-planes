@@ -6,6 +6,13 @@
 
 const CONFIG = {
 
+  // ---- Online play ----
+  // Where the online server lives. For testing on the SAME computer use
+  // "ws://localhost:8080". For other devices on your WiFi use your computer's
+  // IP, e.g. "ws://192.168.1.50:8080". Once you deploy the server online,
+  // put its address here (use "wss://" for a hosted https server).
+  SERVER_URL: 'ws://localhost:8080',
+
   // ---- The size of the game picture (in pixels) ----
   // Small numbers make a chunky, retro pixel look. The picture is stretched
   // bigger to fill your screen, but it's really only drawn this small.

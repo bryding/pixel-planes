@@ -142,6 +142,8 @@ let greenScore = 0, blackScore = 0; // WW2 team scores
 function setMode(m) {
   const prev = mode;
   mode = m;
+  // Online: if I'm the HOST, switch everyone in my server to this mode too.
+  if (typeof Net !== 'undefined' && Net.inServer && Net.isHost) Net.setMode(m);
   // "No Mod Mode" hides the whole Modifier Menu and turns the cheats off.
   const modGroup = document.getElementById('modGroup');
   if (modGroup) modGroup.style.display = (m === 'nomod') ? 'none' : 'flex';
@@ -167,6 +169,8 @@ function setMode(m) {
   if (m === 'blackhole') startBlackHole();
   // Leaving a space mini-game -> put a normal flying plane back.
   if ((prev === 'alien' || prev === 'blackhole') && m !== 'alien' && m !== 'blackhole') spawnPlane(100);
+  // In an online server, a guest must not regain the Mode/Modifier menus.
+  if (typeof applyHostPermissions === 'function') applyHostPermissions();
 }
 
 // Put the player on GREEN and split the bots: the first few are BLACK,
@@ -321,30 +325,10 @@ function resumeGame()  { paused = false; updatePauseMenu(); }
 function chooseNormal() { setSplitScreen(false); paused = false; updatePauseMenu(); }
 function chooseSplit()  { setSplitScreen(true);  paused = false; updatePauseMenu(); }
 
-// ---- Room menu (Create / Join). Foundation for online multiplayer. ----
-// Switch which pause panel is showing.
-function showPausePanel(id) {
-  ['pauseMain', 'createRoom', 'joinRoom'].forEach(p => {
-    const el = document.getElementById(p);
-    if (el) el.style.display = (p === id) ? 'flex' : 'none';
-  });
-}
-function backToPause()    { showPausePanel('pauseMain'); }
-function showCreateRoom() {
-  showPausePanel('createRoom');
-  const n = document.getElementById('createName'); if (n) n.value = getUsername();
-  const i = document.getElementById('createCode'); if (i) { i.value = ''; }
-  const m = document.getElementById('createMsg'); if (m) m.textContent = '';
-  // Put the cursor on the name if it's blank, otherwise the room code.
-  if (n && !n.value) n.focus(); else if (i) i.focus();
-}
-function showJoinRoom() {
-  showPausePanel('joinRoom');
-  const n = document.getElementById('joinName'); if (n) n.value = getUsername();
-  const i = document.getElementById('joinCode'); if (i) { i.value = ''; }
-  const m = document.getElementById('joinMsg'); if (m) m.textContent = '';
-  if (n && !n.value) n.focus(); else if (i) i.focus();
-}
+// ===========================================================================
+//  ONLINE SERVER LOBBY (Create Server / Server List / join+password).
+//  Talks to the server through Net (js/net.js).
+// ===========================================================================
 
 // Your display name (so other players know who you are). Saved between visits.
 function getUsername() {
@@ -354,52 +338,151 @@ function saveUsername(name) {
   try { localStorage.setItem('pp_username', name); } catch (e) {}
 }
 
-// The list of room codes that already exist (saved in this browser for now;
-// real cross-player rooms will need the online server -- that's the next step).
-function getRooms() {
-  try { return JSON.parse(localStorage.getItem('pp_rooms') || '[]'); }
-  catch (e) { return []; }
-}
-function saveRooms(list) {
-  try { localStorage.setItem('pp_rooms', JSON.stringify(list)); } catch (e) {}
+// Make sure we're connected to the online server (lazy: only when you open a
+// server panel, so single-player never waits on the network).
+function ensureConnected() {
+  if (Net.status === 'offline') Net.connect(CONFIG.SERVER_URL);
 }
 
-// Create a room: the code must be CAPITAL letters + numbers only (no spaces),
-// and you can't reuse a code that already exists.
-function doCreateRoom() {
-  const msg = document.getElementById('createMsg');
-  const name = (document.getElementById('createName').value || '').trim();
-  const code = (document.getElementById('createCode').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (!name) { msg.style.color = '#ffd24a'; msg.textContent = 'Please type your name first.'; return; }
-  if (!code) { msg.style.color = '#ffd24a'; msg.textContent = 'Please type a room code.'; return; }
-  const rooms = getRooms();
-  if (rooms.includes(code)) {
-    msg.style.color = '#ff6b6b';
-    msg.textContent = '❌ "' + code + '" is taken — pick a different code.';
-    return;
-  }
-  saveUsername(name);
-  rooms.push(code); saveRooms(rooms);
-  msg.style.color = '#7ee07e';
-  msg.textContent = '✅ Room "' + code + '" created! Playing as ' + name + '.';
+// Switch which pause panel is showing.
+function showPausePanel(id) {
+  ['pauseMain', 'createServer', 'serverList', 'inServer'].forEach(p => {
+    const el = document.getElementById(p);
+    if (el) el.style.display = (p === id) ? 'flex' : 'none';
+  });
+}
+function backToPause() { showPausePanel(Net.inServer ? 'inServer' : 'pauseMain'); }
+
+function showCreateServer() {
+  ensureConnected();
+  showPausePanel('createServer');
+  const n = document.getElementById('csName'); if (n) n.value = getUsername();
+  const s = document.getElementById('csServer'); if (s) s.value = '';
+  const p = document.getElementById('csPass'); if (p) p.value = '';
+  const m = document.getElementById('csMsg'); if (m) m.textContent = '';
+  refreshLobbyUI();
+  if (n && !n.value) n.focus(); else if (s) s.focus();
+}
+function showServerList() {
+  ensureConnected();
+  Net.refreshList();
+  showPausePanel('serverList');
+  const n = document.getElementById('slName'); if (n) n.value = getUsername();
+  const m = document.getElementById('slMsg'); if (m) m.textContent = '';
+  refreshLobbyUI();
 }
 
-// Join a room by code (format-checked for now; live joining needs the server).
-function doJoinRoom() {
-  const msg = document.getElementById('joinMsg');
-  const name = (document.getElementById('joinName').value || '').trim();
-  const code = (document.getElementById('joinCode').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (!name) { msg.style.color = '#ffd24a'; msg.textContent = 'Please type your name first.'; return; }
-  if (!code) { msg.style.color = '#ffd24a'; msg.textContent = 'Please type a room code.'; return; }
+// Create a server: name = letters+numbers only; password optional. The creator
+// becomes the HOST (the only one who gets the Mode/Modifier menus).
+function doCreateServer() {
+  const msg = document.getElementById('csMsg');
+  const name = (document.getElementById('csName').value || '').trim();
+  const server = (document.getElementById('csServer').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const pass = (document.getElementById('csPass').value || '');
+  if (!name) { setMsg(msg, '#ffd24a', 'Please type your name first.'); return; }
+  if (!server) { setMsg(msg, '#ffd24a', 'Please type a server name (letters & numbers).'); return; }
+  if (Net.status !== 'online') { setMsg(msg, '#ff6b6b', 'Not connected to the server yet…'); return; }
   saveUsername(name);
-  if (getRooms().includes(code)) {
-    msg.style.color = '#7ee07e';
-    msg.textContent = '✅ Joined room "' + code + '" as ' + name + '.';
-  } else {
-    msg.style.color = '#ff6b6b';
-    msg.textContent = '❌ No room "' + code + '" found.';
-  }
+  Net.setName(name);
+  Net.createServer(server, pass);
+  setMsg(msg, '#9be7ff', 'Creating "' + server + '"…');
 }
+
+// Join a server by name (used by the Join buttons in the list). Asks for a
+// password first if the server is locked.
+function joinServerByName(name, hasPassword) {
+  const who = (document.getElementById('slName').value || '').trim();
+  const msg = document.getElementById('slMsg');
+  if (!who) { setMsg(msg, '#ffd24a', 'Please type your name first.'); return; }
+  if (Net.status !== 'online') { setMsg(msg, '#ff6b6b', 'Not connected to the server yet…'); return; }
+  saveUsername(who);
+  Net.setName(who);
+  let pass = '';
+  if (hasPassword) {
+    pass = window.prompt('Password for "' + name + '":', '');
+    if (pass === null) return;            // cancelled
+  }
+  Net.joinServer(name, pass);
+  setMsg(msg, '#9be7ff', 'Joining "' + name + '"…');
+}
+
+function doLeaveServer() {
+  Net.leaveServer();
+  applyHostPermissions();
+  showPausePanel('pauseMain');
+}
+
+function setMsg(el, color, text) { if (el) { el.style.color = color; el.textContent = text; } }
+
+// Redraw the live lobby (status text + the server list rows). Called by Net
+// whenever anything changes (connection, list update, joined, denied…).
+function refreshLobbyUI() {
+  const statusTxt = Net.status === 'online' ? '🟢 Connected' :
+                    Net.status === 'connecting' ? '🟡 Connecting…' : '🔴 Offline (server not reachable)';
+  const sc = document.getElementById('netStatusCreate'); if (sc) sc.textContent = statusTxt;
+  const sl = document.getElementById('netStatusList');   if (sl) sl.textContent = statusTxt + ' — ' + Net.servers.length + ' server(s)';
+
+  // The list of joinable servers.
+  const box = document.getElementById('serverListItems');
+  if (box) {
+    box.innerHTML = '';
+    if (!Net.servers.length) {
+      const e = document.createElement('div');
+      e.className = 'serverEmpty';
+      e.textContent = (Net.status === 'online') ? 'No servers yet — create one!' : 'Connecting…';
+      box.appendChild(e);
+    }
+    Net.servers.forEach(s => {
+      const row = document.createElement('div');
+      row.className = 'serverRow';
+      const info = document.createElement('div');
+      info.innerHTML = '<div class="srvName">' + (s.hasPassword ? '🔒 ' : '') + escapeHtml(s.name) +
+                       '</div><div class="srvMeta">' + s.players + ' player' + (s.players === 1 ? '' : 's') + '</div>';
+      const btn = document.createElement('button');
+      btn.textContent = 'Join';
+      btn.onclick = () => { joinServerByName(s.name, s.hasPassword); };
+      row.appendChild(info); row.appendChild(btn);
+      box.appendChild(row);
+    });
+  }
+
+  // Error/denied messages (wrong password, taken name, etc.).
+  if (Net.lastError) {
+    setMsg(document.getElementById('csMsg'), '#ff6b6b', '❌ ' + Net.lastError);
+    setMsg(document.getElementById('slMsg'), '#ff6b6b', '❌ ' + Net.lastError);
+  }
+
+  // If we just joined a server, jump to the in-server panel.
+  if (Net.inServer && paused) {
+    const t = document.getElementById('inServerTitle');
+    if (t) t.textContent = '🌐 ' + Net.serverName;
+    const i = document.getElementById('inServerInfo');
+    if (i) i.textContent = (Net.isHost ? 'You are the HOST — you control the Mode & Modifier menus.'
+                                       : 'You joined as ' + (Net.username || 'a player') + '. The host controls the menus.');
+    const showing = document.getElementById('createServer').style.display !== 'none' ||
+                    document.getElementById('serverList').style.display !== 'none';
+    if (showing) showPausePanel('inServer');
+  }
+  applyHostPermissions();
+}
+function escapeHtml(s) { return ('' + s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+// In an online server, ONLY the host gets the Mode & Modifier menus.
+function applyHostPermissions() {
+  const lockedAway = Net.inServer && !Net.isHost;   // a guest in someone's server
+  const modGroup = document.getElementById('modGroup');
+  const modeGroup = document.getElementById('modeGroup');
+  if (modGroup && mode !== 'nomod') modGroup.style.display = lockedAway ? 'none' : 'flex';
+  if (modeGroup) modeGroup.style.display = lockedAway ? 'none' : 'flex';
+}
+
+// The host changed the mode -> everyone in the server follows.
+function onNetMode(m) {
+  if (typeof m === 'string' && m !== mode) setMode(m);
+}
+
+// Hook Net's updates to the UI.
+Net.onChange = refreshLobbyUI;
 
 // ---- Mobile touch controls ----
 // On-screen buttons drive the SAME Input flags the keyboard does, so all the

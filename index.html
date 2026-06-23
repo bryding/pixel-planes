@@ -18,35 +18,45 @@
       <button onclick="resumeGame(); this.blur();">▶ Resume</button>
       <button onclick="chooseNormal(); this.blur();">🎮 1 Player (Normal)</button>
       <button onclick="chooseSplit(); this.blur();">👥 2 Player — Split Screen</button>
-      <button onclick="showCreateRoom(); this.blur();">➕ Create Room</button>
-      <button onclick="showJoinRoom(); this.blur();">🔑 Join Room Code</button>
+      <button onclick="showCreateServer(); this.blur();">➕ Create Server</button>
+      <button onclick="showServerList(); this.blur();">📡 Server List</button>
       <p class="pauseHint">Split: LEFT = WASD Q E F &nbsp;•&nbsp; RIGHT = Arrows B N M</p>
     </div>
 
-    <!-- create a room: enter your name + pick a code (CAPITALS + numbers only) -->
-    <div class="pauseInner" id="createRoom" style="display:none">
-      <h1>CREATE ROOM</h1>
-      <p class="roomHint">Type your name, then pick a room code (CAPITAL letters and numbers only, no spaces).</p>
-      <input id="createName" class="nameInput" maxlength="14" placeholder="YOUR NAME"
+    <!-- create an online server: name (letters+numbers) + optional password -->
+    <div class="pauseInner" id="createServer" style="display:none">
+      <h1>CREATE SERVER</h1>
+      <p id="netStatusCreate" class="roomHint"></p>
+      <input id="csName" class="nameInput" maxlength="14" placeholder="YOUR NAME"
              oninput="this.value=this.value.replace(/[^A-Za-z0-9 _-]/g,'')" />
-      <input id="createCode" class="roomInput" maxlength="8" placeholder="E.G. SKY42"
+      <input id="csServer" class="roomInput" maxlength="16" placeholder="SERVER NAME"
              oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" />
-      <button onclick="doCreateRoom(); this.blur();">Continue ▶</button>
-      <p id="createMsg" class="roomMsg"></p>
+      <input id="csPass" class="nameInput" maxlength="16" placeholder="PASSWORD (optional)" />
+      <button onclick="doCreateServer(); this.blur();">Create ▶</button>
+      <p id="csMsg" class="roomMsg"></p>
       <button onclick="backToPause(); this.blur();">◀ Back</button>
     </div>
 
-    <!-- join a room by code (with your name) -->
-    <div class="pauseInner" id="joinRoom" style="display:none">
-      <h1>JOIN ROOM</h1>
-      <p class="roomHint">Type your name and the room code to join.</p>
-      <input id="joinName" class="nameInput" maxlength="14" placeholder="YOUR NAME"
+    <!-- browse all servers and join one (locked ones ask for a password) -->
+    <div class="pauseInner" id="serverList" style="display:none">
+      <h1>SERVER LIST</h1>
+      <input id="slName" class="nameInput" maxlength="14" placeholder="YOUR NAME"
              oninput="this.value=this.value.replace(/[^A-Za-z0-9 _-]/g,'')" />
-      <input id="joinCode" class="roomInput" maxlength="8" placeholder="ENTER CODE"
-             oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" />
-      <button onclick="doJoinRoom(); this.blur();">Join ▶</button>
-      <p id="joinMsg" class="roomMsg"></p>
-      <button onclick="backToPause(); this.blur();">◀ Back</button>
+      <p id="netStatusList" class="roomHint"></p>
+      <div id="serverListItems" class="serverList"></div>
+      <p id="slMsg" class="roomMsg"></p>
+      <div class="rowButtons">
+        <button onclick="Net.refreshList(); this.blur();">↻ Refresh</button>
+        <button onclick="backToPause(); this.blur();">◀ Back</button>
+      </div>
+    </div>
+
+    <!-- shown while you ARE in a server -->
+    <div class="pauseInner" id="inServer" style="display:none">
+      <h1 id="inServerTitle">SERVER</h1>
+      <p id="inServerInfo" class="roomHint"></p>
+      <button onclick="resumeGame(); this.blur();">▶ Back to Game</button>
+      <button onclick="doLeaveServer(); this.blur();">🚪 Leave Server</button>
     </div>
   </div>
 
@@ -76,7 +86,7 @@
       <button onclick="resetDefaults(); this.blur();">Reset All Defaults</button>
     </div>
    </div>
-   <div class="menuGroup">
+   <div class="menuGroup" id="modeGroup">
     <button id="modeBtn" onclick="toggleModeMenu(); this.blur();">🎮 Mode Menu</button>
     <div id="modeMenu" style="display:none">
       <button onclick="setMode('classic'); this.blur();">Classic Mode</button>
@@ -127,6 +137,7 @@
 
   <!-- The scripts run top to bottom, so order matters here -->
   <script src="js/config.js"></script>
+  <script src="js/net.js"></script>
   <script src="js/input.js"></script>
   <script src="js/physics.js"></script>
   <script src="js/bullet.js"></script>
