@@ -297,6 +297,44 @@ function resumeGame()  { paused = false; updatePauseMenu(); }
 function chooseNormal() { setSplitScreen(false); paused = false; updatePauseMenu(); }
 function chooseSplit()  { setSplitScreen(true);  paused = false; updatePauseMenu(); }
 
+// ---- Mobile touch controls ----
+// On-screen buttons drive the SAME Input flags the keyboard does, so all the
+// flight, guns and missile mechanics work exactly the same -- just by touch.
+let mobileMode = false;
+function toggleMobile() {
+  mobileMode = !mobileMode;
+  const mc = document.getElementById('mobileControls');
+  if (mc) mc.style.display = mobileMode ? 'block' : 'none';
+  const btn = document.getElementById('mobileBtn');
+  if (btn) btn.textContent = '📱 Mobile: ' + (mobileMode ? 'ON' : 'OFF');
+}
+function setupMobileControls() {
+  // Helper: a button that holds an action while pressed (turn / guns).
+  const hold = (id, on, off) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const press = (e) => { e.preventDefault(); on(); };
+    const release = (e) => { e.preventDefault(); off(); };
+    el.addEventListener('pointerdown', press);
+    el.addEventListener('pointerup', release);
+    el.addEventListener('pointercancel', release);
+    el.addEventListener('pointerleave', release);
+  };
+  hold('mcLeft',   () => Input.left = true,   () => Input.left = false);   // turn left  (like A / ←)
+  hold('mcRight',  () => Input.right = true,  () => Input.right = false);  // turn right (like D / →)
+  hold('mcGun',    () => Input.fire = true,   () => Input.fire = false);   // hold to shoot
+  hold('mcMissile',() => Input.missile = true,() => Input.missile = false);// tap to launch a missile
+
+  // Throttle slider: drag right for more power, left for less.
+  const slider = document.getElementById('mcThrottle');
+  if (slider) slider.addEventListener('input', () => { player.throttle = slider.value / 100; });
+}
+setupMobileControls();
+// Phones/tablets: turn the touch controls on automatically (still toggleable).
+if (typeof navigator !== 'undefined' && (navigator.maxTouchPoints > 0 || 'ontouchstart' in window)) {
+  toggleMobile();
+}
+
 // Turn split-screen 2-player ON or OFF.
 function setSplitScreen(on) {
   if (on === splitScreen) return;

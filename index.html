@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pixel Planes</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -60,6 +60,28 @@
       <button onclick="setMode('nomod'); this.blur();">No Mod Mode</button>
     </div>
    </div>
+   <div class="menuGroup">
+    <button id="mobileBtn" onclick="toggleMobile(); this.blur();">📱 Mobile: OFF</button>
+   </div>
+  </div>
+
+  <!-- On-screen touch controls for phones/tablets (toggle with 📱 Mobile) -->
+  <div id="mobileControls" style="display:none">
+    <!-- bottom-LEFT: turn buttons (like A / D) -->
+    <div class="mcTurn">
+      <button id="mcLeft"  class="mcBtn mcTurnBtn">◀</button>
+      <button id="mcRight" class="mcBtn mcTurnBtn">▶</button>
+    </div>
+    <!-- bottom-MIDDLE: throttle slider (right = faster, left = slower) -->
+    <div class="mcThrottleWrap">
+      <input id="mcThrottle" class="mcSlider" type="range" min="0" max="100" value="100" />
+      <div class="mcThrottleLbl">THROTTLE  ◀ slower · faster ▶</div>
+    </div>
+    <!-- bottom-RIGHT: square = missile, big circle = guns -->
+    <div class="mcActions">
+      <button id="mcMissile" class="mcBtn mcSquare">▣</button>
+      <button id="mcGun"     class="mcBtn mcCircle">●</button>
+    </div>
   </div>
 
   <!-- The scripts run top to bottom, so order matters here -->
