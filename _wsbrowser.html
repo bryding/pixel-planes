@@ -1,0 +1,12 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><div id="out">PENDING</div>
+<script>window.__e=[];window.onerror=(m,s,l,c)=>window.__e.push(m+' @'+l);</script>
+<script src="js/config.js"></script><script src="js/net.js"></script>
+<script>
+  Net.username='Tester';
+  Net.onChange=()=>{ document.getElementById('out').textContent='STATE '+JSON.stringify({
+    status:Net.status, inServer:Net.inServer, isHost:Net.isHost, name:Net.serverName,
+    servers:Net.servers.length, err:Net.lastError, jsErr:window.__e }); };
+  Net.connect('ws://'+location.host);
+  let done=false;
+  setInterval(()=>{ if(Net.status==='online'&&!done){done=true; Net.createServer('BROWSERTEST','');} }, 100);
+</script></body></html>

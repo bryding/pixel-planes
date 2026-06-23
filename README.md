@@ -40,21 +40,31 @@ needs a little **server program** to run. The game itself can be on GitHub
 Pages, but the server has to run somewhere too. It lives in the **`server/`**
 folder.
 
-### ▶️ Play online on your WiFi (easiest — no accounts, no deploying)
+### ▶️ Play online on your WiFi — EASIEST (no installs, no accounts)
 
-The server now hands out the game too, so it's **one command and one address**:
+**Double-click `Play Pixel Planes (same WiFi).command`** in this folder.
+(It uses Python, which every Mac already has — nothing to install.)
 
-1. **Install Node.js** (one time): get it from **https://nodejs.org** (the big
-   "LTS" button) and run the installer.
-2. **Start it.** Open a terminal in this project and run:
-   ```
-   cd server
-   npm install     # one time — downloads the 'ws' library
-   npm start       # starts everything
-   ```
-3. It prints the addresses to open. **On this computer:** `http://localhost:8080`.
-   **Anyone else on your WiFi:** `http://YOUR-IP:8080` (it prints your IP).
-4. Everyone opens that address, presses **ESC → Create Server** (or Server
+A black window opens and prints addresses like:
+```
+- on THIS computer:  http://localhost:8080
+- others on WiFi:    http://192.168.1.16:8080
+```
+Open the `http://localhost:8080` one in your browser, press **ESC → Create
+Server**, and you're online. Anyone on your WiFi opens the `192.168…:8080`
+address it printed. Keep that black window open while you play (close it / press
+Ctrl+C to stop).
+
+*(First time, your Mac might ask if you're sure — right-click the file → Open →
+Open.)*
+
+### Alternative: run it with Node instead of Python
+
+If you'd rather use Node: install it from **https://nodejs.org**, then
+`cd server`, `npm install`, `npm start`. Same result.
+
+When it's running, everyone opens the printed address, presses **ESC → Create
+Server** (or Server
    List), and you're playing together. Nothing to type — it connects to the
    same computer automatically. Keep the terminal window open while you play.
 

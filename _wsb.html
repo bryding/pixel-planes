@@ -1,0 +1,16 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><div id="out">PENDING</div>
+<script>window.__e=[];window.onerror=(m,s,l,c)=>window.__e.push(m+' @'+l);</script>
+<script src="js/config.js"></script><script src="js/net.js"></script>
+<script>
+  let result=null, done=false;
+  Net.username='Tester';
+  Net.onChange=()=>{
+    if(Net.status==='online'&&!done){done=true; Net.createServer('BROWSERTEST','');}
+    if(Net.inServer && !result){
+      result={status:Net.status,inServer:Net.inServer,isHost:Net.isHost,name:Net.serverName,jsErr:window.__e};
+      document.getElementById('out').textContent='STATE '+JSON.stringify(result);
+      Net._want=false; if(Net.ws) Net.ws.close();   // close so the page can settle
+    }
+  };
+  Net.connect('ws://'+location.host);
+</script></body></html>
