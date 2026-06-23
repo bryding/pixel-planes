@@ -37,6 +37,7 @@ let splitScreen = false;      // is two-player split-screen turned on?
 let duelScoreBlue = 0;        // player 1 (blue) kills
 let duelScoreRed = 0;         // player 2 (red) kills
 let p2MissileWasDown = false; // edge-detect player 2's missile key
+let p2EjectWasDown = false;   // edge-detect player 2's eject key
 
 // The camera's x keeps counting up/down smoothly (it never jumps), even as the
 // world loops -- that keeps the background from popping at the seam.
@@ -330,8 +331,8 @@ function resetDuelPlane(p, x, dir) {
   p.deadTimer = 0; p.stalling = false; p.hitGround = false;
 }
 
-// One split-screen player: fly, shoot, crash, and respawn after being downed.
-function updateDuelPlayer(p, missileEdge, fireHeld) {
+// One split-screen player: fly, shoot, eject, crash, and respawn when downed.
+function updateDuelPlayer(p, missileEdge, fireHeld, ejectEdge) {
   if (!p.alive) {
     p.deadTimer -= 1;
     if (p.deadTimer <= 0) resetDuelPlane(p, wrapX(p.x), (p === player) ? 1 : -1);
@@ -349,9 +350,18 @@ function updateDuelPlayer(p, missileEdge, fireHeld) {
     return;
   }
   if (p.frozenTimer <= 0) {
+    if (ejectEdge) { duelEject(p); return; }   // bail out!
     if (fireHeld) p.tryShoot(bullets);
     if (missileEdge) p.fireMissile(missiles, planes);
   }
+}
+// Eject in a duel: the plane is destroyed, a parachute floats down, you respawn.
+function duelEject(p) {
+  bigExplosion(p.x, p.y);
+  const col = (p === player) ? '#7fbdef' : '#e0524a';
+  spawnBotChute(p.x, p.y, col);              // a little parachute in your color
+  pushKill('🪂 ' + ((p === player) ? 'BLUE' : 'RED') + ' ejected', col);
+  duelDown(p);
 }
 // Mark a split-screen player as shot down and start its respawn countdown.
 // (The explosion + kill-feed message are handled by whoever downed it.)
@@ -538,11 +548,13 @@ function update() {
   ejectWasDown = Input.eject;
   const p2MissilePressed = Input.missile2 && !p2MissileWasDown;
   p2MissileWasDown = Input.missile2;
+  const p2EjectPressed = Input.eject2 && !p2EjectWasDown;
+  p2EjectWasDown = Input.eject2;
 
-  // --- Split-screen: just fly both players (no takeoff/parachute lifecycle) ---
+  // --- Split-screen: just fly both players (no takeoff lifecycle) ---
   if (splitScreen) {
-    updateDuelPlayer(player,  missilePressed,   Input.fire);
-    updateDuelPlayer(player2, p2MissilePressed, Input.fire2);
+    updateDuelPlayer(player,  missilePressed,   Input.fire,  ejectPressed);
+    updateDuelPlayer(player2, p2MissilePressed, Input.fire2, p2EjectPressed);
   } else {
   // --- The player, depending on what state they're in ---
   if (playerState === 'takeoff') {
@@ -979,7 +991,8 @@ function drawHudLayer() {
   drawMinimap();
 }
 
-// Split-screen scoreboard + control hints. RED on the left, BLUE on the right.
+// Split-screen scoreboard + control hints + each player's own stats panel.
+// RED is the LEFT half, BLUE is the RIGHT half.
 function drawDuelHud() {
   ctx.font = 'bold 26px monospace';
   ctx.textAlign = 'left';
@@ -989,12 +1002,67 @@ function drawDuelHud() {
   ctx.fillStyle = '#7fbdef';
   ctx.fillText('BLUE  ' + duelScoreBlue, CONFIG.GAME_W - 20, 44);
 
+  // Each player's flight stats, in the middle of THEIR half.
+  drawDuelStats(player2, CONFIG.GAME_W * 0.25, 'RED',  '#e0524a');
+  drawDuelStats(player,  CONFIG.GAME_W * 0.75, 'BLUE', '#7fbdef');
+
   ctx.font = '15px monospace';
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
   ctx.textAlign = 'center';
-  ctx.fillText('RED:  W A S D fly   Q gun   E missile', CONFIG.GAME_W * 0.25, CONFIG.GAME_H - 18);
-  ctx.fillText('BLUE:  Arrows fly   M gun   N missile', CONFIG.GAME_W * 0.75, CONFIG.GAME_H - 18);
+  ctx.fillText('RED:  WASD   Q gun   E missile   F eject', CONFIG.GAME_W * 0.25, CONFIG.GAME_H - 14);
+  ctx.fillText('BLUE:  Arrows   B gun   N missile   M eject', CONFIG.GAME_W * 0.75, CONFIG.GAME_H - 14);
   ctx.textAlign = 'left';
+}
+
+// One player's stats panel (throttle / health / missiles / speed), centered at
+// cx so it sits in that player's half of the split screen.
+function drawDuelStats(p, cx, label, labelColor) {
+  const pw = 360, ph = 88;
+  const px0 = Math.round(cx - pw / 2);
+  const py0 = CONFIG.GAME_H - ph - 44;
+  const barX = px0 + 106, barW = 244;
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(px0, py0, pw, ph);
+
+  // Who this panel belongs to.
+  ctx.font = 'bold 13px monospace'; ctx.textAlign = 'left';
+  ctx.fillStyle = labelColor; ctx.fillText(label, px0 + 10, py0 - 6);
+  ctx.font = '10px monospace';
+
+  // Throttle
+  ctx.fillStyle = '#ffffff'; ctx.fillText('THROTTLE', px0 + 10, py0 + 16);
+  ctx.strokeStyle = '#ffffff'; ctx.strokeRect(barX, py0 + 9, barW, 8);
+  ctx.fillStyle = '#f1c40f'; ctx.fillRect(barX + 1, py0 + 10, (barW - 2) * p.throttle, 6);
+
+  // Health
+  ctx.fillStyle = '#ffffff'; ctx.fillText('HEALTH', px0 + 10, py0 + 34);
+  ctx.strokeStyle = '#ffffff'; ctx.strokeRect(barX, py0 + 27, barW, 8);
+  const hf = Math.max(0, p.health) / CONFIG.PLAYER_HEALTH;
+  ctx.fillStyle = hf > 0.5 ? '#2ecc71' : (hf > 0.25 ? '#f39c12' : '#e74c3c');
+  ctx.fillRect(barX + 1, py0 + 28, (barW - 2) * hf, 6);
+
+  // Missiles
+  ctx.fillStyle = '#ffffff'; ctx.fillText('MISSILES', px0 + 10, py0 + 54);
+  for (let i = 0; i < CONFIG.MISSILE_MAX; i++) {
+    const bx = barX + i * 18, by = py0 + 46;
+    ctx.strokeStyle = '#ffffff'; ctx.strokeRect(bx, by, 14, 9);
+    if (i < p.missiles) { ctx.fillStyle = CONFIG.COLORS.missile; ctx.fillRect(bx + 1, by + 1, 12, 7); }
+    else if (i === p.missiles) {
+      const fr = p.missileTimer / (CONFIG.MISSILE_REFILL_SECONDS * 60);
+      ctx.fillStyle = '#7f8c8d'; ctx.fillRect(bx + 1, by + 1, 12 * fr, 7);
+    }
+  }
+
+  // Speed
+  const sp = Math.hypot(p.vx, p.vy);
+  ctx.fillStyle = '#ffffff'; ctx.fillText('SPEED ' + sp.toFixed(1), px0 + 10, py0 + 76);
+
+  // Shot down? Show a respawn note where the plane would be.
+  if (!p.alive) {
+    ctx.textAlign = 'center'; ctx.font = '18px monospace'; ctx.fillStyle = '#ff8a65';
+    ctx.fillText('RESPAWNING...', cx, py0 - 28);
+    ctx.textAlign = 'left';
+  }
 }
 
 // Alien Invasion HUD: tells you if YOU are the UFO, how many runners are left,
