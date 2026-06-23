@@ -345,10 +345,16 @@ function saveUsername(name) {
 //     local + same-WiFi play "just works" with nothing to type, else
 //  3. the public deployed server in config.js (for the https github.io link).
 function serverUrl() {
-  try { const saved = localStorage.getItem('pp_serverurl'); if (saved) return saved; } catch (e) {}
+  // LOCAL play: if the game was opened from our own server (any http address
+  // like http://localhost:8080 or http://192.168.x.x:8080), ALWAYS talk to that
+  // same computer. This is always correct and ignores any stale typed-in
+  // address, so same-WiFi play can't get pointed at the wrong place.
   if (typeof location !== 'undefined' && location.host && location.protocol !== 'https:') {
     return 'ws://' + location.host;
   }
+  // PUBLIC https link: a saved address (typed in the lobby) wins, else the
+  // configured deployed server.
+  try { const saved = localStorage.getItem('pp_serverurl'); if (saved) return saved; } catch (e) {}
   return CONFIG.SERVER_URL;
 }
 // Type a new address and connect to it (so connection issues can be fixed
@@ -512,6 +518,67 @@ function onNetMode(m) {
 
 // Hook Net's updates to the UI.
 Net.onChange = refreshLobbyUI;
+
+// ===========================================================================
+//  ONLINE LIVE SYNC — see the other players fly on their own devices.
+//  Each client sends its plane a few times a second; everyone draws the others.
+// ===========================================================================
+const remotePlayers = {};       // id -> {x,y,tx,ty,angle,throttle,health,isUfo,name,last}
+let netStateTimer = 0;
+const REMOTE_COLORS = ['#e0524a', '#3fae54', '#e0a93a', '#9b59b6', '#e84393', '#1abc9c', '#ff7f50'];
+const _remoteSprites = {};
+function remoteSprite(id) {
+  const c = REMOTE_COLORS[((id % REMOTE_COLORS.length) + REMOTE_COLORS.length) % REMOTE_COLORS.length];
+  if (!_remoteSprites[c]) _remoteSprites[c] = makePlaneSetFromColor(c);
+  return _remoteSprites[c];
+}
+// Just joined an online server: drop bots (online = just the humans) and clear
+// any leftover remote players.
+function onNetJoined() {
+  removeAllBots();
+  for (const k in remotePlayers) delete remotePlayers[k];
+  if (playerState === 'dead' || playerState === 'chute') spawnPlane(camera.x + CONFIG.GAME_W / 2);
+}
+// Got another player's plane from the server.
+function onNetState(id, name, s) {
+  if (!s) return;
+  let r = remotePlayers[id];
+  if (!r) r = remotePlayers[id] = { x: s.x, y: s.y, angle: s.angle || 0 };
+  r.name = name; r.tx = s.x; r.ty = s.y; r.angle = s.angle || 0;
+  r.throttle = s.throttle; r.health = s.health; r.isUfo = s.isUfo; r.dead = s.dead;
+  r.last = frameCount;
+}
+function onNetLeft(id) { delete remotePlayers[id]; }
+
+// Run online each frame: send my plane, smooth the others, forget silent ones.
+function netSyncStep() {
+  netStateTimer += 1;
+  if (netStateTimer >= 2 && (playerState === 'flying' || playerState === 'takeoff')) {
+    netStateTimer = 0;
+    Net.sendState({ x: player.x, y: player.y, angle: player.angle, throttle: player.throttle,
+                    health: player.health, isUfo: player.isUfo });
+  }
+  for (const id in remotePlayers) {
+    const r = remotePlayers[id];
+    if (r.tx !== undefined) { r.x = wrapX(r.x + wrapDX(r.tx - r.x) * 0.35); r.y += (r.ty - r.y) * 0.35; }
+    if (frameCount - (r.last || 0) > 300) delete remotePlayers[id]; // stopped sending -> gone
+  }
+}
+
+// Draw the other online players (with name tags). Called from drawWorldContents.
+function drawRemotePlayers() {
+  for (const id in remotePlayers) {
+    const r = remotePlayers[id];
+    if (r.x === undefined) continue;
+    const sx = worldToScreenX(r.x), sy = r.y - camera.y;
+    if (mode === 'alien' && r.isUfo) drawUfoCraft(ctx, sx, sy, frameCount, false);
+    else drawPlaneSprite(ctx, remoteSprite(parseInt(id, 10)), sx, sy, r.angle || 0, frameCount, false);
+    ctx.font = '11px monospace'; ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillText(r.name || 'player', sx + 1, sy - 21);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(r.name || 'player', sx, sy - 22);
+    ctx.textAlign = 'left';
+  }
+}
 
 // ---- Mobile touch controls ----
 // On-screen buttons drive the SAME Input flags the keyboard does, so all the
@@ -951,6 +1018,9 @@ function update() {
   }
   if (infiniteMissiles) { player.missiles = CONFIG.MISSILE_MAX; player.missileTimer = 0; }
 
+  // Online: send my plane to the others and smooth their planes.
+  if (Net.inServer) netSyncStep();
+
   // Alien Invasion: spread the UFO bots across different runners first.
   if (mode === 'alien') assignUfoTargets();
 
@@ -1239,6 +1309,9 @@ function drawWorldContents() {
   for (const boom of explosions) {
     boom.draw(ctx);
   }
+
+  // --- Other online players ---
+  if (Net.inServer) drawRemotePlayers();
 
   // --- The player plane(s) ---
   if (splitScreen) {

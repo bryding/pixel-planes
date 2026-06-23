@@ -1,0 +1,17 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="css/style.css"></head><body>
+<canvas id="game"></canvas><div id="pauseMenu" style="display:none"></div>
+<script src="js/config.js"></script><script src="js/net.js"></script><script src="js/input.js"></script>
+<script src="js/physics.js"></script><script src="js/bullet.js"></script><script src="js/missile.js"></script>
+<script src="js/explosion.js"></script><script src="js/powerup.js"></script><script src="js/sprites.js"></script>
+<script src="js/scenery.js"></script><script src="js/plane.js"></script><script src="js/enemy.js"></script>
+<script src="js/pilot.js"></script><script src="js/game.js"></script>
+<script>
+  removeAllBots();
+  Net.inServer = true; Net.serverName='STARLINK';
+  player.x=BARN_X; player.y=CONFIG.GROUND_Y-500; player.angle=0; playerState='flying';
+  remotePlayers[2]={x:BARN_X-260,y:CONFIG.GROUND_Y-540,angle:0.3,name:'Maya',last:frameCount};
+  remotePlayers[3]={x:BARN_X+280,y:CONFIG.GROUND_Y-470,angle:Math.PI,name:'Leo',last:frameCount};
+  remotePlayers[4]={x:BARN_X+60,y:CONFIG.GROUND_Y-650,angle:-0.6,name:'Zoe',last:frameCount};
+  camera.x=player.x-CONFIG.GAME_W/2; camera.y=player.y-CONFIG.GAME_H/2;
+  draw();
+</script></body></html>

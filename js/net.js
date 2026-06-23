@@ -139,6 +139,7 @@ const Net = {
       case 'joined':
         this.inServer = true; this.isHost = !!m.isHost; this.serverName = m.name; this.lastError = '';
         if (m.mode && typeof onNetMode === 'function') onNetMode(m.mode);
+        if (typeof onNetJoined === 'function') onNetJoined();
         break;
       case 'denied':  this.lastError = m.msg || 'Denied.'; break;
       case 'error':   this.lastError = m.msg || 'Error.'; break;
