@@ -151,6 +151,18 @@ function setMode(m) {
     infiniteMissiles = false;
   }
   if (m === 'ww2') assignWW2Factions();
+
+  // In split-screen, switching modes keeps BOTH players in the duel: set up the
+  // new mode for two players instead of running the single-player spawn logic.
+  if (splitScreen) {
+    if (m === 'alien') { startAlien(); }      // alien is split-aware (uses alienPlanes)
+    else {
+      player.isUfo = false; player2.isUfo = false;
+      startDuel();                            // fresh duel positions for the new mode
+    }
+    return;
+  }
+
   if (m === 'alien') startAlien();
   if (m === 'blackhole') startBlackHole();
   // Leaving a space mini-game -> put a normal flying plane back.
@@ -180,8 +192,13 @@ let lightningFlash = 0;
 function lightningStrike() {
   const safeTop = CONFIG.CEILING + 160; // above this height = safe from lightning
   const cands = [];
-  // A shielded/invincible player is never picked.
-  if (playerState === 'flying' && player.y > safeTop && player.invincibleTimer <= 0) cands.push(player);
+  // A shielded/invincible player is never picked. In split-screen BOTH players
+  // can be struck.
+  const humans = splitScreen ? [player, player2] : [player];
+  for (const pl of humans) {
+    const airborne = splitScreen ? pl.alive : (playerState === 'flying');
+    if (airborne && pl.y > safeTop && pl.invincibleTimer <= 0) cands.push(pl);
+  }
   for (const e of enemies) if (e.alive && e.y > safeTop) cands.push(e);
   if (!cands.length) return;
 
@@ -193,7 +210,10 @@ function lightningStrike() {
   lightnings.push({ x: pick.x, y: pick.y, life: 14 });
   lightningFlash = 8;
   bigExplosion(pick.x, pick.y);
-  if (pick === player) {
+  if (splitScreen && (pick === player || pick === player2)) {
+    pushKill('⚡ ' + ((pick === player) ? 'BLUE' : 'RED') + ' struck by lightning', '#ffe066');
+    duelDown(pick);
+  } else if (pick === player) {
     pushKill('⚡ YOU were struck by lightning', '#ffe066');
     playerDies(player.x, player.y, 'STRUCK BY LIGHTNING!');
   } else {
@@ -343,11 +363,18 @@ function setSplitScreen(on) {
     removeAllBots();          // no bots in a duel unless you add them
     duelScoreBlue = 0; duelScoreRed = 0;
     if (!planes.includes(player2)) planes.splice(1, 0, player2); // bots can target P2
-    startDuel();
+    if (mode === 'alien') startAlien(); else startDuel();
+    // Make sure both cameras start on their player.
+    cam1.x = player.x  - CONFIG.GAME_W / 4; cam1.y = player.y  - CONFIG.GAME_H / 2;
+    cam2.x = player2.x - CONFIG.GAME_W / 4; cam2.y = player2.y - CONFIG.GAME_H / 2;
   } else {
     const idx = planes.indexOf(player2);
     if (idx >= 0) planes.splice(idx, 1);
-    spawnPlane(100);          // back to a normal single-player start
+    player.isUfo = false;
+    // Restart single-player for whatever mode is active.
+    if (mode === 'alien') startAlien();
+    else if (mode === 'blackhole') startBlackHole();
+    else spawnPlane(100);
   }
 }
 
@@ -376,9 +403,21 @@ function updateDuelPlayer(p, missileEdge, fireHeld, ejectEdge) {
     if (p.deadTimer <= 0) resetDuelPlane(p, wrapX(p.x), (p === player) ? 1 : -1);
     return;
   }
+
+  // ALIEN INVASION (tag): no guns/missiles/eject/crashing. The UFO flies with
+  // straight arrow/WASD movement; runners fly like planes. Tagging is handled
+  // by alienTagStep(); the black-hole pull etc. don't apply here.
+  if (mode === 'alien') {
+    if (p.isUfo) ufoDirectMove(p);
+    else p.update();
+    return;
+  }
+
   p.update();
-  // Hard ground impact = crash (gentle level touch is a safe roll).
-  const hard = p.invincibleTimer <= 0 && p.hitGround &&
+
+  // Hard ground impact = crash -- EXCEPT in Black Hole (no ground there).
+  const canCrash = (mode !== 'blackhole');
+  const hard = canCrash && p.invincibleTimer <= 0 && p.hitGround &&
     (p.impactVy >= CONFIG.LAND_MAX_VY || Math.abs(angleDiff(p.angle, 0)) >= CONFIG.LAND_MAX_ANGLE);
   if (hard) {
     bigExplosion(p.x, p.y);
@@ -387,18 +426,30 @@ function updateDuelPlayer(p, missileEdge, fireHeld, ejectEdge) {
     duelDown(p);
     return;
   }
+
+  // Weapons & eject. WW2 has NO missiles and NO ejecting (same as single-player).
   if (p.frozenTimer <= 0) {
-    if (ejectEdge) { duelEject(p); return; }   // bail out!
+    if (ejectEdge && mode !== 'ww2') { duelEject(p); return; }
     if (fireHeld) p.tryShoot(bullets);
-    if (missileEdge) p.fireMissile(missiles, planes);
+    if (missileEdge && mode !== 'ww2') p.fireMissile(missiles, planes);
   }
 }
 // Eject in a duel: the plane is destroyed, a parachute floats down, you respawn.
 function duelEject(p) {
-  bigExplosion(p.x, p.y);
+  const who = (p === player) ? 'BLUE' : 'RED';
   const col = (p === player) ? '#7fbdef' : '#e0524a';
+  // Bad Weather: bailing out gets you struck by lightning instantly!
+  if (mode === 'badweather' && p.invincibleTimer <= 0) {
+    lightnings.push({ x: p.x, y: p.y, life: 14 });
+    lightningFlash = 8;
+    bigExplosion(p.x, p.y);
+    pushKill('⚡ ' + who + ' ejected into the storm', '#ffe066');
+    duelDown(p);
+    return;
+  }
+  bigExplosion(p.x, p.y);
   spawnBotChute(p.x, p.y, col);              // a little parachute in your color
-  pushKill('🪂 ' + ((p === player) ? 'BLUE' : 'RED') + ' ejected', col);
+  pushKill('🪂 ' + who + ' ejected', col);
   duelDown(p);
 }
 // Mark a split-screen player as shot down and start its respawn countdown.
@@ -614,23 +665,7 @@ function update() {
     // --- Alien Invasion: YOU are the UFO. It does NOT fly like a plane --
     // the arrow keys move it straight up/down/left/right. Touching a runner
     // tags them (handled in alienTagStep). No guns, no crashing.
-    let dx = 0, dy = 0;
-    if (Input.left)  dx -= 1;
-    if (Input.right) dx += 1;
-    if (Input.up)    dy -= 1;
-    if (Input.down)  dy += 1;
-    if (dx || dy) {
-      const len = Math.hypot(dx, dy);
-      player.vx = (dx / len) * CONFIG.UFO_SPEED;
-      player.vy = (dy / len) * CONFIG.UFO_SPEED;
-    } else {
-      player.vx *= 0.8; player.vy *= 0.8;   // coast to a stop when no key held
-    }
-    player.x = wrapX(player.x + player.vx);
-    player.y += player.vy;
-    if (player.y > CONFIG.GROUND_Y - 6) { player.y = CONFIG.GROUND_Y - 6; player.vy = 0; }
-    if (player.y < CONFIG.CEILING) { player.y = CONFIG.CEILING; player.vy = 0; }
-    player.propSpin += 1;
+    ufoDirectMove(player);
   } else if (playerState === 'flying') {
     player.update();
     // Touching the ground: a gentle, level touchdown is a safe landing (you
@@ -703,8 +738,9 @@ function update() {
     for (const target of planes) {
       if (!target.alive) continue;               // can't hit a downed plane
       // Friendly fire is off for your own team (WW2 = faction; otherwise team).
-      const friendly = (mode === 'ww2') ? (target.faction === bullet.faction)
-                                        : (target.team === bullet.team);
+      // Split-screen always uses teams so the two players can shoot each other.
+      const friendly = (mode === 'ww2' && !splitScreen) ? (target.faction === bullet.faction)
+                                                        : (target.team === bullet.team);
       if (friendly) continue;
       if (hits(bullet, target, 14)) {
         bullet.dead = true;
@@ -1012,7 +1048,8 @@ function drawWorldContents() {
 // The on-top info layer, drawn ONCE over the whole screen (not per split half).
 function drawHudLayer() {
   if (splitScreen) {
-    drawDuelHud();
+    if (mode === 'alien') drawAlienHud();   // runner count + winner banner
+    else drawDuelHud();
     drawKillFeed();
   } else if (mode === 'alien') {
     drawAlienHud();
@@ -1522,25 +1559,43 @@ function drawHud() {
 // =========================================================================
 let alienWinner = null, alienWinTimer = 0;
 
+// Everyone in the tag round: both human players in split-screen, else you + bots.
+function alienPlanes() {
+  return splitScreen ? [player, player2, ...enemies] : [player, ...enemies];
+}
+// UFO free-flight: the arrow/WASD keys move it straight (no plane physics, no
+// gravity). Shared by the player UFO in single-player AND in split-screen.
+function ufoDirectMove(o) {
+  const kUp    = (o.keymap === 'p2') ? Input.up2    : Input.up;
+  const kDown  = (o.keymap === 'p2') ? Input.down2  : Input.down;
+  const kLeft  = (o.keymap === 'p2') ? Input.left2  : Input.left;
+  const kRight = (o.keymap === 'p2') ? Input.right2 : Input.right;
+  let dx = 0, dy = 0;
+  if (kLeft) dx -= 1; if (kRight) dx += 1; if (kUp) dy -= 1; if (kDown) dy += 1;
+  if (dx || dy) { const len = Math.hypot(dx, dy); o.vx = dx / len * CONFIG.UFO_SPEED; o.vy = dy / len * CONFIG.UFO_SPEED; }
+  else { o.vx *= 0.8; o.vy *= 0.8; }
+  o.x = wrapX(o.x + o.vx); o.y += o.vy;
+  if (o.y > CONFIG.GROUND_Y - 6) { o.y = CONFIG.GROUND_Y - 6; o.vy = 0; }
+  if (o.y < CONFIG.CEILING) { o.y = CONFIG.CEILING; o.vy = 0; }
+  o.propSpin += 1;
+}
+
 function startAlien() {
-  spawnPlane(100);
-  playerState = 'flying';                 // everyone starts already in the air
-  const all = [player, ...enemies];
-  // There are NO power-ups in Alien Tag, so clear any bubbles on the map and
-  // strip every power-up the player or bots carried in from another mode --
-  // otherwise a leftover shield would make someone impossible to tag.
+  if (!splitScreen) { spawnPlane(100); playerState = 'flying'; } // single: fly in airborne
+  // No power-ups in Alien Tag: clear bubbles + strip everyone's powers so a
+  // leftover shield can't make someone impossible to tag.
   powerups.length = 0;
-  all.forEach(p => {
-    p.isUfo = false;
+  for (const p of alienPlanes()) {
+    p.isUfo = false; p.alive = true; p.deadTimer = 0;
     p.invincibleTimer = 0; p.wideTimer = 0; p.frozenTimer = 0;
-  });
-  const alive = all.filter(p => p.alive !== false);
-  alive[Math.floor(Math.random() * alive.length)].isUfo = true; // random first UFO
+  }
+  const all = alienPlanes();
+  all[Math.floor(Math.random() * all.length)].isUfo = true; // random first UFO
   placeAlienRound();
   alienWinner = null; alienWinTimer = 0;
 }
 function newAlienRound() {
-  const all = [player, ...enemies];
+  const all = alienPlanes();
   all.forEach(p => { p.isUfo = false; });
   if (alienWinner) alienWinner.isUfo = true;                    // winner is "it"
   else all[Math.floor(Math.random() * all.length)].isUfo = true;
@@ -1552,7 +1607,7 @@ function newAlienRound() {
 // the UFO teleports to the MIDDLE of the map, and the runners spread out across
 // the far half (around the world's edges), as far from the middle as possible.
 function placeAlienRound() {
-  const all = [player, ...enemies];
+  const all = alienPlanes();
   const ufo = all.find(p => p.isUfo);
   if (ufo) {
     ufo.x = BARN_X;                       // dead center of the world
@@ -1796,12 +1851,21 @@ function implodeAt(x, y) {
 
 // Run the hole each frame: pull everything, and crush whatever crosses in.
 function blackHoleStep() {
-  if (playerState === 'flying' || playerState === 'takeoff') {
-    const d = applyBlackHolePull(player, 1);
-    if (d < CONFIG.BH_HORIZON && player.invincibleTimer <= 0) {
-      implodeAt(player.x, player.y);
-      pushKill('🕳️ the black hole crushed YOU', '#b388ff');
-      playerDies(player.x, player.y, 'SPAGHETTIFIED!');
+  // Pull the human player(s). In split-screen BOTH players feel the gravity.
+  const humans = splitScreen ? [player, player2] : [player];
+  for (const pl of humans) {
+    const airborne = splitScreen ? pl.alive : (playerState === 'flying' || playerState === 'takeoff');
+    if (!airborne) continue;
+    const d = applyBlackHolePull(pl, 1);
+    if (d < CONFIG.BH_HORIZON && pl.invincibleTimer <= 0) {
+      implodeAt(pl.x, pl.y);
+      if (splitScreen) {
+        pushKill('🕳️ ' + ((pl === player) ? 'BLUE' : 'RED') + ' crushed by the black hole', '#b388ff');
+        duelDown(pl);
+      } else {
+        pushKill('🕳️ the black hole crushed YOU', '#b388ff');
+        playerDies(pl.x, pl.y, 'SPAGHETTIFIED!');
+      }
     }
   }
   for (const e of enemies) {
