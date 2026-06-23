@@ -993,6 +993,13 @@ function drawMinimap() {
   ctx.fillStyle = '#5a3b2e'; ctx.fillRect(fx, my + mh - 12, 1, 9);
   ctx.fillStyle = '#2ecc71'; ctx.fillRect(fx + 1, my + mh - 12, 7, 4);
 
+  // Black Hole: a purple-ringed black dot so you can see where the hole is.
+  if (mode === 'blackhole') {
+    const hx = mapX(BH_X), hy = mapY(BH_Y);
+    ctx.fillStyle = '#b388ff'; ctx.beginPath(); ctx.arc(hx, hy, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(hx, hy, 4, 0, Math.PI * 2); ctx.fill();
+  }
+
   // Red box = you, now placed by BOTH where you are and how high you are.
   const who = (playerState === 'chute' && pilot) ? pilot : player;
   ctx.fillStyle = '#e74c3c';
