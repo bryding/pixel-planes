@@ -60,8 +60,17 @@ In **`js/config.js`**, set `SERVER_URL`:
 - **Same computer:** `ws://localhost:8080`
 - **Other devices on your home WiFi:** use your computer's local IP, e.g.
   `ws://192.168.1.50:8080` (find it in your WiFi settings).
-- **Worldwide:** deploy the `server/` folder to a free host like Render,
-  Railway, or Fly.io, then use its address (starts with `wss://`).
+- **Worldwide (from the https game link):** the server must have a **secure
+  `wss://`** address. Deploy it free on **Render** (a blueprint is included):
+  1. Sign up at **https://render.com** with your GitHub account.
+  2. **New + → Blueprint**, pick this repo, click **Apply**. (It reads
+     `render.yaml` and builds the `server/` folder for you.)
+  3. Render gives a URL like `https://pixel-planes-server.onrender.com`.
+     In the game's server box, use it with **wss://**:
+     `wss://pixel-planes-server.onrender.com`
+  > Important: a page on **https** (the github.io link) can ONLY use **wss://**,
+  > never `ws://`. The free tier sleeps when idle, so the first connect can take
+  > 30–60s to wake — the game keeps retrying, so just wait a moment.
 
 ### 4. Play
 Press **ESC** → **Create Server** (pick a name + optional password) or

@@ -1,0 +1,23 @@
+# Render.com blueprint — deploys the Pixel Planes online server for free,
+# with a secure wss:// address that works from the https game link.
+#
+# How to use:
+#   1. Push this repo to GitHub (already done).
+#   2. Make a free account at https://render.com (sign in with GitHub).
+#   3. Click "New +" -> "Blueprint", pick this repo, click Apply.
+#   4. Render builds it and gives a URL like
+#         https://pixel-planes-server.onrender.com
+#      Use it in the game's server box as:
+#         wss://pixel-planes-server.onrender.com
+#
+# (Free tier sleeps after ~15 min idle, so the first connect can take ~30-60s
+#  to wake up — the game auto-retries, so just wait a moment.)
+services:
+  - type: web
+    name: pixel-planes-server
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    autoDeploy: true
