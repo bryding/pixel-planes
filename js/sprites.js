@@ -194,6 +194,11 @@ const WW2_SPRITES = {
 // draw a saucer instead). Matches the blue "runner" arrow color.
 const ALIEN_PLANE_SPRITE = makePlaneSetFromColor('#3b9bff');
 
+// Split-screen duel: player 2 flies a RED plane; any bots are GREEN.
+// (Player 1 keeps the normal blue plane.)
+const PLAYER2_SPRITE = makePlaneSetFromColor('#e0524a');
+const SPLIT_BOT_SPRITE = makePlaneSetFromColor('#3fae54');
+
 // Pre-build every plane's pictures once, when the game starts.
 // (Keyed by team: 'player' = blue, 1 = purple enemies, 2 = orange enemies.)
 const PLANE_SPRITES = {

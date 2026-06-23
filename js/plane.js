@@ -34,6 +34,11 @@ class Plane {
     // In Alien Invasion (tag) mode, true means this plane is a UFO ("it").
     this.isUfo = false;
     this.isPlayer = true;
+    // Which control scheme this plane uses: null = arrow keys (player 1),
+    // 'p2' = WASD keys (player 2 in split-screen).
+    this.keymap = null;
+    // Split-screen: counts down while shot down, then this player respawns.
+    this.deadTimer = 0;
 
     // Health: how many hits left. alive = false means shot down (respawning).
     this.health = CONFIG.PLAYER_HEALTH;
@@ -75,15 +80,20 @@ class Plane {
   // This runs every frame to move the plane.
   update() {
     // --- 1. Read the controls (unless we're FROZEN by a bad power-up) ---
+    // Player 2 (split-screen) uses the WASD keys; everyone else uses arrows.
+    const kUp    = (this.keymap === 'p2') ? Input.up2    : Input.up;
+    const kDown  = (this.keymap === 'p2') ? Input.down2  : Input.down;
+    const kLeft  = (this.keymap === 'p2') ? Input.left2  : Input.left;
+    const kRight = (this.keymap === 'p2') ? Input.right2 : Input.right;
     if (this.frozenTimer <= 0) {
-      if (Input.up)   this.throttle += CONFIG.THROTTLE_UP_RATE; // slow to spin up
-      if (Input.down) this.throttle -= CONFIG.THROTTLE_RATE;
+      if (kUp)   this.throttle += CONFIG.THROTTLE_UP_RATE; // slow to spin up
+      if (kDown) this.throttle -= CONFIG.THROTTLE_RATE;
       // Keep the throttle between 0 (off) and 1 (full power).
       this.throttle = Math.max(0, Math.min(1, this.throttle));
 
       const tm = (mode === 'ww2') ? CONFIG.WW2_TURN_MULT : 1; // WW2 planes turn slowly
-      if (Input.left)  this.angle -= CONFIG.TURN_SPEED * tm;
-      if (Input.right) this.angle += CONFIG.TURN_SPEED * tm;
+      if (kLeft)  this.angle -= CONFIG.TURN_SPEED * tm;
+      if (kRight) this.angle += CONFIG.TURN_SPEED * tm;
     }
 
     // --- 2. Realistic flight. Lift scales with throttle, so cutting the
@@ -230,7 +240,9 @@ class Plane {
     }
 
     let set = PLANE_SPRITES.player;
-    if (mode === 'unicorn') set = UNICORN_SPRITES.player;
+    // Split-screen duel: player 1 is BLUE, player 2 is RED (overrides modes).
+    if (splitScreen) set = (this.keymap === 'p2') ? PLAYER2_SPRITE : PLANE_SPRITES.player;
+    else if (mode === 'unicorn') set = UNICORN_SPRITES.player;
     else if (mode === 'ww2') set = WW2_SPRITES[this.faction];
     else if (mode === 'alien') set = ALIEN_PLANE_SPRITE; // untagged runners are blue
     drawPlaneSprite(ctx, set, sx, sy, this.angle, this.propSpin, this.flash > 0);

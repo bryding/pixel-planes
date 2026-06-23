@@ -304,7 +304,8 @@ class Enemy {
     }
 
     let set = this.sprite;
-    if (mode === 'unicorn') set = this.uniSprite;
+    if (splitScreen) set = SPLIT_BOT_SPRITE;            // duel bots are all green
+    else if (mode === 'unicorn') set = this.uniSprite;
     else if (mode === 'ww2') set = WW2_SPRITES[this.faction];
     else if (mode === 'alien') set = ALIEN_PLANE_SPRITE; // untagged runners are blue
     drawPlaneSprite(ctx, set, sx, sy, this.angle, this.propSpin, this.flash > 0);

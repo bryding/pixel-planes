@@ -28,17 +28,35 @@ resize();
 // --- Make the player's plane and the camera ---
 const player = new Plane(100, 120);
 
+// Player 2, only used in split-screen mode. Flies with WASD (Q gun / E missile),
+// is RED, and is on a different team so the two players can shoot each other.
+const player2 = new Plane(100, 120);
+player2.keymap = 'p2';
+player2.team = 2;
+let splitScreen = false;      // is two-player split-screen turned on?
+let duelScoreBlue = 0;        // player 1 (blue) kills
+let duelScoreRed = 0;         // player 2 (red) kills
+let p2MissileWasDown = false; // edge-detect player 2's missile key
+
 // The camera's x keeps counting up/down smoothly (it never jumps), even as the
 // world loops -- that keeps the background from popping at the seam.
-const camera = { x: 0, y: 0 };
+const camera = { x: 0, y: 0 };  // the ACTIVE render camera (set per view)
+const cam1 = { x: 0, y: 0 };    // split-screen: player 1's camera (right half)
+const cam2 = { x: 0, y: 0 };    // split-screen: player 2's camera (left half)
+
+// The current viewport we're drawing into. For a single full-screen view this
+// is the whole canvas; in split-screen each half sets these while it draws.
+let viewOriginX = 0;
+let viewWidth = CONFIG.GAME_W;
+let viewFocus = player;         // whose view this is (so arrows skip yourself)
 
 // Turn a world x into a screen x, picking the copy of it (the world loops)
-// that is closest to the middle of the screen.
+// that is closest to the middle of the CURRENT viewport.
 function worldToScreenX(wx) {
   const W = CONFIG.WORLD_WIDTH;
-  const center = camera.x + CONFIG.GAME_W / 2;
+  const center = camera.x + viewWidth / 2;
   const copy = wx + Math.round((center - wx) / W) * W;
-  return copy - camera.x;
+  return (copy - camera.x) + viewOriginX;
 }
 
 // The list of bullets that are flying right now. Starts empty.
@@ -93,6 +111,7 @@ function addBot() {
     const blacks = enemies.filter(x => x.faction === 'black').length;
     e.faction = (blacks < CONFIG.WW2_BLACK_COUNT) ? 'black' : 'green';
   }
+  if (splitScreen) e.team = 1; // duel bots are all one GREEN team (vs both players)
   enemies.push(e);
   planes.push(e);
 }
@@ -263,10 +282,92 @@ let playerRespawn = 0;   // counts down while dead, then a fresh plane flies in
 let frameCount = 0;      // ticks up every frame (used for blinking warnings)
 let paused = false;      // ESC pauses/unpauses the game
 
-// ESC toggles pause. (e.repeat guard so holding the key doesn't flicker it.)
+// ESC toggles pause and shows/hides the pause menu (Resume / 1-Player / Split).
 window.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape' && !e.repeat) paused = !paused;
+  if (e.key === 'Escape' && !e.repeat) { paused = !paused; updatePauseMenu(); }
 });
+// Show or hide the HTML pause menu to match the paused flag.
+function updatePauseMenu() {
+  const m = document.getElementById('pauseMenu');
+  if (m) m.style.display = paused ? 'flex' : 'none';
+}
+// Pause-menu buttons.
+function resumeGame()  { paused = false; updatePauseMenu(); }
+function chooseNormal() { setSplitScreen(false); paused = false; updatePauseMenu(); }
+function chooseSplit()  { setSplitScreen(true);  paused = false; updatePauseMenu(); }
+
+// Turn split-screen 2-player ON or OFF.
+function setSplitScreen(on) {
+  if (on === splitScreen) return;
+  splitScreen = on;
+  if (on) {
+    removeAllBots();          // no bots in a duel unless you add them
+    duelScoreBlue = 0; duelScoreRed = 0;
+    if (!planes.includes(player2)) planes.splice(1, 0, player2); // bots can target P2
+    startDuel();
+  } else {
+    const idx = planes.indexOf(player2);
+    if (idx >= 0) planes.splice(idx, 1);
+    spawnPlane(100);          // back to a normal single-player start
+  }
+}
+
+// Put both players in the air on opposite sides, ready to dogfight.
+function startDuel() {
+  resetDuelPlane(player,  BARN_X + 900, 1);   // blue, faces right
+  resetDuelPlane(player2, BARN_X - 900, -1);  // red, faces left
+  cam1.x = player.x  - CONFIG.GAME_W / 4; cam1.y = player.y  - CONFIG.GAME_H / 2;
+  cam2.x = player2.x - CONFIG.GAME_W / 4; cam2.y = player2.y - CONFIG.GAME_H / 2;
+  playerState = 'flying';
+}
+function resetDuelPlane(p, x, dir) {
+  p.alive = true; p.health = CONFIG.PLAYER_HEALTH;
+  p.x = wrapX(x); p.y = CONFIG.GROUND_Y - 700;
+  p.vx = 3 * dir; p.vy = 0; p.angle = (dir > 0) ? 0 : Math.PI;
+  p.throttle = 0.75; p.flash = 0;
+  p.missiles = CONFIG.MISSILE_MAX; p.missileTimer = 0;
+  p.invincibleTimer = 0; p.wideTimer = 0; p.frozenTimer = 0;
+  p.deadTimer = 0; p.stalling = false; p.hitGround = false;
+}
+
+// One split-screen player: fly, shoot, crash, and respawn after being downed.
+function updateDuelPlayer(p, missileEdge, fireHeld) {
+  if (!p.alive) {
+    p.deadTimer -= 1;
+    if (p.deadTimer <= 0) resetDuelPlane(p, wrapX(p.x), (p === player) ? 1 : -1);
+    return;
+  }
+  p.update();
+  // Hard ground impact = crash (gentle level touch is a safe roll).
+  const hard = p.invincibleTimer <= 0 && p.hitGround &&
+    (p.impactVy >= CONFIG.LAND_MAX_VY || Math.abs(angleDiff(p.angle, 0)) >= CONFIG.LAND_MAX_ANGLE);
+  if (hard) {
+    bigExplosion(p.x, p.y);
+    const who = (p === player) ? 'BLUE' : 'RED';
+    pushKill('🛩️ ' + who + ' crashed 💥', (p === player) ? '#7fbdef' : '#e0524a');
+    duelDown(p);
+    return;
+  }
+  if (p.frozenTimer <= 0) {
+    if (fireHeld) p.tryShoot(bullets);
+    if (missileEdge) p.fireMissile(missiles, planes);
+  }
+}
+// Mark a split-screen player as shot down and start its respawn countdown.
+// (The explosion + kill-feed message are handled by whoever downed it.)
+function duelDown(p) {
+  p.alive = false;
+  p.deadTimer = CONFIG.PLAYER_RESPAWN;
+}
+// Slide a camera smoothly toward its player (vw = the viewport width it fills).
+function followCam(cam, focus, vw) {
+  const tx = focus.x - vw / 2 + (focus.vx || 0) * CONFIG.CAM_LOOKAHEAD * 0.1;
+  const ty = focus.y - CONFIG.GAME_H / 2;
+  cam.x += wrapDX(tx - cam.x) * CONFIG.CAM_SMOOTH;
+  cam.y += (ty - cam.y) * CONFIG.CAM_SMOOTH;
+  const maxCamY = CONFIG.GROUND_Y - CONFIG.GAME_H + 140;
+  if (cam.y > maxCamY) cam.y = maxCamY;
+}
 let deathMsg = 'SHOT DOWN!'; // what the middle-of-screen death message says
 
 // The "who killed who" kill feed (newest first). Each entry fades out.
@@ -366,6 +467,19 @@ function checkPilotHit() {
 // handles your own death (points reset).
 function onPlanePopped(target, shooterTeam, shooterFaction) {
   bigExplosion(target.x, target.y);
+
+  // --- Split-screen duel scoring (BLUE = P1 team 0, RED = P2 team 2, bots green) ---
+  if (splitScreen) {
+    const killer = (shooterTeam === 0) ? 'BLUE' : (shooterTeam === 2) ? 'RED' : 'GREEN';
+    if (shooterTeam === 0) duelScoreBlue += 1;
+    else if (shooterTeam === 2) duelScoreRed += 1;
+    const victim = (target === player) ? 'BLUE' : (target === player2) ? 'RED' : (target.name || 'GREEN');
+    if (target === player || target === player2) duelDown(target); // shot down -> respawn
+    const col = (killer === 'BLUE') ? '#7fbdef' : (killer === 'RED') ? '#e0524a' : '#3fae54';
+    pushKill(killer + '  ›❌  ' + victim, col);
+    return;
+  }
+
   if (mode === 'ww2') {
     // Team scoring; no names/kill feed in WW2.
     if (shooterFaction === 'green') greenScore += 1;
@@ -422,7 +536,14 @@ function update() {
   const ejectPressed = Input.eject && !ejectWasDown;
   missileWasDown = Input.missile;
   ejectWasDown = Input.eject;
+  const p2MissilePressed = Input.missile2 && !p2MissileWasDown;
+  p2MissileWasDown = Input.missile2;
 
+  // --- Split-screen: just fly both players (no takeoff/parachute lifecycle) ---
+  if (splitScreen) {
+    updateDuelPlayer(player,  missilePressed,   Input.fire);
+    updateDuelPlayer(player2, p2MissilePressed, Input.fire2);
+  } else {
   // --- The player, depending on what state they're in ---
   if (playerState === 'takeoff') {
     // Rolling down the "runway": full power, nose held up, until we lift off.
@@ -500,6 +621,7 @@ function update() {
     playerRespawn -= 1;
     if (playerRespawn <= 0) spawnPlane(camera.x + CONFIG.GAME_W / 2);
   }
+  } // end single-player player handling
 
   // Cheats from the modifier menu. Infinite Health = TRULY unkillable: we keep
   // health full AND keep the invincibility flag on, which already blocks bullets,
@@ -562,7 +684,7 @@ function update() {
 
   // --- Power-ups: spawn over time, float, and get collected (not in tag mode) ---
   powerupTimer -= 1;
-  if (powerupTimer <= 0 && mode !== 'alien') { spawnPowerUp(); powerupTimer = CONFIG.POWERUP_INTERVAL; }
+  if (powerupTimer <= 0 && mode !== 'alien' && !splitScreen) { spawnPowerUp(); powerupTimer = CONFIG.POWERUP_INTERVAL; }
   for (const p of powerups) p.update();
   if (playerState === 'flying' || playerState === 'takeoff') {
     for (const p of powerups) {
@@ -627,26 +749,52 @@ function update() {
     if (killFeed[i].life <= 0) killFeed.splice(i, 1);
   }
 
-  // The camera follows the plane normally, or the pilot while parachuting.
-  const focus = (playerState === 'chute' && pilot) ? pilot : player;
-  const targetX = focus.x - CONFIG.GAME_W / 2 + (focus.vx || 0) * CONFIG.CAM_LOOKAHEAD * 0.1;
-  const targetY = focus.y - CONFIG.GAME_H / 2;
-
-  // Smoothly slide the camera toward the target. wrapDX lets it follow the
-  // player straight across the loop seam without a jump.
-  camera.x += wrapDX(targetX - camera.x) * CONFIG.CAM_SMOOTH;
-  camera.y += (targetY - camera.y) * CONFIG.CAM_SMOOTH;
-
-  // Don't let the camera show too far below the ground, but DO leave room
-  // to see the countryside (trees, barns, haybales) when flying low.
-  const maxCamY = CONFIG.GROUND_Y - CONFIG.GAME_H + 140;
-  if (camera.y > maxCamY) camera.y = maxCamY;
+  // Cameras. In split-screen each half follows its own player; otherwise the
+  // single camera follows the plane (or the pilot while parachuting).
+  if (splitScreen) {
+    followCam(cam1, player,  CONFIG.GAME_W / 2);   // right half
+    followCam(cam2, player2, CONFIG.GAME_W / 2);   // left half
+  } else {
+    const focus = (playerState === 'chute' && pilot) ? pilot : player;
+    const targetX = focus.x - CONFIG.GAME_W / 2 + (focus.vx || 0) * CONFIG.CAM_LOOKAHEAD * 0.1;
+    const targetY = focus.y - CONFIG.GAME_H / 2;
+    camera.x += wrapDX(targetX - camera.x) * CONFIG.CAM_SMOOTH;
+    camera.y += (targetY - camera.y) * CONFIG.CAM_SMOOTH;
+    const maxCamY = CONFIG.GROUND_Y - CONFIG.GAME_H + 140;
+    if (camera.y > maxCamY) camera.y = maxCamY;
+  }
 }
 
 // =========================================================================
-//  DRAW  --  paint everything onto the screen (runs every frame)
+//  DRAW  --  paint everything onto the screen (runs every frame).
+//  draw() sets up the viewport(s); drawWorldContents() paints one view of the
+//  world; drawHudLayer() paints the on-top info once.
 // =========================================================================
 function draw() {
+  if (splitScreen) {
+    drawWorldView(cam2, player2, 0, CONFIG.GAME_W / 2);                 // LEFT = red
+    drawWorldView(cam1, player,  CONFIG.GAME_W / 2, CONFIG.GAME_W / 2); // RIGHT = blue
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';                          // split divider
+    ctx.fillRect(CONFIG.GAME_W / 2 - 2, 0, 4, CONFIG.GAME_H);
+  } else {
+    drawWorldView(camera, player, 0, CONFIG.GAME_W);
+  }
+  drawHudLayer();
+}
+
+// Draw one view of the world: aim the active camera at camStore, clip to the
+// viewport rectangle, paint the world, then restore.
+function drawWorldView(camStore, focus, originX, width) {
+  camera.x = camStore.x; camera.y = camStore.y;
+  viewOriginX = originX; viewWidth = width; viewFocus = focus;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(originX, 0, width, CONFIG.GAME_H); ctx.clip();
+  drawWorldContents();
+  ctx.restore();
+  viewOriginX = 0; viewWidth = CONFIG.GAME_W; viewFocus = player;
+}
+
+function drawWorldContents() {
   const C = CONFIG.COLORS;
 
   const uni = (mode === 'unicorn');
@@ -772,9 +920,15 @@ function draw() {
     boom.draw(ctx);
   }
 
-  // --- The player's plane (flying or taking off) or the parachuting pilot ---
-  if (playerState === 'flying' || playerState === 'takeoff') player.draw(ctx);
-  else if (playerState === 'chute' && pilot) pilot.draw(ctx);
+  // --- The player plane(s) ---
+  if (splitScreen) {
+    if (player.alive)  player.draw(ctx);   // blue
+    if (player2.alive) player2.draw(ctx);  // red
+  } else if (playerState === 'flying' || playerState === 'takeoff') {
+    player.draw(ctx);
+  } else if (playerState === 'chute' && pilot) {
+    pilot.draw(ctx);
+  }
 
   // --- Black Hole: the event horizon, drawn IN FRONT so planes vanish into it ---
   if (bh) drawBlackHoleCore();
@@ -803,9 +957,14 @@ function draw() {
 
   // --- Bad Weather: rain, storm darkening, and lightning over the world ---
   if (mode === 'badweather') drawBadWeather();
+}
 
-  // --- HUD (the info text on top) ---
-  if (alien) {
+// The on-top info layer, drawn ONCE over the whole screen (not per split half).
+function drawHudLayer() {
+  if (splitScreen) {
+    drawDuelHud();
+    drawKillFeed();
+  } else if (mode === 'alien') {
     drawAlienHud();
   } else {
     drawHud();
@@ -815,9 +974,27 @@ function draw() {
       drawLeaderboard();
       drawKillFeed();
     }
-    if (bh) drawBlackHoleHud();   // flashing "gravity pull" warning
+    if (mode === 'blackhole') drawBlackHoleHud();   // flashing "gravity pull" warning
   }
   drawMinimap();
+}
+
+// Split-screen scoreboard + control hints. RED on the left, BLUE on the right.
+function drawDuelHud() {
+  ctx.font = 'bold 26px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#e0524a';
+  ctx.fillText('RED  ' + duelScoreRed, 20, 44);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#7fbdef';
+  ctx.fillText('BLUE  ' + duelScoreBlue, CONFIG.GAME_W - 20, 44);
+
+  ctx.font = '15px monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.textAlign = 'center';
+  ctx.fillText('RED:  W A S D fly   Q gun   E missile', CONFIG.GAME_W * 0.25, CONFIG.GAME_H - 18);
+  ctx.fillText('BLUE:  Arrows fly   M gun   N missile', CONFIG.GAME_W * 0.75, CONFIG.GAME_H - 18);
+  ctx.textAlign = 'left';
 }
 
 // Alien Invasion HUD: tells you if YOU are the UFO, how many runners are left,
@@ -984,8 +1161,15 @@ function drawMinimap() {
   // Every bot as a small dot, so you can see the whole area at a glance.
   for (const e of enemies) {
     if (!e.alive) continue;
-    ctx.fillStyle = (mode === 'alien') ? (e.isUfo ? '#2ecc40' : '#3b9bff') : e.bodyColor;
+    ctx.fillStyle = splitScreen ? '#3fae54'                       // duel bots are green
+      : (mode === 'alien') ? (e.isUfo ? '#2ecc40' : '#3b9bff') : e.bodyColor;
     ctx.fillRect(mapX(e.x) - 3, mapY(e.y) - 3, 6, 6); // same size as your marker
+  }
+
+  // Split-screen: show player 2 (red) too.
+  if (splitScreen && player2.alive) {
+    ctx.fillStyle = '#e0524a';
+    ctx.fillRect(mapX(player2.x) - 3, mapY(player2.y) - 3, 6, 6);
   }
 
   // Green flag = the rescue barn (sits on the ground)
@@ -1000,9 +1184,9 @@ function drawMinimap() {
     ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(hx, hy, 4, 0, Math.PI * 2); ctx.fill();
   }
 
-  // Red box = you, now placed by BOTH where you are and how high you are.
+  // Your marker: red box normally; in split-screen player 1 is the BLUE dot.
   const who = (playerState === 'chute' && pilot) ? pilot : player;
-  ctx.fillStyle = '#e74c3c';
+  ctx.fillStyle = splitScreen ? '#7fbdef' : '#e74c3c';
   ctx.fillRect(mapX(who.x) - 3, mapY(who.y) - 3, 6, 6);
 
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
@@ -1030,53 +1214,53 @@ function drawKillFeed() {
 function drawOffscreenIndicators() {
   if (!CONFIG.SHOW_ENEMY_ARROWS) return;
 
-  const cx = CONFIG.GAME_W / 2; // middle of the screen
+  // Centered in the CURRENT viewport (so each split half points correctly).
+  const cx = viewOriginX + viewWidth / 2;
   const cy = CONFIG.GAME_H / 2;
   const margin = CONFIG.ARROW_MARGIN;
   const size = CONFIG.ARROW_SIZE;
 
-  for (const enemy of enemies) {
-    if (!enemy.alive) continue;
+  // Point at every bot, plus the OTHER player in split-screen.
+  const targets = [];
+  for (const e of enemies) if (e.alive) targets.push(e);
+  if (splitScreen) {
+    const other = (viewFocus === player) ? player2 : player;
+    if (other.alive) targets.push(other);
+  }
 
-    // Where the enemy would be on the screen.
-    const sx = worldToScreenX(enemy.x);
-    const sy = enemy.y - camera.y;
+  for (const t of targets) {
+    if (t === viewFocus) continue;
 
-    // If it's already visible on screen, it doesn't need an arrow.
-    const onScreen = sx >= 0 && sx <= CONFIG.GAME_W &&
+    const sx = worldToScreenX(t.x);
+    const sy = t.y - camera.y;
+
+    // Already visible inside this viewport? Then no arrow needed.
+    const onScreen = sx >= viewOriginX && sx <= viewOriginX + viewWidth &&
                      sy >= 0 && sy <= CONFIG.GAME_H;
     if (onScreen) continue;
 
-    // The direction from the middle of the screen toward the enemy.
     const angle = Math.atan2(sy - cy, sx - cx);
-    const dx = Math.cos(angle);
-    const dy = Math.sin(angle);
-
-    // Slide out from the center along that direction until we reach the
-    // edge (kept "margin" pixels inside so the arrow isn't half cut off).
-    const halfW = cx - margin;
+    const dx = Math.cos(angle), dy = Math.sin(angle);
+    const halfW = viewWidth / 2 - margin;
     const halfH = cy - margin;
     let dist;
-    if (Math.abs(dx) * halfH > Math.abs(dy) * halfW) {
-      dist = halfW / Math.abs(dx); // hits the left/right edge first
-    } else {
-      dist = halfH / Math.abs(dy); // hits the top/bottom edge first
-    }
+    if (Math.abs(dx) * halfH > Math.abs(dy) * halfW) dist = halfW / Math.abs(dx);
+    else dist = halfH / Math.abs(dy);
     const ix = cx + dx * dist;
     const iy = cy + dy * dist;
 
-    // Draw a small triangle pointing toward the enemy, in its team color.
-    // In Alien Invasion the color shows who's "it": green = UFO, blue = runner.
-    let arrowColor = enemy.bodyColor;
-    if (mode === 'alien') arrowColor = enemy.isUfo ? '#2ecc40' : '#3b9bff';
+    // Arrow color: split = blue/red/green by who it is; Alien = UFO/runner; else its body color.
+    let arrowColor = t.bodyColor || '#ffffff';
+    if (splitScreen) arrowColor = (t === player) ? '#7fbdef' : (t === player2) ? '#e0524a' : '#3fae54';
+    else if (mode === 'alien') arrowColor = t.isUfo ? '#2ecc40' : '#3b9bff';
     ctx.save();
     ctx.translate(ix, iy);
     ctx.rotate(angle);
     ctx.fillStyle = arrowColor;
     ctx.beginPath();
-    ctx.moveTo(size, 0);       // the pointy tip (points at the enemy)
-    ctx.lineTo(-size, -size);  // back corner
-    ctx.lineTo(-size, size);   // other back corner
+    ctx.moveTo(size, 0);
+    ctx.lineTo(-size, -size);
+    ctx.lineTo(-size, size);
     ctx.closePath();
     ctx.fill();
     ctx.restore();
@@ -1605,17 +1789,11 @@ function loop() {
   requestAnimationFrame(loop); // ask the browser to run loop again next frame
 }
 
-// A dark "PAUSED" overlay shown while the game is frozen.
+// A dark dim while paused. The PAUSED title + buttons live in the HTML
+// #pauseMenu overlay (so they're clickable), drawn on top of the canvas.
 function drawPauseOverlay() {
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
-  ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'center';
-  ctx.font = '44px monospace';
-  ctx.fillText('PAUSED', CONFIG.GAME_W / 2, CONFIG.GAME_H / 2);
-  ctx.font = '16px monospace';
-  ctx.fillText('press ESC to resume', CONFIG.GAME_W / 2, CONFIG.GAME_H / 2 + 36);
-  ctx.textAlign = 'left';
 }
 
 loop(); // start the game!
