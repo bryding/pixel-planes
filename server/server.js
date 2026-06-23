@@ -12,6 +12,7 @@
 // ===========================================================================
 
 const http = require('http');
+const os = require('os');
 const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 8080;
@@ -56,6 +57,10 @@ wss.on('connection', (ws) => {
   ws.id = nextId++;
   ws.username = 'Player';
   ws.serverName = null;
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });   // answered our heartbeat ping
+  ws.on('error', () => {});                       // ignore socket errors (close follows)
+  console.log('player ' + ws.id + ' connected (' + wss.clients.size + ' online)');
   send(ws, { t: 'welcome', id: ws.id });
   send(ws, listPayload());
 
@@ -149,4 +154,30 @@ function leave(ws) {
   broadcastList();
 }
 
-httpServer.listen(PORT, () => console.log('Pixel Planes server listening on port ' + PORT));
+// --- Heartbeat: every 30s, ping everyone; drop anyone who didn't answer last
+// time. This clears out "ghost" players/servers from dropped connections. ---
+const heartbeat = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) { try { ws.terminate(); } catch (_) {} return; } // 'close' -> leave()
+    ws.isAlive = false;
+    try { ws.ping(); } catch (_) {}
+  });
+}, 30000);
+wss.on('close', () => clearInterval(heartbeat));
+
+httpServer.listen(PORT, () => {
+  console.log('================================================================');
+  console.log(' Pixel Planes server is running on port ' + PORT);
+  console.log(' Put one of these in js/config.js  ->  SERVER_URL:');
+  console.log('   • same computer:  ws://localhost:' + PORT);
+  const nets = os.networkInterfaces();
+  Object.keys(nets).forEach((name) => {
+    (nets[name] || []).forEach((net) => {
+      if (net.family === 'IPv4' && !net.internal) {
+        console.log('   • this WiFi:      ws://' + net.address + ':' + PORT);
+      }
+    });
+  });
+  console.log(' (For worldwide play, deploy this folder and use its wss:// URL.)');
+  console.log('================================================================');
+});

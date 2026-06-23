@@ -327,3 +327,16 @@ html, body {
 .rowButtons { display: flex; gap: 12px; }
 .passRow { display: flex; gap: 6px; margin-top: 4px; }
 .passRow input { width: 150px; }
+
+/* server-address row in the Create / List panels */
+.connRow { display: flex; gap: 8px; align-items: center; }
+.urlInput {
+  font-family: monospace; font-size: 13px; color: #fff;
+  background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.6);
+  border-radius: 6px; padding: 7px 10px; width: 230px; outline: none;
+}
+.connRow button {
+  font-family: monospace; font-weight: bold; font-size: 13px; color: #fff;
+  background: rgba(20,40,70,0.9); border: 2px solid #fff; border-radius: 6px;
+  padding: 7px 12px; cursor: pointer; min-width: 0;
+}

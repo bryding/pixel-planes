@@ -338,11 +338,27 @@ function saveUsername(name) {
   try { localStorage.setItem('pp_username', name); } catch (e) {}
 }
 
+// The server address to use: an in-game override (typed in the lobby) wins over
+// the default in config.js. Saved so it sticks between visits.
+function serverUrl() {
+  try { return localStorage.getItem('pp_serverurl') || CONFIG.SERVER_URL; }
+  catch (e) { return CONFIG.SERVER_URL; }
+}
+// Type a new address and connect to it (so connection issues can be fixed
+// without editing files). Accepts "host:port" and adds ws:// for you.
+function applyServerUrl(inputId) {
+  const el = document.getElementById(inputId);
+  let url = ((el && el.value) || '').trim();
+  if (url && !/^wss?:\/\//i.test(url)) url = 'ws://' + url;
+  try { if (url) localStorage.setItem('pp_serverurl', url); } catch (e) {}
+  Net.disconnect();
+  Net.connect(serverUrl());
+  refreshLobbyUI();
+}
+
 // Make sure we're connected to the online server (lazy: only when you open a
 // server panel, so single-player never waits on the network).
-function ensureConnected() {
-  if (Net.status === 'offline') Net.connect(CONFIG.SERVER_URL);
-}
+function ensureConnected() { Net.connect(serverUrl()); }
 
 // Switch which pause panel is showing.
 function showPausePanel(id) {
@@ -418,9 +434,15 @@ function setMsg(el, color, text) { if (el) { el.style.color = color; el.textCont
 // whenever anything changes (connection, list update, joined, denied…).
 function refreshLobbyUI() {
   const statusTxt = Net.status === 'online' ? '🟢 Connected' :
-                    Net.status === 'connecting' ? '🟡 Connecting…' : '🔴 Offline (server not reachable)';
+                    Net.status === 'connecting' ? '🟡 Connecting…' :
+                    ('🔴 Offline' + (Net.lastError ? ' — ' + Net.lastError : ''));
   const sc = document.getElementById('netStatusCreate'); if (sc) sc.textContent = statusTxt;
-  const sl = document.getElementById('netStatusList');   if (sl) sl.textContent = statusTxt + ' — ' + Net.servers.length + ' server(s)';
+  const sl = document.getElementById('netStatusList');
+  if (sl) sl.textContent = (Net.status === 'online') ? ('🟢 Connected — ' + Net.servers.length + ' server(s)') : statusTxt;
+
+  // Pre-fill the server-address boxes with the current address.
+  const cu = document.getElementById('csUrl'); if (cu && !cu.value) cu.value = serverUrl();
+  const lu = document.getElementById('slUrl'); if (lu && !lu.value) lu.value = serverUrl();
 
   // The list of joinable servers.
   const box = document.getElementById('serverListItems');

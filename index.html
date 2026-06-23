@@ -27,6 +27,10 @@
     <div class="pauseInner" id="createServer" style="display:none">
       <h1>CREATE SERVER</h1>
       <p id="netStatusCreate" class="roomHint"></p>
+      <div class="connRow">
+        <input id="csUrl" class="urlInput" placeholder="ws://localhost:8080" />
+        <button onclick="applyServerUrl('csUrl'); this.blur();">Connect</button>
+      </div>
       <input id="csName" class="nameInput" maxlength="14" placeholder="YOUR NAME"
              oninput="this.value=this.value.replace(/[^A-Za-z0-9 _-]/g,'')" />
       <input id="csServer" class="roomInput" maxlength="16" placeholder="SERVER NAME"
@@ -43,6 +47,10 @@
       <input id="slName" class="nameInput" maxlength="14" placeholder="YOUR NAME"
              oninput="this.value=this.value.replace(/[^A-Za-z0-9 _-]/g,'')" />
       <p id="netStatusList" class="roomHint"></p>
+      <div class="connRow">
+        <input id="slUrl" class="urlInput" placeholder="ws://localhost:8080" />
+        <button onclick="applyServerUrl('slUrl'); this.blur();">Connect</button>
+      </div>
       <div id="serverListItems" class="serverList"></div>
       <p id="slMsg" class="roomMsg"></p>
       <div class="rowButtons">

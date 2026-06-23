@@ -3,7 +3,11 @@
 //  over a WebSocket: fetches the server list, creates/joins servers (with
 //  optional passwords), tracks whether YOU are the host, and relays planes.
 //
-//  Set the server address in js/config.js  ->  CONFIG.SERVER_URL
+//  Robust connection handling:
+//   • clear status (offline / connecting / online) and friendly error text
+//   • connection TIMEOUT (so it never just hangs forever)
+//   • AUTO-RECONNECT with backoff
+//   • detects the classic "https page can't use ws://" mistake and explains it
 // ===========================================================================
 
 const Net = {
@@ -14,42 +18,109 @@ const Net = {
   inServer: false,
   isHost: false,
   serverName: null,
-  servers: [],           // latest public server list: [{name, hasPassword, players}]
+  servers: [],           // [{name, hasPassword, players}]
   lastError: '',
   onChange: null,        // game.js sets this to refresh the lobby UI
 
+  _url: null,
+  _want: false,          // do we want to stay connected? (drives auto-reconnect)
+  _connectTimer: null,
+  _reconnectTimer: null,
+  _retryDelay: 1000,
+
+  // Ask to be connected to `url` (and keep trying if it drops).
   connect(url) {
-    if (this.status !== 'offline') return;
+    if (url) this._url = url;
+    this._want = true;
+    this._open();
+  },
+
+  // Stop trying / close the socket.
+  disconnect() {
+    this._want = false;
+    clearTimeout(this._reconnectTimer);
+    clearTimeout(this._connectTimer);
+    if (this.ws) { try { this.ws.close(); } catch (_) {} }
+  },
+
+  // Manual "try again now".
+  retry() { this._retryDelay = 1000; this._want = true; this.status = 'offline'; this._open(); },
+
+  _open() {
+    if (this.status === 'connecting' || this.status === 'online') return;
+    const url = this._url;
+    if (!url) { this.lastError = 'No server address set.'; this._notify(); return; }
+
+    // The #1 gotcha: a page loaded over https can ONLY open a secure wss:// — a
+    // plain ws:// is blocked by the browser as "mixed content".
+    if (typeof location !== 'undefined' && location.protocol === 'https:' && /^ws:\/\//i.test(url)) {
+      this.status = 'offline';
+      this.lastError = 'This page is secure (https), so it can only connect to a secure server (wss://). ' +
+                       'For testing on one computer, open the game over http (e.g. http://localhost:8000).';
+      this._notify();
+      return;   // don't auto-retry a connection the browser will always block
+    }
+
     this.status = 'connecting';
     this.lastError = '';
     this._notify();
-    try {
-      this.ws = new WebSocket(url);
-    } catch (e) {
-      this.status = 'offline';
-      this.lastError = "Couldn't reach the server.";
-      this._notify();
-      return;
-    }
-    this.ws.onopen = () => {
+
+    let ws;
+    try { ws = new WebSocket(url); }
+    catch (e) { this._failed('That server address looks wrong: ' + url); return; }
+    this.ws = ws;
+
+    // If it doesn't open within 8s, treat it as unreachable (don't hang).
+    clearTimeout(this._connectTimer);
+    this._connectTimer = setTimeout(() => {
+      if (this.status === 'connecting') { try { ws.close(); } catch (_) {} }
+    }, 8000);
+
+    ws.onopen = () => {
+      clearTimeout(this._connectTimer);
       this.status = 'online';
+      this._retryDelay = 1000;
+      this.lastError = '';
       if (this.username) this.send({ t: 'setname', name: this.username });
       this.send({ t: 'list' });
       this._notify();
     };
-    this.ws.onclose = () => {
-      this.status = 'offline';
-      this.inServer = false; this.isHost = false; this.serverName = null;
-      this._notify();
-    };
-    this.ws.onerror = () => { this.lastError = 'Connection problem.'; this._notify(); };
-    this.ws.onmessage = (e) => {
+    ws.onmessage = (e) => {
       let m; try { m = JSON.parse(e.data); } catch (_) { return; }
       this._handle(m);
     };
+    ws.onerror = () => { /* a close event always follows; handle it there */ };
+    ws.onclose = () => {
+      clearTimeout(this._connectTimer);
+      const wasTrying = (this.status === 'connecting');
+      this.status = 'offline';
+      this.inServer = false; this.isHost = false; this.serverName = null;
+      if (!this.lastError) {
+        this.lastError = wasTrying
+          ? "Couldn't reach the server. Is it running, and is the address right?"
+          : 'Lost connection to the server — trying to reconnect…';
+      }
+      this._notify();
+      this._scheduleReconnect();
+    };
   },
 
-  send(obj) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(obj)); },
+  _failed(msg) { this.status = 'offline'; this.lastError = msg; this._notify(); this._scheduleReconnect(); },
+
+  _scheduleReconnect() {
+    if (!this._want) return;
+    clearTimeout(this._reconnectTimer);
+    this._reconnectTimer = setTimeout(() => {
+      if (this._want && this.status === 'offline') this._open();
+    }, this._retryDelay);
+    this._retryDelay = Math.min(Math.round(this._retryDelay * 1.7), 8000); // gentle backoff
+  },
+
+  send(obj) {
+    if (this.ws && this.ws.readyState === 1) {
+      try { this.ws.send(JSON.stringify(obj)); } catch (_) {}
+    }
+  },
   _notify() { if (typeof this.onChange === 'function') this.onChange(); },
 
   setName(n) { this.username = n; this.send({ t: 'setname', name: n }); },
@@ -67,7 +138,7 @@ const Net = {
       case 'list':    this.servers = m.servers || []; break;
       case 'joined':
         this.inServer = true; this.isHost = !!m.isHost; this.serverName = m.name; this.lastError = '';
-        if (m.mode && typeof onNetMode === 'function') onNetMode(m.mode); // match the host's mode
+        if (m.mode && typeof onNetMode === 'function') onNetMode(m.mode);
         break;
       case 'denied':  this.lastError = m.msg || 'Denied.'; break;
       case 'error':   this.lastError = m.msg || 'Error.'; break;
