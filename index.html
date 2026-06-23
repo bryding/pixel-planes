@@ -23,10 +23,12 @@
       <p class="pauseHint">Split: LEFT = WASD Q E F &nbsp;•&nbsp; RIGHT = Arrows B N M</p>
     </div>
 
-    <!-- create a room: pick a code (CAPITALS + numbers only, no spaces) -->
+    <!-- create a room: enter your name + pick a code (CAPITALS + numbers only) -->
     <div class="pauseInner" id="createRoom" style="display:none">
       <h1>CREATE ROOM</h1>
-      <p class="roomHint">Pick a room code — CAPITAL letters and numbers only, no spaces.</p>
+      <p class="roomHint">Type your name, then pick a room code (CAPITAL letters and numbers only, no spaces).</p>
+      <input id="createName" class="nameInput" maxlength="14" placeholder="YOUR NAME"
+             oninput="this.value=this.value.replace(/[^A-Za-z0-9 _-]/g,'')" />
       <input id="createCode" class="roomInput" maxlength="8" placeholder="E.G. SKY42"
              oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" />
       <button onclick="doCreateRoom(); this.blur();">Continue ▶</button>
@@ -34,10 +36,12 @@
       <button onclick="backToPause(); this.blur();">◀ Back</button>
     </div>
 
-    <!-- join a room by code -->
+    <!-- join a room by code (with your name) -->
     <div class="pauseInner" id="joinRoom" style="display:none">
       <h1>JOIN ROOM</h1>
-      <p class="roomHint">Type the room code to join.</p>
+      <p class="roomHint">Type your name and the room code to join.</p>
+      <input id="joinName" class="nameInput" maxlength="14" placeholder="YOUR NAME"
+             oninput="this.value=this.value.replace(/[^A-Za-z0-9 _-]/g,'')" />
       <input id="joinCode" class="roomInput" maxlength="8" placeholder="ENTER CODE"
              oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" />
       <button onclick="doJoinRoom(); this.blur();">Join ▶</button>

@@ -330,13 +330,26 @@ function showPausePanel(id) {
 function backToPause()    { showPausePanel('pauseMain'); }
 function showCreateRoom() {
   showPausePanel('createRoom');
-  const i = document.getElementById('createCode'); if (i) { i.value = ''; i.focus(); }
+  const n = document.getElementById('createName'); if (n) n.value = getUsername();
+  const i = document.getElementById('createCode'); if (i) { i.value = ''; }
   const m = document.getElementById('createMsg'); if (m) m.textContent = '';
+  // Put the cursor on the name if it's blank, otherwise the room code.
+  if (n && !n.value) n.focus(); else if (i) i.focus();
 }
 function showJoinRoom() {
   showPausePanel('joinRoom');
-  const i = document.getElementById('joinCode'); if (i) { i.value = ''; i.focus(); }
+  const n = document.getElementById('joinName'); if (n) n.value = getUsername();
+  const i = document.getElementById('joinCode'); if (i) { i.value = ''; }
   const m = document.getElementById('joinMsg'); if (m) m.textContent = '';
+  if (n && !n.value) n.focus(); else if (i) i.focus();
+}
+
+// Your display name (so other players know who you are). Saved between visits.
+function getUsername() {
+  try { return localStorage.getItem('pp_username') || ''; } catch (e) { return ''; }
+}
+function saveUsername(name) {
+  try { localStorage.setItem('pp_username', name); } catch (e) {}
 }
 
 // The list of room codes that already exist (saved in this browser for now;
@@ -352,30 +365,34 @@ function saveRooms(list) {
 // Create a room: the code must be CAPITAL letters + numbers only (no spaces),
 // and you can't reuse a code that already exists.
 function doCreateRoom() {
-  const input = document.getElementById('createCode');
   const msg = document.getElementById('createMsg');
-  const code = (input.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (!code) { msg.style.color = '#ffd24a'; msg.textContent = 'Please type a room code first.'; return; }
+  const name = (document.getElementById('createName').value || '').trim();
+  const code = (document.getElementById('createCode').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!name) { msg.style.color = '#ffd24a'; msg.textContent = 'Please type your name first.'; return; }
+  if (!code) { msg.style.color = '#ffd24a'; msg.textContent = 'Please type a room code.'; return; }
   const rooms = getRooms();
   if (rooms.includes(code)) {
     msg.style.color = '#ff6b6b';
     msg.textContent = '❌ "' + code + '" is taken — pick a different code.';
     return;
   }
+  saveUsername(name);
   rooms.push(code); saveRooms(rooms);
   msg.style.color = '#7ee07e';
-  msg.textContent = '✅ Room "' + code + '" created!';
+  msg.textContent = '✅ Room "' + code + '" created! Playing as ' + name + '.';
 }
 
 // Join a room by code (format-checked for now; live joining needs the server).
 function doJoinRoom() {
-  const input = document.getElementById('joinCode');
   const msg = document.getElementById('joinMsg');
-  const code = (input.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const name = (document.getElementById('joinName').value || '').trim();
+  const code = (document.getElementById('joinCode').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!name) { msg.style.color = '#ffd24a'; msg.textContent = 'Please type your name first.'; return; }
   if (!code) { msg.style.color = '#ffd24a'; msg.textContent = 'Please type a room code.'; return; }
+  saveUsername(name);
   if (getRooms().includes(code)) {
     msg.style.color = '#7ee07e';
-    msg.textContent = '✅ Found room "' + code + '".';
+    msg.textContent = '✅ Joined room "' + code + '" as ' + name + '.';
   } else {
     msg.style.color = '#ff6b6b';
     msg.textContent = '❌ No room "' + code + '" found.';

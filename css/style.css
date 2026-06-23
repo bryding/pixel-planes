@@ -244,3 +244,18 @@ html, body {
   margin: 2px 0;
   text-align: center;
 }
+
+/* name box in the room panels (normal text, unlike the code box) */
+.nameInput {
+  font-family: monospace;
+  font-size: 20px;
+  text-align: center;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid #ffffff;
+  border-radius: 8px;
+  padding: 9px 14px;
+  width: 300px;
+  outline: none;
+}
+.nameInput::placeholder { color: rgba(255, 255, 255, 0.35); }
