@@ -1,34 +1,47 @@
-# 🛩️ Hi! Please do this one thing to put Pixel Planes online (≈2 minutes, free)
+# 🛩️ Ben — please help get Pixel Planes online (a few minutes, free)
 
-Your nephew's game works great, but to let **anyone with the link play
-together online (any WiFi, any device)**, the game needs a small "server"
-running on the internet. That part needs an account, so it has to be you. You
-only ever do this **once** — after that the game link just works online forever.
+Your nephew built the whole game (it's great!). The only thing left is the
+"online" part, which needs an account, so it needs you. Two options — **Option A
+is the real fix** (works from the public link, anywhere).
 
-## The steps
+---
 
-1. **Click this link:**
+## ✅ Option A — Make the public link work online for everyone (best)
+
+This hosts the little game server for free, so anyone with the link can play
+together from any WiFi.
+
+1. Click this link:
    👉 https://render.com/deploy?repo=https://github.com/bryding/pixel-planes
+2. Sign in (the **GitHub** button — your account; free, no credit card).
+3. Click **Apply**. Wait ~2 minutes while it builds.
+4. It shows a web address ending in **`.onrender.com`**
+   (e.g. `https://pixel-planes-bryding.onrender.com`).
+5. **Send that address to Claude Code** (or your nephew), saying
+   *"the server is at &lt;that address&gt;"*. Claude points the game at it and
+   then the public link works online for everyone:
+   **https://bryding.github.io/pixel-planes/**
 
-2. **Sign in** (the "GitHub" button is easiest — it's your account). It's free;
-   no credit card.
+*(Free tier "sleeps" when idle, so the first connection after a quiet spell
+takes ~30–60s to wake — that's normal.)*
 
-3. A page shows the service it will create. Click **Apply** (or **Create**).
+---
 
-4. Wait about **2 minutes** while it builds. When it's done it shows a web
-   address that ends in **`.onrender.com`** (for example
-   `https://pixel-planes-bryding.onrender.com`).
+## 🏠 Option B — Just play in THIS house, no accounts (quick test)
 
-## That's it — last step
+1. Make sure **Node OR Python** is available (Macs have Python already).
+2. Double-click **`Play Pixel Planes (same WiFi).command`** in the project
+   folder. A black window opens and your browser opens the game.
+   - If macOS asks **"Allow incoming connections?"** → click **Allow**
+     (needed so other devices can join).
+3. On other devices on the same WiFi, open the **`http://192.168.x.x:8080`**
+   address the black window prints.
 
-**Copy that `.onrender.com` address** and either:
-- paste it back to Claude Code and say *"the server is at &lt;address&gt;"*, or
-- tell your nephew to do that.
+If Option B's window flashes and closes, or the browser says "couldn't reach,"
+it's usually the firewall prompt (click Allow) or Python not found — tell Claude
+what the black window shows and it'll sort it.
 
-Claude will point the game at it, and the public link
-(https://bryding.github.io/pixel-planes/) will work online for everyone. 🎉
+---
 
-*(It's the free tier, so the very first time someone connects after a quiet
-period it can take ~30–60 seconds to "wake up" — that's normal, just wait.)*
-
-Thank you! — Claude
+Thanks so much! Once you do **Option A step 5**, your nephew can play with
+anyone, anywhere. — Claude
