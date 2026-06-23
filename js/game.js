@@ -415,16 +415,28 @@ function toggleMobile() {
   updateMobileLayout();
 }
 function setupMobileControls() {
-  // Helper: a button that holds an action while pressed (turn / guns).
+  // Helper: a button that holds an action while pressed (turn / guns / UFO arrows).
   const hold = (id, on, off) => {
     const el = document.getElementById(id);
     if (!el) return;
-    const press = (e) => { e.preventDefault(); on(); };
-    const release = (e) => { e.preventDefault(); off(); };
+    const press = (e) => {
+      if (e.preventDefault) e.preventDefault();
+      // CAPTURE the finger so sliding it a little doesn't "let go" of the
+      // button -- this is what made the up/down arrows feel broken on touch.
+      if (e.pointerId !== undefined && el.setPointerCapture) {
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+      on();
+    };
+    const release = (e) => { if (e && e.preventDefault) e.preventDefault(); off(); };
     el.addEventListener('pointerdown', press);
     el.addEventListener('pointerup', release);
     el.addEventListener('pointercancel', release);
-    el.addEventListener('pointerleave', release);
+    // NOTE: no 'pointerleave' release -- with capture the finger can drift while held.
+    // Touch fallbacks, in case a phone's pointer events misbehave.
+    el.addEventListener('touchstart', press, { passive: false });
+    el.addEventListener('touchend', release);
+    el.addEventListener('touchcancel', release);
   };
   hold('mcLeft',   () => Input.left = true,   () => Input.left = false);   // turn left  (like A / ←)
   hold('mcRight',  () => Input.right = true,  () => Input.right = false);  // turn right (like D / →)
