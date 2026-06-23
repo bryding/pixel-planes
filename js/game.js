@@ -303,9 +303,11 @@ let playerRespawn = 0;   // counts down while dead, then a fresh plane flies in
 let frameCount = 0;      // ticks up every frame (used for blinking warnings)
 let paused = false;      // ESC pauses/unpauses the game
 
-// ESC toggles pause and shows/hides the pause menu (Resume / 1-Player / Split).
+// Pause/unpause and show/hide the pause menu. Used by the ESC key AND by the
+// on-screen "ESC" button (so phones, with no keyboard, can open the menu too).
+function pauseToggle() { paused = !paused; updatePauseMenu(); }
 window.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape' && !e.repeat) { paused = !paused; updatePauseMenu(); }
+  if (e.key === 'Escape' && !e.repeat) pauseToggle();
 });
 // Show or hide the HTML pause menu to match the paused flag. Always reopen on
 // the MAIN screen (not a leftover Create/Join sub-panel).
