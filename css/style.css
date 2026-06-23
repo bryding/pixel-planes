@@ -126,7 +126,19 @@ html, body {
 }
 #mobileControls .mcTurn,
 #mobileControls .mcActions,
-#mobileControls .mcThrottleWrap { pointer-events: auto; }
+#mobileControls .mcThrottleWrap,
+#mobileControls .mcEscBtn { pointer-events: auto; }
+
+/* top-right pause/ESC button (only visible while mobile controls are on) */
+.mcEscBtn {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  width: 96px;
+  height: 46px;
+  font-size: 17px;
+  border-radius: 10px;
+}
 
 .mcBtn {
   font-family: monospace;

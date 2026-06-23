@@ -97,6 +97,8 @@
 
   <!-- On-screen touch controls for phones/tablets (toggle with 📱 Mobile) -->
   <div id="mobileControls" style="display:none">
+    <!-- top-RIGHT: pause / open the menu (phones have no ESC key) -->
+    <button id="mcEsc" class="mcBtn mcEscBtn" onclick="pauseToggle(); this.blur();">⏸ ESC</button>
     <!-- bottom-LEFT: turn buttons (like A / D) -->
     <div class="mcTurn">
       <button id="mcLeft"  class="mcBtn mcTurnBtn">◀</button>
