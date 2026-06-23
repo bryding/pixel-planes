@@ -411,6 +411,8 @@ function toggleMobile() {
   if (mc) mc.style.display = mobileMode ? 'block' : 'none';
   const btn = document.getElementById('mobileBtn');
   if (btn) btn.textContent = '📱 Mobile: ' + (mobileMode ? 'ON' : 'OFF');
+  _ufoPadShown = null;        // re-evaluate which control layout to show
+  updateMobileLayout();
 }
 function setupMobileControls() {
   // Helper: a button that holds an action while pressed (turn / guns).
@@ -429,11 +431,35 @@ function setupMobileControls() {
   hold('mcGun',    () => Input.fire = true,   () => Input.fire = false);   // hold to shoot
   hold('mcMissile',() => Input.missile = true,() => Input.missile = false);// tap to launch a missile
 
+  // UFO 4-way pad (Alien Invasion): straight up/down/left/right movement.
+  hold('mcUp',     () => Input.up = true,     () => Input.up = false);
+  hold('mcDown',   () => Input.down = true,   () => Input.down = false);
+  hold('mcLeftU',  () => Input.left = true,   () => Input.left = false);
+  hold('mcRightU', () => Input.right = true,  () => Input.right = false);
+
   // Throttle slider: drag right for more power, left for less.
   const slider = document.getElementById('mcThrottle');
   if (slider) slider.addEventListener('input', () => { player.throttle = slider.value / 100; });
 }
 setupMobileControls();
+
+// Swap the mobile control layout: when YOU are the UFO in Alien Invasion, show
+// the 4-way pad and hide the turn/throttle/gun controls; otherwise the normal
+// flying controls. Runs each frame but only touches the DOM when it changes.
+let _ufoPadShown = null;
+function updateMobileLayout() {
+  if (!mobileMode) return;
+  const wantUfoPad = (mode === 'alien' && !splitScreen && player.isUfo);
+  if (wantUfoPad === _ufoPadShown) return;     // no change -> nothing to do
+  _ufoPadShown = wantUfoPad;
+  const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+  show('mcUfoPad', wantUfoPad);
+  show('mcTurn', !wantUfoPad);
+  show('mcThrottleWrap', !wantUfoPad);
+  show('mcActions', !wantUfoPad);
+  // Clear any held directions so a key can't get stuck across the swap.
+  Input.up = Input.down = Input.left = Input.right = false;
+}
 // Phones/tablets: turn the touch controls on automatically (still toggleable).
 if (typeof navigator !== 'undefined' && (navigator.maxTouchPoints > 0 || 'ontouchstart' in window)) {
   toggleMobile();
@@ -2040,6 +2066,7 @@ function loop() {
   }
   draw();
   if (paused) drawPauseOverlay();
+  updateMobileLayout();          // show the UFO pad vs normal controls as needed
   requestAnimationFrame(loop); // ask the browser to run loop again next frame
 }
 

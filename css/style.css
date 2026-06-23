@@ -77,8 +77,12 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* The container itself is click-through so the on-screen ESC button (which
+     sits behind it) stays tappable to CLOSE the menu. Only the panel catches taps. */
+  pointer-events: none;
 }
 #pauseMenu .pauseInner {
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -127,6 +131,7 @@ html, body {
 #mobileControls .mcTurn,
 #mobileControls .mcActions,
 #mobileControls .mcThrottleWrap,
+#mobileControls #mcUfoPad,
 #mobileControls .mcEscBtn { pointer-events: auto; }
 
 /* top-right pause/ESC button (only visible while mobile controls are on) */
@@ -139,6 +144,19 @@ html, body {
   font-size: 17px;
   border-radius: 10px;
 }
+
+/* UFO 4-way pad (Alien Invasion, when you're the UFO) -- WASD cross, bottom-left */
+#mcUfoPad {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+#mcUfoPad .mcDpadRow { display: flex; gap: 8px; }
+.mcDpad { width: 68px; height: 68px; font-size: 26px; border-radius: 12px; }
 
 .mcBtn {
   font-family: monospace;

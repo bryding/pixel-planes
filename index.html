@@ -100,19 +100,29 @@
     <!-- top-RIGHT: pause / open the menu (phones have no ESC key) -->
     <button id="mcEsc" class="mcBtn mcEscBtn" onclick="pauseToggle(); this.blur();">⏸ ESC</button>
     <!-- bottom-LEFT: turn buttons (like A / D) -->
-    <div class="mcTurn">
+    <div class="mcTurn" id="mcTurn">
       <button id="mcLeft"  class="mcBtn mcTurnBtn">◀</button>
       <button id="mcRight" class="mcBtn mcTurnBtn">▶</button>
     </div>
     <!-- bottom-MIDDLE: throttle slider (right = faster, left = slower) -->
-    <div class="mcThrottleWrap">
+    <div class="mcThrottleWrap" id="mcThrottleWrap">
       <input id="mcThrottle" class="mcSlider" type="range" min="0" max="100" value="100" />
       <div class="mcThrottleLbl">THROTTLE  ◀ slower · faster ▶</div>
     </div>
     <!-- bottom-RIGHT: square = missile, big circle = guns -->
-    <div class="mcActions">
+    <div class="mcActions" id="mcActions">
       <button id="mcMissile" class="mcBtn mcSquare">▣</button>
       <button id="mcGun"     class="mcBtn mcCircle">●</button>
+    </div>
+    <!-- bottom-LEFT: UFO 4-way pad. Shown ONLY in Alien Invasion when YOU are
+         the UFO (it replaces the turn/throttle/action buttons). WASD layout. -->
+    <div id="mcUfoPad" style="display:none">
+      <button id="mcUp" class="mcBtn mcDpad">▲</button>
+      <div class="mcDpadRow">
+        <button id="mcLeftU"  class="mcBtn mcDpad">◀</button>
+        <button id="mcDown"   class="mcBtn mcDpad">▼</button>
+        <button id="mcRightU" class="mcBtn mcDpad">▶</button>
+      </div>
     </div>
   </div>
 
