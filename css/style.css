@@ -145,17 +145,21 @@ html, body {
   border-radius: 10px;
 }
 
-/* UFO 4-way pad (Alien Invasion, when you're the UFO) -- WASD cross, bottom-left */
+/* UFO 4-way pad (Alien Invasion, when you're the UFO) -- a + cross, bottom-left:
+   UP on top, LEFT/RIGHT in the middle row, DOWN on the bottom. */
 #mcUfoPad {
   position: fixed;
   left: 18px;
   bottom: 18px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 68px);
+  grid-template-rows: repeat(3, 68px);
+  gap: 6px;
 }
-#mcUfoPad .mcDpadRow { display: flex; gap: 8px; }
+#mcUp     { grid-area: 1 / 2; }   /* top-center  */
+#mcLeftU  { grid-area: 2 / 1; }   /* middle-left */
+#mcRightU { grid-area: 2 / 3; }   /* middle-right */
+#mcDown   { grid-area: 3 / 2; }   /* bottom-center */
 .mcDpad { width: 68px; height: 68px; font-size: 26px; border-radius: 12px; }
 
 .mcBtn {
