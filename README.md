@@ -40,26 +40,31 @@ needs a little **server program** to run. The game itself can be on GitHub
 Pages, but the server has to run somewhere too. It lives in the **`server/`**
 folder.
 
-### 1. Install Node.js (one time)
-Download and install it from **https://nodejs.org** (the "LTS" button).
+### ▶️ Play online on your WiFi (easiest — no accounts, no deploying)
 
-### 2. Start the server
-Open a terminal in this project and run:
+The server now hands out the game too, so it's **one command and one address**:
 
-```
-cd server
-npm install        # one time — downloads the 'ws' library
-npm start          # starts the server on port 8080
-```
+1. **Install Node.js** (one time): get it from **https://nodejs.org** (the big
+   "LTS" button) and run the installer.
+2. **Start it.** Open a terminal in this project and run:
+   ```
+   cd server
+   npm install     # one time — downloads the 'ws' library
+   npm start       # starts everything
+   ```
+3. It prints the addresses to open. **On this computer:** `http://localhost:8080`.
+   **Anyone else on your WiFi:** `http://YOUR-IP:8080` (it prints your IP).
+4. Everyone opens that address, presses **ESC → Create Server** (or Server
+   List), and you're playing together. Nothing to type — it connects to the
+   same computer automatically. Keep the terminal window open while you play.
 
-You should see: `Pixel Planes server listening on port 8080`. Leave it running.
+### 🌍 Play worldwide (from the public https link) — needs a one-time deploy
 
-### 3. Point the game at it
-In **`js/config.js`**, set `SERVER_URL`:
+The public github.io link is **https**, and a browser will only let an https
+page talk to a **secure `wss://`** server. So for the link to work for anyone
+anywhere, the server has to be hosted online (a grown-up with the accounts
+should do this part):
 
-- **Same computer:** `ws://localhost:8080`
-- **Other devices on your home WiFi:** use your computer's local IP, e.g.
-  `ws://192.168.1.50:8080` (find it in your WiFi settings).
 - **Worldwide (from the https game link):** the server must have a **secure
   `wss://`** address. Deploy it free on **Render** — basically one click:
 

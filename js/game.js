@@ -338,11 +338,18 @@ function saveUsername(name) {
   try { localStorage.setItem('pp_username', name); } catch (e) {}
 }
 
-// The server address to use: an in-game override (typed in the lobby) wins over
-// the default in config.js. Saved so it sticks between visits.
+// The server address to use:
+//  1. an address you typed in the lobby (saved) always wins, else
+//  2. if the game is being served by our own server (i.e. you opened it over
+//     http, not the public https link), talk to that SAME computer/port -- so
+//     local + same-WiFi play "just works" with nothing to type, else
+//  3. the public deployed server in config.js (for the https github.io link).
 function serverUrl() {
-  try { return localStorage.getItem('pp_serverurl') || CONFIG.SERVER_URL; }
-  catch (e) { return CONFIG.SERVER_URL; }
+  try { const saved = localStorage.getItem('pp_serverurl'); if (saved) return saved; } catch (e) {}
+  if (typeof location !== 'undefined' && location.host && location.protocol !== 'https:') {
+    return 'ws://' + location.host;
+  }
+  return CONFIG.SERVER_URL;
 }
 // Type a new address and connect to it (so connection issues can be fixed
 // without editing files). Accepts "host:port" and adds ws:// for you.

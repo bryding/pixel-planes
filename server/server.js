@@ -13,6 +13,8 @@
 
 const http = require('http');
 const os = require('os');
+const fs = require('fs');
+const path = require('path');
 const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 8080;
@@ -21,10 +23,25 @@ const PORT = process.env.PORT || 8080;
 const servers = new Map();
 let nextId = 1;
 
-// A plain web page so visiting the URL in a browser shows it's alive.
+// This server ALSO hands out the game files (index.html, js/, css/) from the
+// project folder, so you only need ONE command and ONE web address to play
+// locally -- and there's no https/ws mismatch.
+const ROOT = path.join(__dirname, '..');
+const MIME = {
+  '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.gif': 'image/gif',
+  '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
+};
 const httpServer = http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Pixel Planes server is running. ' + servers.size + ' server(s) open.');
+  let urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
+  if (urlPath === '/' || urlPath === '') urlPath = '/index.html';
+  const filePath = path.normalize(path.join(ROOT, urlPath));
+  if (!filePath.startsWith(ROOT)) { res.writeHead(403); res.end('Forbidden'); return; } // no peeking outside
+  fs.readFile(filePath, (err, data) => {
+    if (err) { res.writeHead(404, { 'Content-Type': 'text/plain' }); res.end('Not found'); return; }
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(filePath).toLowerCase()] || 'application/octet-stream' });
+    res.end(data);
+  });
 });
 const wss = new WebSocketServer({ server: httpServer });
 
@@ -167,17 +184,17 @@ wss.on('close', () => clearInterval(heartbeat));
 
 httpServer.listen(PORT, () => {
   console.log('================================================================');
-  console.log(' Pixel Planes server is running on port ' + PORT);
-  console.log(' Put one of these in js/config.js  ->  SERVER_URL:');
-  console.log('   • same computer:  ws://localhost:' + PORT);
+  console.log(' Pixel Planes is RUNNING! Open one of these in a browser:');
+  console.log('   • on THIS computer:  http://localhost:' + PORT);
   const nets = os.networkInterfaces();
   Object.keys(nets).forEach((name) => {
     (nets[name] || []).forEach((net) => {
       if (net.family === 'IPv4' && !net.internal) {
-        console.log('   • this WiFi:      ws://' + net.address + ':' + PORT);
+        console.log('   • others on WiFi:    http://' + net.address + ':' + PORT);
       }
     });
   });
-  console.log(' (For worldwide play, deploy this folder and use its wss:// URL.)');
+  console.log(' Everyone who opens it can press ESC -> Create / Join a server.');
+  console.log(' (Keep this window open while you play. Press Ctrl+C to stop.)');
   console.log('================================================================');
 });
