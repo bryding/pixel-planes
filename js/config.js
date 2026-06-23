@@ -7,11 +7,12 @@
 const CONFIG = {
 
   // ---- Online play ----
-  // Where the online server lives. For testing on the SAME computer use
-  // "ws://localhost:8080". For other devices on your WiFi use your computer's
-  // IP, e.g. "ws://192.168.1.50:8080". Once you deploy the server online,
-  // put its address here (use "wss://" for a hosted https server).
-  SERVER_URL: 'ws://localhost:8080',
+  // The public game link (https) can ONLY use a secure "wss://" server, so this
+  // points at the free Render server the project deploys (see render.yaml).
+  // Once you deploy it (one click — see README), the public link works for
+  // everyone automatically. For LOCAL testing, open the game over http and type
+  // "ws://localhost:8080" in the lobby's server box instead.
+  SERVER_URL: 'wss://pixel-planes-bryding.onrender.com',
 
   // ---- The size of the game picture (in pixels) ----
   // Small numbers make a chunky, retro pixel look. The picture is stretched

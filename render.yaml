@@ -14,7 +14,7 @@
 #  to wake up — the game auto-retries, so just wait a moment.)
 services:
   - type: web
-    name: pixel-planes-server
+    name: pixel-planes-bryding
     runtime: node
     rootDir: server
     plan: free

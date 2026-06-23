@@ -61,16 +61,24 @@ In **`js/config.js`**, set `SERVER_URL`:
 - **Other devices on your home WiFi:** use your computer's local IP, e.g.
   `ws://192.168.1.50:8080` (find it in your WiFi settings).
 - **Worldwide (from the https game link):** the server must have a **secure
-  `wss://`** address. Deploy it free on **Render** (a blueprint is included):
-  1. Sign up at **https://render.com** with your GitHub account.
-  2. **New + → Blueprint**, pick this repo, click **Apply**. (It reads
-     `render.yaml` and builds the `server/` folder for you.)
-  3. Render gives a URL like `https://pixel-planes-server.onrender.com`.
-     In the game's server box, use it with **wss://**:
-     `wss://pixel-planes-server.onrender.com`
-  > Important: a page on **https** (the github.io link) can ONLY use **wss://**,
-  > never `ws://`. The free tier sleeps when idle, so the first connect can take
-  > 30–60s to wake — the game keeps retrying, so just wait a moment.
+  `wss://`** address. Deploy it free on **Render** — basically one click:
+
+  **[➡️ Click here to Deploy to Render](https://render.com/deploy?repo=https://github.com/bryding/pixel-planes)**
+
+  1. Sign in with your GitHub account (free).
+  2. Click **Apply** — Render reads `render.yaml` and builds the `server/` folder.
+  3. Wait ~2 minutes. It creates a server at
+     **`https://pixel-planes-bryding.onrender.com`**.
+
+  The game is already pointed at `wss://pixel-planes-bryding.onrender.com`
+  (in `js/config.js`), so the moment that deploy is live, **the public game
+  link works online for everyone, on any device/OS** — no other changes needed.
+
+  > Notes: a page on **https** can ONLY use **wss://** (never `ws://`) — that's
+  > a browser rule on every device. If Render gives a slightly different URL,
+  > paste it into the lobby's server box (or tell me and I'll update the
+  > default). The free tier sleeps when idle, so the first connect after a quiet
+  > spell takes ~30–60s to wake — the game keeps retrying, just wait a moment.
 
 ### 4. Play
 Press **ESC** → **Create Server** (pick a name + optional password) or
