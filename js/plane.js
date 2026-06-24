@@ -184,6 +184,8 @@ class Plane {
     const nx = this.x + Math.cos(this.angle) * 17;
     const ny = this.y + Math.sin(this.angle) * 17;
     missiles.push(new Missile(nx, ny, this.angle, this.team, target));
+    // click + whoosh on a normal launch (skip the 300/sec spam, or it's chaos).
+    if (!force && typeof Sound !== 'undefined') Sound.missileLaunch();
   }
 
   // Try to fire the gun. If the cooldown is ready, make a new bullet at the

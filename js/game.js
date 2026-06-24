@@ -1224,6 +1224,7 @@ function update() {
       if (hits(missile, target, 16)) {
         missile.dead = true;
         explosions.push(new Explosion(missile.x, missile.y, CONFIG.COLORS.explosion));
+        if (typeof Sound !== 'undefined') Sound.boom();   // KABOOM!
         const popped = target.takeHit(CONFIG.MISSILE_DAMAGE); // ~2 missiles = dead
         if (popped) onPlanePopped(target, missile.team);
         break;

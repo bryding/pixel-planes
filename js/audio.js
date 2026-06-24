@@ -88,6 +88,69 @@ const Sound = {
     src.stop(t + 0.09);
   },
 
+  // A longer (~0.5s) white-noise buffer, reused for the whoosh and the boom.
+  _longNoiseBuf() {
+    if (this._longNoise) return this._longNoise;
+    const ctx = this.ctx, dur = 0.5;
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    this._longNoise = buf;
+    return buf;
+  },
+
+  // Missile launch: a sharp CLICK, then a rising WHOOSH.
+  missileLaunch() {
+    if (!this.ctx || this.volume <= 0) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    // 1) click (trigger)
+    const click = ctx.createOscillator(); click.type = 'square'; click.frequency.value = 1900;
+    const cg = ctx.createGain();
+    cg.gain.setValueAtTime(0.3, t);
+    cg.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    click.connect(cg); cg.connect(this.master);
+    click.start(t); click.stop(t + 0.05);
+    // 2) whoosh (rocket leaving) -- band-passed noise sweeping upward
+    const w = t + 0.04;
+    const src = ctx.createBufferSource(); src.buffer = this._longNoiseBuf();
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.7;
+    bp.frequency.setValueAtTime(350, w);
+    bp.frequency.exponentialRampToValueAtTime(2800, w + 0.32);
+    const wg = ctx.createGain();
+    wg.gain.setValueAtTime(0.0001, w);
+    wg.gain.exponentialRampToValueAtTime(0.55, w + 0.05);
+    wg.gain.exponentialRampToValueAtTime(0.0001, w + 0.4);
+    src.connect(bp); bp.connect(wg); wg.connect(this.master);
+    src.start(w); src.stop(w + 0.45);
+  },
+
+  // Explosion boom: a deep pitch-drop thump + a low noise blast.
+  boom() {
+    if (!this.ctx || this.volume <= 0) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    if (this._lastBoom && t - this._lastBoom < 0.05) return;   // throttle big swarms
+    this._lastBoom = t;
+    // low body
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(170, t);
+    o.frequency.exponentialRampToValueAtTime(40, t + 0.4);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.9, t);
+    og.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    o.connect(og); og.connect(this.master);
+    o.start(t); o.stop(t + 0.55);
+    // noise blast
+    const src = ctx.createBufferSource(); src.buffer = this._longNoiseBuf();
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(1400, t);
+    lp.frequency.exponentialRampToValueAtTime(180, t + 0.4);
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.7, t);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+    src.connect(lp); lp.connect(ng); ng.connect(this.master);
+    src.start(t); src.stop(t + 0.5);
+  },
+
   // ---- Title theme: a short military bugle-style fanfare that loops ----
   // [frequency in Hz (0 = rest), length in seconds]
   _melody: [
