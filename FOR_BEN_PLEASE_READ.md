@@ -17,13 +17,24 @@ together from any WiFi.
 3. Click **Apply**. Wait ~2 minutes while it builds.
 4. It shows a web address ending in **`.onrender.com`**
    (e.g. `https://pixel-planes-bryding.onrender.com`).
-5. **Send that address to Claude Code** (or your nephew), saying
-   *"the server is at &lt;that address&gt;"*. Claude points the game at it and
-   then the public link works online for everyone:
-   **https://bryding.github.io/pixel-planes/**
+5. **📱 Text that address to your nephew** (a phone message is perfect). That's
+   all you need to do!
 
 *(Free tier "sleeps" when idle, so the first connection after a quiet spell
 takes ~30–60s to wake — that's normal.)*
+
+---
+
+### 👦 For my nephew — what to send to Claude
+
+Once Uncle Ben texts you the `.onrender.com` address, open Claude Code and paste
+this (put the real address in):
+
+> **the server is at https://pixel-planes-bryding.onrender.com**
+
+Claude will point the game at it, and then the public link works online for
+everyone, any WiFi:
+**https://bryding.github.io/pixel-planes/**
 
 ---
 
