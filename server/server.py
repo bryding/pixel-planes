@@ -195,7 +195,25 @@ def handle_message(conn, m):
             is_host = (conn.id == s['host'])
             mode = s['mode']
             broadcast_to_server(s, {'t': 'player-joined', 'id': conn.id, 'name': conn.username}, conn.id)
-        conn.send({'t': 'joined', 'name': name, 'isHost': is_host, 'mode': mode})
+        print('player %d joined server %s' % (conn.id, name)); conn.send({'t': 'joined', 'name': name, 'isHost': is_host, 'mode': mode})
+        broadcast_list()
+    elif t == 'quickjoin':
+        # Join the named room if it exists, otherwise create it. One shared room
+        # so everyone who opens the link lands together (no menus, no password).
+        name = clean_name(m.get('name')) or 'HOME'
+        with lock:
+            s = servers.get(name)
+            if not s:
+                s = {'name': name, 'password': '', 'host': conn.id, 'mode': 'classic', 'clients': {conn.id: conn}}
+                servers[name] = s
+                conn.server_name = name
+                is_host, mode = True, 'classic'
+            else:
+                s['clients'][conn.id] = conn
+                conn.server_name = name
+                is_host, mode = (conn.id == s['host']), s['mode']
+                broadcast_to_server(s, {'t': 'player-joined', 'id': conn.id, 'name': conn.username}, conn.id)
+        print('player %d joined server %s' % (conn.id, name)); conn.send({'t': 'joined', 'name': name, 'isHost': is_host, 'mode': mode})
         broadcast_list()
     elif t == 'leave':
         leave(conn)
@@ -256,6 +274,11 @@ def serve_file(sock, request_line):
         path = '/'
     if path == '/' or path == '':
         path = '/index.html'
+    if path == '/ip':   # the game asks "what's my LAN address?" to make the invite QR
+        ips = lan_ips()
+        body = json.dumps({'ip': ips[0] if ips else '', 'port': PORT}).encode()
+        sock.sendall(b'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n' % len(body) + body)
+        return
     from urllib.parse import unquote
     path = unquote(path)
     file_path = os.path.normpath(os.path.join(ROOT, path.lstrip('/')))

@@ -127,6 +127,7 @@ const Net = {
   refreshList() { this.send({ t: 'list' }); },
   createServer(name, password) { this.lastError = ''; this.send({ t: 'create', name: name, password: password }); },
   joinServer(name, password) { this.lastError = ''; this.send({ t: 'join', name: name, password: password }); },
+  quickJoin(name) { this.lastError = ''; this.send({ t: 'quickjoin', name: name }); }, // join it, or make it
   leaveServer() { this.send({ t: 'leave' }); this.inServer = false; this.isHost = false; this.serverName = null; this._notify(); },
   setMode(mode) { if (this.isHost) this.send({ t: 'setmode', mode: mode }); },
   sendState(state) { this.send({ t: 'state', s: state }); },

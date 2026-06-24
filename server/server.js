@@ -35,6 +35,17 @@ const MIME = {
 const httpServer = http.createServer((req, res) => {
   let urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
   if (urlPath === '/' || urlPath === '') urlPath = '/index.html';
+  if (urlPath === '/ip') {   // the game asks for our LAN address to build the invite QR
+    let ip = '';
+    const nets = os.networkInterfaces();
+    Object.keys(nets).forEach((nm) => (nets[nm] || []).forEach((n) => {
+      if (n.family === 'IPv4' && !n.internal && !ip) ip = n.address;
+    }));
+    const body = JSON.stringify({ ip: ip, port: PORT });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(body);
+    return;
+  }
   const filePath = path.normalize(path.join(ROOT, urlPath));
   if (!filePath.startsWith(ROOT)) { res.writeHead(403); res.end('Forbidden'); return; } // no peeking outside
   fs.readFile(filePath, (err, data) => {
@@ -124,6 +135,23 @@ wss.on('connection', (ws) => {
         ws.serverName = name;
         send(ws, { t: 'joined', name, isHost: ws.id === s.hostId, mode: s.mode });
         broadcastToServer(s, { t: 'player-joined', id: ws.id, name: ws.username }, ws.id);
+        broadcastList();
+        break;
+      }
+
+      case 'quickjoin': {
+        // Join the room if it exists, else create it (one shared room, no password).
+        const name = cleanName(m.name) || 'HOME';
+        let s = servers.get(name);
+        let isHost;
+        if (!s) {
+          s = { name, password: '', hostId: ws.id, mode: 'classic', clients: new Map() };
+          s.clients.set(ws.id, ws); servers.set(name, s); ws.serverName = name; isHost = true;
+        } else {
+          s.clients.set(ws.id, ws); ws.serverName = name; isHost = (ws.id === s.hostId);
+          broadcastToServer(s, { t: 'player-joined', id: ws.id, name: ws.username }, ws.id);
+        }
+        send(ws, { t: 'joined', name, isHost, mode: s.mode });
         broadcastList();
         break;
       }

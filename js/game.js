@@ -494,11 +494,35 @@ function refreshLobbyUI() {
     const i = document.getElementById('inServerInfo');
     if (i) i.textContent = (Net.isHost ? 'You are the HOST — you control the Mode & Modifier menus.'
                                        : 'You joined as ' + (Net.username || 'a player') + '. The host controls the menus.');
+    updateInvite();
     const showing = document.getElementById('createServer').style.display !== 'none' ||
                     document.getElementById('serverList').style.display !== 'none';
     if (showing) showPausePanel('inServer');
   }
   applyHostPermissions();
+}
+
+// Show how friends on the same WiFi can join: the address + a scannable QR.
+let _inviteUrl = null;
+function updateInvite() {
+  const info = document.getElementById('inServerInvite');
+  const qr = document.getElementById('inviteQR');
+  if (!info) return;
+  const show = (url) => {
+    info.innerHTML = 'Friends on your WiFi: open <b>' + url + '</b>&nbsp; or scan ⤵';
+    if (qr) {
+      qr.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
+      qr.style.display = 'inline-block';
+    }
+  };
+  if (_inviteUrl) { show(_inviteUrl); return; }
+  // Ask our own server for its WiFi address (only works during local play).
+  try {
+    fetch('/ip').then((r) => r.json()).then((d) => {
+      if (d && d.ip) { _inviteUrl = 'http://' + d.ip + ':' + d.port; show(_inviteUrl); }
+      else { info.textContent = ''; if (qr) qr.style.display = 'none'; }
+    }).catch(() => { info.textContent = ''; if (qr) qr.style.display = 'none'; });
+  } catch (e) {}
 }
 function escapeHtml(s) { return ('' + s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
@@ -516,8 +540,30 @@ function onNetMode(m) {
   if (typeof m === 'string' && m !== mode) setMode(m);
 }
 
-// Hook Net's updates to the UI.
-Net.onChange = refreshLobbyUI;
+// ---- Quick Play: on local (WiFi) play, auto-join ONE shared room so opening
+// the address on any device drops you straight into the game together. ----
+let quickJoinSent = false;
+function autoQuickPlay() {
+  if (typeof location === 'undefined' || !location.host) return; // file:// -> skip
+  if (location.protocol === 'https:') return;                    // public link uses the lobby
+  let name = getUsername();
+  if (!name) { name = 'Pilot' + (1000 + Math.floor(Math.random() * 9000)); saveUsername(name); }
+  Net.username = name;
+  Net._quickRoom = 'HOME';
+  ensureConnected();
+}
+function maybeQuickJoin() {
+  if (!Net._quickRoom || Net.inServer || quickJoinSent) return;
+  if (Net.status === 'online') { quickJoinSent = true; Net.quickJoin(Net._quickRoom); }
+}
+
+// Hook Net's updates to the UI (+ auto quick-join when connected).
+Net.onChange = function () {
+  if (Net.status !== 'online') quickJoinSent = false;  // re-join after a reconnect
+  refreshLobbyUI();
+  maybeQuickJoin();
+};
+autoQuickPlay();   // local WiFi play: connect + join the shared room automatically
 
 // ===========================================================================
 //  ONLINE LIVE SYNC — see the other players fly on their own devices.
