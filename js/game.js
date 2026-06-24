@@ -337,6 +337,17 @@ function returnToMainMenu() {
   if (typeof Sound !== 'undefined') { Sound.startTheme(); Sound.startEngine(); }  // title music + engine
 }
 
+// The "Click to Play" gate: nothing shows until you click. Clicking hides the
+// gate, turns on sound, and starts the title (music, engine, banner fly-in).
+function enterTitle() {
+  const gate = document.getElementById('clickGate'); if (gate) gate.style.display = 'none';
+  if (typeof Sound !== 'undefined') {
+    Sound.init();
+    if (!gameStarted) { Sound.startTheme(); Sound.startEngine(); }
+  }
+  frameCount = 0;   // start the banner fly-in now, in sync with the sound
+}
+
 // Browsers block sound until you interact. On the FIRST click/key/tap, start the
 // title music + plane engine (and replay the fly-in so it's in sync with sound).
 function armTitleAudio() {

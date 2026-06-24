@@ -1,0 +1,27 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
+<canvas id="game"></canvas>
+<div id="clickGate" onclick="enterTitle()"><div class="gateInner"></div></div>
+<div id="startScreen"></div>
+<div id="settingsScreen" style="display:none"><input type="range" id="volSlider" value="50"><p id="volLabel">50%</p></div>
+<div id="topBar"><div id="modGroup"></div><div id="modeGroup"></div></div>
+<div id="pauseMenu" style="display:none"><div class="pauseInner" id="pauseMain"></div><div class="pauseInner" id="createServer" style="display:none"></div><div class="pauseInner" id="serverList" style="display:none"></div><div class="pauseInner" id="inServer" style="display:none"></div><div class="pauseInner" id="colorPanel" style="display:none"></div></div>
+<div id="out">PENDING</div>
+<script>window.__e=[];window.onerror=(m,s,l,c)=>window.__e.push(m+' @'+l);</script>
+<script src="js/config.js"></script><script src="js/audio.js"></script><script src="js/net.js"></script><script src="js/input.js"></script>
+<script src="js/physics.js"></script><script src="js/bullet.js"></script><script src="js/missile.js"></script>
+<script src="js/explosion.js"></script><script src="js/powerup.js"></script><script src="js/sprites.js"></script>
+<script src="js/scenery.js"></script><script src="js/plane.js"></script><script src="js/enemy.js"></script>
+<script src="js/pilot.js"></script><script src="js/game.js"></script>
+<script>
+const r={};
+try{
+  r.gateVisibleAtStart = document.getElementById('clickGate').style.display !== 'none';
+  enterTitle();
+  r.gateHidden = document.getElementById('clickGate').style.display === 'none';
+  r.themeOn = Sound._themeOn===true; r.engineOn = Sound._engineOn===true; r.frameReset = frameCount===0;
+  for(let f=0;f<6;f++){update();draw();}
+  startGame(); r.canStart = gameStarted===true;
+  r.err=window.__e;
+  document.getElementById('out').textContent='RESULT '+JSON.stringify(r);
+}catch(e){document.getElementById('out').textContent='THREW '+e.message;}
+</script></body></html>
