@@ -346,17 +346,29 @@ html, body {
   position: fixed;
   inset: 0;
   z-index: 30;                 /* above everything else */
+  overflow: hidden;
+}
+/* Start screen: the banner + plane are drawn on the CANVAS, so this overlay is
+   transparent and just holds the buttons near the bottom. */
+#startScreen {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 12%;
+  background: transparent;
+}
+/* Settings keeps a dim backdrop. */
+#settingsScreen {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.35);  /* dim so the AI dogfights show but text is readable */
-  overflow: hidden;
+  background: rgba(0, 0, 0, 0.5);
 }
-.startCenter {
+.startCenter, .startButtons {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 22px;
+  gap: 18px;
   z-index: 32;
 }
 .titleBanner {

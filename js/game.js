@@ -1249,6 +1249,69 @@ function draw() {
     drawWorldView(camera, player, 0, CONFIG.GAME_W);
   }
   if (gameStarted) drawHudLayer();   // no HUD on the title screen
+  else drawTitleScreen();            // a plane tows the PIXEL PLANES banner in
+}
+
+// ---- Title screen: a game plane flies in towing a pixelated banner, then
+// detaches it so the banner settles in the middle as the title. ----
+const TITLE_BANNER_W = 860, TITLE_BANNER_H = 156;
+function drawTitleScreen() {
+  const W = CONFIG.GAME_W, H = CONFIG.GAME_H;
+  // Dim the live dogfights behind so the title reads clearly.
+  ctx.fillStyle = 'rgba(8,12,26,0.5)';
+  ctx.fillRect(0, 0, W, H);
+
+  const bannerY = H * 0.30;
+  const centerX = W / 2;
+  const towLen = 600;                         // how far behind the plane the banner trails
+  const planeX = -780 + frameCount * 13;      // the plane flies in from the left
+  const towedX = planeX - towLen;             // where the towed banner would be
+  const detached = towedX >= centerX;         // once it reaches the middle, it lets go
+  const bannerX = detached ? centerX : towedX;
+
+  drawTowBanner(bannerX, bannerY);
+
+  // The plane + tow rope, while the plane is still on screen.
+  if (planeX < W + 500) {
+    if (!detached) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(bannerX + TITLE_BANNER_W / 2, bannerY); // banner's front edge
+      ctx.lineTo(planeX - 36, bannerY);                  // the plane's tail
+      ctx.stroke();
+    }
+    // Draw the plane bigger so it reads clearly as it tows the banner.
+    ctx.save();
+    ctx.translate(planeX, bannerY);
+    ctx.scale(2.2, 2.2);
+    drawPlaneSprite(ctx, PLANE_SPRITES.player, 0, 0, 0, frameCount, false);
+    ctx.restore();
+  }
+}
+// A red, pixelated cloth banner with white "PIXEL PLANES" text (like the real
+// banners planes tow behind them).
+function drawTowBanner(cx, cy) {
+  const w = TITLE_BANNER_W, h = TITLE_BANNER_H;
+  const x = cx - w / 2, y = cy - h / 2;
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;          // keep it crisp/pixel-looking
+  ctx.fillStyle = '#d62828'; ctx.fillRect(x, y, w, h);                 // red cloth
+  ctx.fillStyle = '#ef4b4b'; ctx.fillRect(x, y, w, 10);               // top highlight
+  ctx.fillStyle = '#b51d1d'; ctx.fillRect(x, y + h - 16, w, 16);      // bottom shadow
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 6;                     // white border
+  ctx.strokeRect(x + 4, y + 4, w - 8, h - 8);
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';                          // grommet dots
+  for (let i = 0; i < 8; i++) {
+    const gx = x + 26 + i * ((w - 52) / 7);
+    ctx.fillRect(gx, y + 13, 7, 7);
+    ctx.fillRect(gx, y + h - 20, 7, 7);
+  }
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 84px monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('PIXEL PLANES', cx, cy + 2);
+  ctx.restore();
 }
 
 // Draw one view of the world: aim the active camera at camStore, clip to the

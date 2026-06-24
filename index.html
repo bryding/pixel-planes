@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pixel Planes</title>
-  <link rel="stylesheet" href="css/style.css?v=2" />
+  <link rel="stylesheet" href="css/style.css?v=3" />
 </head>
 <body>
   <!-- This is the box the whole game is drawn onto -->
@@ -13,9 +13,8 @@
   <!-- TITLE / START SCREEN (shown on load & refresh; the canvas behind it shows
        live AI dogfights). Pressing START begins play. Dying does NOT return here. -->
   <div id="startScreen">
-    <div class="planeFlyby">🛩️</div>
-    <div class="startCenter">
-      <div class="titleBanner">PIXEL&nbsp;PLANES</div>
+    <!-- The PIXEL PLANES banner + the plane that tows it are drawn on the CANVAS. -->
+    <div class="startButtons">
       <button class="startBtn" onclick="startGame(); this.blur();">▶ START</button>
       <button class="startBtn" onclick="openSettings(); this.blur();">⚙ SETTINGS</button>
     </div>
@@ -177,19 +176,19 @@
   </div>
 
   <!-- The scripts run top to bottom, so order matters here -->
-  <script src="js/config.js?v=2"></script>
-  <script src="js/net.js?v=2"></script>
-  <script src="js/input.js?v=2"></script>
-  <script src="js/physics.js?v=2"></script>
-  <script src="js/bullet.js?v=2"></script>
-  <script src="js/missile.js?v=2"></script>
-  <script src="js/explosion.js?v=2"></script>
-  <script src="js/powerup.js?v=2"></script>
-  <script src="js/sprites.js?v=2"></script>
-  <script src="js/scenery.js?v=2"></script>
-  <script src="js/plane.js?v=2"></script>
-  <script src="js/enemy.js?v=2"></script>
-  <script src="js/pilot.js?v=2"></script>
-  <script src="js/game.js?v=2"></script>
+  <script src="js/config.js?v=3"></script>
+  <script src="js/net.js?v=3"></script>
+  <script src="js/input.js?v=3"></script>
+  <script src="js/physics.js?v=3"></script>
+  <script src="js/bullet.js?v=3"></script>
+  <script src="js/missile.js?v=3"></script>
+  <script src="js/explosion.js?v=3"></script>
+  <script src="js/powerup.js?v=3"></script>
+  <script src="js/sprites.js?v=3"></script>
+  <script src="js/scenery.js?v=3"></script>
+  <script src="js/plane.js?v=3"></script>
+  <script src="js/enemy.js?v=3"></script>
+  <script src="js/pilot.js?v=3"></script>
+  <script src="js/game.js?v=3"></script>
 </body>
 </html>
