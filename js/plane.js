@@ -209,6 +209,7 @@ class Plane {
 
     // Start the cooldown so the next shot has to wait a bit.
     this.fireCooldown = CONFIG.FIRE_COOLDOWN;
+    if (typeof Sound !== 'undefined') Sound.gun();   // rat-a-tat machine-gun sound
   }
 
   // Draw the plane on screen (worldToScreenX handles the looping world).

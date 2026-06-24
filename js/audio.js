@@ -1,0 +1,64 @@
+// ===========================================================================
+//  SOUND  --  all game sounds, generated in code with the Web Audio API
+//  (no sound files to download). One master volume controls everything, set on
+//  the title SETTINGS screen. Browsers only allow sound after a click/tap, so
+//  we start the audio when you press START (or move the volume slider).
+// ===========================================================================
+
+const Sound = {
+  ctx: null,
+  master: null,
+  volume: 0.5,     // 0..1, controlled by the Settings slider
+  _noise: null,
+
+  // Load the saved volume (call at startup).
+  load() {
+    try {
+      const v = localStorage.getItem('pp_volume');
+      if (v !== null) this.volume = Math.max(0, Math.min(1, parseFloat(v)));
+    } catch (e) {}
+  },
+
+  // Start (or resume) the audio engine. Must run from a click/tap.
+  init() {
+    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = this.volume;
+      this.master.connect(this.ctx.destination);
+    } catch (e) { this.ctx = null; }
+  },
+
+  setVolume(v) {
+    this.volume = Math.max(0, Math.min(1, v));
+    if (this.master) this.master.gain.value = this.volume;
+    try { localStorage.setItem('pp_volume', this.volume); } catch (e) {}
+  },
+
+  // A short, decaying noise burst we reuse for each gunshot.
+  _noiseBuf() {
+    if (this._noise) return this._noise;
+    const ctx = this.ctx, dur = 0.08;
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2.5);
+    this._noise = buf;
+    return buf;
+  },
+
+  // One gunshot. Fired repeatedly while shooting -> a machine-gun rattle.
+  gun() {
+    if (!this.ctx || this.volume <= 0) return;
+    const ctx = this.ctx;
+    const src = ctx.createBufferSource();
+    src.buffer = this._noiseBuf();
+    const lp = ctx.createBiquadFilter();          // soften the harsh high end
+    lp.type = 'lowpass'; lp.frequency.value = 1700;
+    const g = ctx.createGain(); g.gain.value = 0.5;
+    src.connect(lp); lp.connect(g); g.connect(this.master);
+    src.start();
+  },
+};
+Sound.load();

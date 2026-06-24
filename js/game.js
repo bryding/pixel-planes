@@ -312,6 +312,7 @@ let gameStarted = false; // false = on the title/start screen (attract mode)
 // START begins play; SETTINGS opens the look-picker. The canvas behind shows
 // live AI dogfights the whole time. Dying never comes back here.
 function startGame() {
+  if (typeof Sound !== 'undefined') Sound.init();   // a click -> sound is now allowed
   gameStarted = true;
   const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'none';
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';
@@ -321,6 +322,18 @@ function startGame() {
 function openSettings() {
   const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'none';
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'flex';
+  // Show the current volume on the slider.
+  const sl = document.getElementById('volSlider'), lb = document.getElementById('volLabel');
+  if (sl) sl.value = Math.round(Sound.volume * 100);
+  if (lb) lb.textContent = Math.round(Sound.volume * 100) + '%';
+}
+// Move the Settings volume slider.
+function setVolumePct(pct) {
+  if (typeof Sound === 'undefined') return;
+  Sound.init();                 // a slider drag is a click -> sound allowed
+  Sound.setVolume(pct / 100);
+  const lb = document.getElementById('volLabel'); if (lb) lb.textContent = Math.round(pct) + '%';
+  Sound.gun();                  // quick click so you HEAR the level as you set it
 }
 function closeSettings() {
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';

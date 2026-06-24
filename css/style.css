@@ -450,3 +450,15 @@ html, body {
   background: none;
   cursor: pointer;
 }
+
+/* volume slider on the Settings screen */
+.volSlider {
+  -webkit-appearance: none; appearance: none;
+  width: 300px; height: 24px; border-radius: 12px;
+  background: rgba(0,0,0,0.5); border: 2px solid #fff; outline: none; cursor: pointer;
+}
+.volSlider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 34px; height: 34px; border-radius: 50%; background: #f1c40f; border: 2px solid #fff; cursor: pointer;
+}
+.volSlider::-moz-range-thumb { width: 34px; height: 34px; border-radius: 50%; background: #f1c40f; border: 2px solid #fff; cursor: pointer; }

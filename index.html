@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pixel Planes</title>
-  <link rel="stylesheet" href="css/style.css?v=5" />
+  <link rel="stylesheet" href="css/style.css?v=6" />
 </head>
 <body>
   <!-- This is the box the whole game is drawn onto -->
@@ -24,16 +24,10 @@
   <div id="settingsScreen" style="display:none">
     <div class="startCenter">
       <div class="titleBanner small">SETTINGS</div>
-      <p class="startHint">Pick how the game looks:</p>
-      <div class="settingsModes">
-        <button onclick="setMode('classic'); this.blur();">Classic</button>
-        <button onclick="setMode('unicorn'); this.blur();">🦄 Unicorn</button>
-        <button onclick="setMode('badweather'); this.blur();">🌧️ Bad Weather</button>
-        <button onclick="setMode('ww2'); this.blur();">🪖 WW2</button>
-        <button onclick="setMode('alien'); this.blur();">👽 Alien</button>
-        <button onclick="setMode('night'); this.blur();">🌙 Night</button>
-        <button onclick="setMode('blackhole'); this.blur();">🕳️ Black Hole</button>
-      </div>
+      <p class="startHint">🔊 Sound volume</p>
+      <input type="range" id="volSlider" class="volSlider" min="0" max="100" value="50"
+             oninput="setVolumePct(this.value)" />
+      <p id="volLabel" class="startHint">50%</p>
       <button class="startBtn" onclick="toggleMobile(); this.blur();">📱 Mobile Controls On/Off</button>
       <button class="startBtn" onclick="closeSettings(); this.blur();">◀ Back</button>
     </div>
@@ -199,19 +193,20 @@
   </div>
 
   <!-- The scripts run top to bottom, so order matters here -->
-  <script src="js/config.js?v=5"></script>
-  <script src="js/net.js?v=5"></script>
-  <script src="js/input.js?v=5"></script>
-  <script src="js/physics.js?v=5"></script>
-  <script src="js/bullet.js?v=5"></script>
-  <script src="js/missile.js?v=5"></script>
-  <script src="js/explosion.js?v=5"></script>
-  <script src="js/powerup.js?v=5"></script>
-  <script src="js/sprites.js?v=5"></script>
-  <script src="js/scenery.js?v=5"></script>
-  <script src="js/plane.js?v=5"></script>
-  <script src="js/enemy.js?v=5"></script>
-  <script src="js/pilot.js?v=5"></script>
-  <script src="js/game.js?v=5"></script>
+  <script src="js/config.js?v=6"></script>
+  <script src="js/audio.js?v=6"></script>
+  <script src="js/net.js?v=6"></script>
+  <script src="js/input.js?v=6"></script>
+  <script src="js/physics.js?v=6"></script>
+  <script src="js/bullet.js?v=6"></script>
+  <script src="js/missile.js?v=6"></script>
+  <script src="js/explosion.js?v=6"></script>
+  <script src="js/powerup.js?v=6"></script>
+  <script src="js/sprites.js?v=6"></script>
+  <script src="js/scenery.js?v=6"></script>
+  <script src="js/plane.js?v=6"></script>
+  <script src="js/enemy.js?v=6"></script>
+  <script src="js/pilot.js?v=6"></script>
+  <script src="js/game.js?v=6"></script>
 </body>
 </html>
