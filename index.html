@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pixel Planes</title>
-  <link rel="stylesheet" href="css/style.css?v=4" />
+  <link rel="stylesheet" href="css/style.css?v=5" />
 </head>
 <body>
   <!-- This is the box the whole game is drawn onto -->
@@ -47,6 +47,7 @@
       <button onclick="resumeGame(); this.blur();">▶ Resume</button>
       <button onclick="chooseNormal(); this.blur();">🎮 1 Player (Normal)</button>
       <button onclick="chooseSplit(); this.blur();">👥 2 Player — Split Screen</button>
+      <button onclick="showColorPanel(); this.blur();">🎨 Plane Color</button>
       <!-- Online is paused for now: buttons stay, but do nothing (refine later). -->
       <button onclick="this.blur();">➕ Create Server</button>
       <button onclick="this.blur();">📡 Server List</button>
@@ -97,6 +98,28 @@
       <img id="inviteQR" alt="invite QR" style="display:none;width:170px;height:170px;border:5px solid #fff;border-radius:8px;background:#fff" />
       <button onclick="resumeGame(); this.blur();">▶ Back to Game</button>
       <button onclick="doLeaveServer(); this.blur();">🚪 Leave Server</button>
+    </div>
+
+    <!-- pick your plane color: presets + a color wheel -->
+    <div class="pauseInner" id="colorPanel" style="display:none">
+      <h1>PLANE COLOR</h1>
+      <p class="roomHint">Tap a preset, or use the color wheel:</p>
+      <div class="colorPresets">
+        <button style="background:#3d8fd6" onclick="setPlayerColor('#3d8fd6'); this.blur();"></button>
+        <button style="background:#e0524a" onclick="setPlayerColor('#e0524a'); this.blur();"></button>
+        <button style="background:#3fae54" onclick="setPlayerColor('#3fae54'); this.blur();"></button>
+        <button style="background:#f1c40f" onclick="setPlayerColor('#f1c40f'); this.blur();"></button>
+        <button style="background:#e67e22" onclick="setPlayerColor('#e67e22'); this.blur();"></button>
+        <button style="background:#9b59b6" onclick="setPlayerColor('#9b59b6'); this.blur();"></button>
+        <button style="background:#e84393" onclick="setPlayerColor('#e84393'); this.blur();"></button>
+        <button style="background:#1abc9c" onclick="setPlayerColor('#1abc9c'); this.blur();"></button>
+        <button style="background:#ecf0f1" onclick="setPlayerColor('#ecf0f1'); this.blur();"></button>
+        <button style="background:#2c3e50" onclick="setPlayerColor('#2c3e50'); this.blur();"></button>
+      </div>
+      <input type="color" id="colorWheel" value="#3d8fd6"
+             oninput="setPlayerColor(this.value)" />
+      <p class="startHint">🎡 Color wheel — drag to mix any color</p>
+      <button onclick="backToPause(); this.blur();">◀ Back</button>
     </div>
   </div>
 
@@ -176,19 +199,19 @@
   </div>
 
   <!-- The scripts run top to bottom, so order matters here -->
-  <script src="js/config.js?v=4"></script>
-  <script src="js/net.js?v=4"></script>
-  <script src="js/input.js?v=4"></script>
-  <script src="js/physics.js?v=4"></script>
-  <script src="js/bullet.js?v=4"></script>
-  <script src="js/missile.js?v=4"></script>
-  <script src="js/explosion.js?v=4"></script>
-  <script src="js/powerup.js?v=4"></script>
-  <script src="js/sprites.js?v=4"></script>
-  <script src="js/scenery.js?v=4"></script>
-  <script src="js/plane.js?v=4"></script>
-  <script src="js/enemy.js?v=4"></script>
-  <script src="js/pilot.js?v=4"></script>
-  <script src="js/game.js?v=4"></script>
+  <script src="js/config.js?v=5"></script>
+  <script src="js/net.js?v=5"></script>
+  <script src="js/input.js?v=5"></script>
+  <script src="js/physics.js?v=5"></script>
+  <script src="js/bullet.js?v=5"></script>
+  <script src="js/missile.js?v=5"></script>
+  <script src="js/explosion.js?v=5"></script>
+  <script src="js/powerup.js?v=5"></script>
+  <script src="js/sprites.js?v=5"></script>
+  <script src="js/scenery.js?v=5"></script>
+  <script src="js/plane.js?v=5"></script>
+  <script src="js/enemy.js?v=5"></script>
+  <script src="js/pilot.js?v=5"></script>
+  <script src="js/game.js?v=5"></script>
 </body>
 </html>

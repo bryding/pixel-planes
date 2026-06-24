@@ -327,6 +327,24 @@ function closeSettings() {
   const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'flex';
 }
 
+// --- Plane color customizer (ESC menu) ---
+// Your chosen plane color builds a sprite set used in the normal modes.
+let playerSpriteSet = PLANE_SPRITES.player;
+function getPlayerColor() {
+  try { return localStorage.getItem('pp_playercolor') || ''; } catch (e) { return ''; }
+}
+function setPlayerColor(hex) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
+  playerSpriteSet = makePlaneSetFromColor(hex);
+  try { localStorage.setItem('pp_playercolor', hex); } catch (e) {}
+  const w = document.getElementById('colorWheel'); if (w) w.value = hex;
+}
+function showColorPanel() {
+  showPausePanel('colorPanel');
+  const saved = getPlayerColor();
+  const w = document.getElementById('colorWheel'); if (w && saved) w.value = saved;
+}
+
 // Pause/unpause and show/hide the pause menu. Used by the ESC key AND by the
 // on-screen "ESC" button (so phones, with no keyboard, can open the menu too).
 function pauseToggle() { if (!gameStarted) return; paused = !paused; updatePauseMenu(); }
@@ -395,7 +413,7 @@ function ensureConnected() { Net.connect(serverUrl()); }
 
 // Switch which pause panel is showing.
 function showPausePanel(id) {
-  ['pauseMain', 'createServer', 'serverList', 'inServer'].forEach(p => {
+  ['pauseMain', 'createServer', 'serverList', 'inServer', 'colorPanel'].forEach(p => {
     const el = document.getElementById(p);
     if (el) el.style.display = (p === id) ? 'flex' : 'none';
   });
@@ -851,6 +869,7 @@ spawnPlane(100);
 (function initTitleScreen() {
   const tb = document.getElementById('topBar'); if (tb) tb.style.display = 'none';
   player.alive = false;   // not playing yet (bots ignore it; it isn't drawn)
+  const c = getPlayerColor(); if (c) setPlayerColor(c);   // restore chosen plane color
 })();
 
 // A simple "did these two things touch?" check (using the looping distance).
@@ -1293,7 +1312,7 @@ function drawTitleScreen() {
     ctx.save();
     ctx.translate(planeX, bannerY);
     ctx.scale(2.2, 2.2);
-    drawPlaneSprite(ctx, PLANE_SPRITES.player, 0, 0, 0, frameCount, false);
+    drawPlaneSprite(ctx, playerSpriteSet || PLANE_SPRITES.player, 0, 0, 0, frameCount, false);
     ctx.restore();
   }
 }

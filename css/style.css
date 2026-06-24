@@ -424,3 +424,29 @@ html, body {
   75%  { top: 31%; }
   100% { left: 112%; top: 36%; }
 }
+
+/* ---- Plane color customizer ---- */
+.colorPresets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  max-width: 420px;
+}
+.colorPresets button {
+  width: 54px;
+  height: 54px;
+  border: 3px solid #ffffff;
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 0;
+}
+.colorPresets button:hover { transform: scale(1.08); }
+#colorWheel {
+  width: 220px;
+  height: 70px;
+  border: 3px solid #ffffff;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+}

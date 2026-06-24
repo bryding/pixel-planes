@@ -242,7 +242,8 @@ class Plane {
       return;
     }
 
-    let set = PLANE_SPRITES.player;
+    // Default: your chosen plane color (from the Color customizer), else blue.
+    let set = (typeof playerSpriteSet !== 'undefined' && playerSpriteSet) ? playerSpriteSet : PLANE_SPRITES.player;
     // Split-screen duel: player 1 is BLUE, player 2 is RED (overrides modes).
     if (splitScreen) set = (this.keymap === 'p2') ? PLAYER2_SPRITE : PLANE_SPRITES.player;
     else if (mode === 'unicorn') set = UNICORN_SPRITES.player;
