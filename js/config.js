@@ -108,9 +108,11 @@ const CONFIG = {
   // while they have fuel -- once the fuel runs out they fly straight, so a
   // sharp-turning plane can dodge them!
   MISSILE_MAX: 5,            // how many missiles you can hold
-  MISSILE_FIRE_COOLDOWN: 45, // min frames between launches (~0.75s) -- no spamming,
-                             // even with the Infinite Missiles cheat
   MISSILE_REFILL_SECONDS: 20,// you get one more missile every this many seconds
+  // With the ∞ Missiles cheat, HOLDING X rapid-fires this many missiles per
+  // frame (5 x 60fps = ~300 missiles/second!). Capped so it can't freeze.
+  INF_MISSILE_RATE: 5,
+  INF_MISSILE_CAP: 400,      // most missiles allowed flying at once (safety cap)
   MISSILE_SPEED: 11,         // a tiny bit faster than your top speed (MAX_SPEED)
   MISSILE_TURN: 0.15,        // sharp turn: smallest turn circle ~3 biplanes wide
   MISSILE_FUEL: 600,         // it chases for about 10 seconds, then flies straight

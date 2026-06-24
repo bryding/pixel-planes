@@ -1059,7 +1059,15 @@ function update() {
       // Flying (or safely rolling on the ground): normal controls.
       // WW2 mode has NO missiles and NO ejecting.
       if (Input.fire) player.tryShoot(bullets);
-      if (missilePressed && mode !== 'ww2') player.fireMissile(missiles, planes);
+      if (mode !== 'ww2') {
+        if (infiniteMissiles && Input.missile) {
+          // ∞ Missiles cheat: HOLD X to rapid-fire a swarm (~300/sec)!
+          for (let i = 0; i < CONFIG.INF_MISSILE_RATE && missiles.length < CONFIG.INF_MISSILE_CAP; i++)
+            player.fireMissile(missiles, planes, true);
+        } else if (missilePressed) {
+          player.fireMissile(missiles, planes);   // normal: one per press, ammo-limited
+        }
+      }
       if (ejectPressed && mode !== 'ww2') eject();
     }
   } else if (playerState === 'chute') {
