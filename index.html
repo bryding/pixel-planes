@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pixel Planes</title>
-  <link rel="stylesheet" href="css/style.css?v=11" />
+  <link rel="stylesheet" href="css/style.css?v=12" />
 </head>
 <body>
   <!-- This is the box the whole game is drawn onto -->
@@ -182,6 +182,8 @@
       <button id="mcLeft"  class="mcBtn mcTurnBtn">◀</button>
       <button id="mcRight" class="mcBtn mcTurnBtn">▶</button>
     </div>
+    <!-- left of the throttle: red EJECT button (also toggles the parachute) -->
+    <button id="mcEject" class="mcBtn mcEjectBtn">EJECT<br>🪂</button>
     <!-- bottom-MIDDLE: throttle slider (right = faster, left = slower) -->
     <div class="mcThrottleWrap" id="mcThrottleWrap">
       <input id="mcThrottle" class="mcSlider" type="range" min="0" max="100" value="100" />
@@ -204,20 +206,20 @@
   </div>
 
   <!-- The scripts run top to bottom, so order matters here -->
-  <script src="js/config.js?v=11"></script>
-  <script src="js/audio.js?v=11"></script>
-  <script src="js/net.js?v=11"></script>
-  <script src="js/input.js?v=11"></script>
-  <script src="js/physics.js?v=11"></script>
-  <script src="js/bullet.js?v=11"></script>
-  <script src="js/missile.js?v=11"></script>
-  <script src="js/explosion.js?v=11"></script>
-  <script src="js/powerup.js?v=11"></script>
-  <script src="js/sprites.js?v=11"></script>
-  <script src="js/scenery.js?v=11"></script>
-  <script src="js/plane.js?v=11"></script>
-  <script src="js/enemy.js?v=11"></script>
-  <script src="js/pilot.js?v=11"></script>
-  <script src="js/game.js?v=11"></script>
+  <script src="js/config.js?v=12"></script>
+  <script src="js/audio.js?v=12"></script>
+  <script src="js/net.js?v=12"></script>
+  <script src="js/input.js?v=12"></script>
+  <script src="js/physics.js?v=12"></script>
+  <script src="js/bullet.js?v=12"></script>
+  <script src="js/missile.js?v=12"></script>
+  <script src="js/explosion.js?v=12"></script>
+  <script src="js/powerup.js?v=12"></script>
+  <script src="js/sprites.js?v=12"></script>
+  <script src="js/scenery.js?v=12"></script>
+  <script src="js/plane.js?v=12"></script>
+  <script src="js/enemy.js?v=12"></script>
+  <script src="js/pilot.js?v=12"></script>
+  <script src="js/game.js?v=12"></script>
 </body>
 </html>

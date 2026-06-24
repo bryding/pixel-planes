@@ -132,7 +132,26 @@ html, body {
 #mobileControls .mcActions,
 #mobileControls .mcThrottleWrap,
 #mobileControls #mcUfoPad,
+#mobileControls .mcEjectBtn,
 #mobileControls .mcEscBtn { pointer-events: auto; }
+
+/* red EJECT button, just to the LEFT of the throttle (also toggles parachute) */
+.mcEjectBtn {
+  position: fixed;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(calc(-50% - 205px));
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: bold;
+  line-height: 1.15;
+  color: #ffffff;
+  background: rgba(200, 40, 40, 0.6);     /* red */
+  border-color: #ff8a8a;
+}
+.mcEjectBtn:active { background: rgba(255, 80, 80, 0.55); }
 
 /* top-right pause/ESC button (only visible while mobile controls are on) */
 .mcEscBtn {

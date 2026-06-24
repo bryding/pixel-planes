@@ -760,6 +760,7 @@ function setupMobileControls() {
   hold('mcRight',  () => Input.right = true,  () => Input.right = false);  // turn right (like D / →)
   hold('mcGun',    () => Input.fire = true,   () => Input.fire = false);   // hold to shoot
   hold('mcMissile',() => Input.missile = true,() => Input.missile = false);// tap to launch a missile
+  hold('mcEject',  () => Input.eject = true,  () => Input.eject = false);  // eject / toggle parachute
 
   // UFO 4-way pad (Alien Invasion): straight up/down/left/right movement.
   hold('mcUp',     () => Input.up = true,     () => Input.up = false);
@@ -787,6 +788,7 @@ function updateMobileLayout() {
   show('mcTurn', !wantUfoPad);
   show('mcThrottleWrap', !wantUfoPad);
   show('mcActions', !wantUfoPad);
+  show('mcEject', !wantUfoPad);   // the eject button (hidden when you're a UFO)
   // Clear any held directions so a key can't get stuck across the swap.
   Input.up = Input.down = Input.left = Input.right = false;
 }
