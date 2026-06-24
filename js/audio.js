@@ -51,14 +51,22 @@ const Sound = {
   // One gunshot. Fired repeatedly while shooting -> a machine-gun rattle.
   gun() {
     if (!this.ctx || this.volume <= 0) return;
-    const ctx = this.ctx;
+    const ctx = this.ctx, t = ctx.currentTime;
     const src = ctx.createBufferSource();
     src.buffer = this._noiseBuf();
     const lp = ctx.createBiquadFilter();          // soften the harsh high end
-    lp.type = 'lowpass'; lp.frequency.value = 1700;
-    const g = ctx.createGain(); g.gain.value = 0.5;
+    lp.type = 'lowpass'; lp.frequency.value = 2200;
+    const g = ctx.createGain();                   // punchy: loud start, fast decay
+    g.gain.setValueAtTime(0.9, t);
+    g.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
     src.connect(lp); lp.connect(g); g.connect(this.master);
-    src.start();
+    src.start(t);
+    src.stop(t + 0.09);
   },
 };
 Sound.load();
+
+// Browsers block audio until the user interacts. Wake the engine up on ANY
+// click / key / tap, so sound is ready (and resumes if the tab suspended it).
+['pointerdown', 'keydown', 'touchstart'].forEach((ev) =>
+  window.addEventListener(ev, () => Sound.init(), { passive: true }));

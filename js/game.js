@@ -319,6 +319,18 @@ function startGame() {
   const tb = document.getElementById('topBar'); if (tb) tb.style.display = 'flex';
   spawnPlane(camera.x + CONFIG.GAME_W / 2);   // fly the player in where the camera is
 }
+// Go back to the title screen (from the ESC menu).
+function returnToMainMenu() {
+  paused = false;
+  updatePauseMenu();              // close the pause menu
+  splitScreen = false;            // title is single-player attract mode
+  gameStarted = false;
+  player.alive = false;           // no player on the title (just AI dogfights)
+  frameCount = 0;                 // replay the banner fly-in
+  const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'flex';
+  const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';
+  const tb = document.getElementById('topBar'); if (tb) tb.style.display = 'none';
+}
 function openSettings() {
   const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'none';
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'flex';
