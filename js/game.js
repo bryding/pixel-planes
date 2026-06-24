@@ -312,7 +312,11 @@ let gameStarted = false; // false = on the title/start screen (attract mode)
 // START begins play; SETTINGS opens the look-picker. The canvas behind shows
 // live AI dogfights the whole time. Dying never comes back here.
 function startGame() {
-  if (typeof Sound !== 'undefined') Sound.init();   // a click -> sound is now allowed
+  if (typeof Sound !== 'undefined') {
+    Sound.init();             // a click -> sound is now allowed
+    Sound.stopTheme();        // the title theme + plane engine stop once you play
+    Sound.stopEngine();
+  }
   gameStarted = true;
   const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'none';
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';
@@ -330,7 +334,22 @@ function returnToMainMenu() {
   const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'flex';
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';
   const tb = document.getElementById('topBar'); if (tb) tb.style.display = 'none';
+  if (typeof Sound !== 'undefined') { Sound.startTheme(); Sound.startEngine(); }  // title music + engine
 }
+
+// Browsers block sound until you interact. On the FIRST click/key/tap, start the
+// title music + plane engine (and replay the fly-in so it's in sync with sound).
+function armTitleAudio() {
+  if (typeof Sound === 'undefined') return;
+  Sound.init();
+  if (!gameStarted && !Sound._themeOn) {
+    Sound.startTheme();
+    Sound.startEngine();
+    frameCount = 0;
+  }
+}
+['pointerdown', 'keydown', 'touchstart'].forEach((ev) =>
+  window.addEventListener(ev, armTitleAudio, { passive: true }));
 function openSettings() {
   const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'none';
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'flex';
@@ -1339,6 +1358,16 @@ function drawTitleScreen() {
     ctx.scale(2.2, 2.2);
     drawPlaneSprite(ctx, playerSpriteSet || PLANE_SPRITES.player, 0, 0, 0, frameCount, false);
     ctx.restore();
+  }
+
+  // Engine sound follows the plane: loud/high near the middle, fading as it
+  // approaches and as it flies away after dropping the banner.
+  if (typeof Sound !== 'undefined') {
+    let level = Math.max(0, 1 - Math.abs(planeX - centerX) / (W * 0.6));
+    if (planeX > W + 500) level = 0;                      // plane has gone -> silent
+    const pitch = (planeX < centerX) ? 100 + level * 55   // higher as it nears
+                                     : 95 - level * 30;    // drops after it passes
+    Sound.setEngine(level, pitch);
   }
 }
 // A red, pixelated cloth banner with white "PIXEL PLANES" text (like the real
