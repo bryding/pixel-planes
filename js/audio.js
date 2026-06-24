@@ -28,7 +28,19 @@ const Sound = {
       this.master = this.ctx.createGain();
       this.master.gain.value = this.volume;
       this.master.connect(this.ctx.destination);
+      this._loadGun();                 // fetch the real AK-47 gun sound
     } catch (e) { this.ctx = null; }
+  },
+
+  // Load the real gunfire recording (decoded into memory for instant playback).
+  _loadGun() {
+    if (this._gunBuf || this._gunLoading) return;
+    this._gunLoading = true;
+    fetch('sounds/gun.mp3')
+      .then((r) => r.arrayBuffer())
+      .then((b) => this.ctx.decodeAudioData(b))
+      .then((buf) => { this._gunBuf = buf; })
+      .catch(() => {});                // if it fails, gun() uses the generated sound
   },
 
   setVolume(v) {
@@ -52,11 +64,23 @@ const Sound = {
   gun() {
     if (!this.ctx || this.volume <= 0) return;
     const ctx = this.ctx, t = ctx.currentTime;
+
+    // Preferred: a short slice of the REAL AK-47 recording (one shot's worth).
+    if (this._gunBuf) {
+      const src = ctx.createBufferSource();
+      src.buffer = this._gunBuf;
+      const g = ctx.createGain(); g.gain.value = 1.0;
+      src.connect(g); g.connect(this.master);
+      src.start(t, 0, 0.16);          // play just the first ~1 shot, then stop
+      return;
+    }
+
+    // Fallback (until the mp3 loads / if it fails): a generated gunshot.
     const src = ctx.createBufferSource();
     src.buffer = this._noiseBuf();
-    const lp = ctx.createBiquadFilter();          // soften the harsh high end
+    const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass'; lp.frequency.value = 2200;
-    const g = ctx.createGain();                   // punchy: loud start, fast decay
+    const g = ctx.createGain();
     g.gain.setValueAtTime(0.9, t);
     g.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
     src.connect(lp); lp.connect(g); g.connect(this.master);
