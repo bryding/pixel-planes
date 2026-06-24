@@ -10,6 +10,36 @@
   <!-- This is the box the whole game is drawn onto -->
   <canvas id="game"></canvas>
 
+  <!-- TITLE / START SCREEN (shown on load & refresh; the canvas behind it shows
+       live AI dogfights). Pressing START begins play. Dying does NOT return here. -->
+  <div id="startScreen">
+    <div class="planeFlyby">🛩️</div>
+    <div class="startCenter">
+      <div class="titleBanner">PIXEL&nbsp;PLANES</div>
+      <button class="startBtn" onclick="startGame(); this.blur();">▶ START</button>
+      <button class="startBtn" onclick="openSettings(); this.blur();">⚙ SETTINGS</button>
+    </div>
+  </div>
+
+  <!-- SETTINGS (from the start screen) -->
+  <div id="settingsScreen" style="display:none">
+    <div class="startCenter">
+      <div class="titleBanner small">SETTINGS</div>
+      <p class="startHint">Pick how the game looks:</p>
+      <div class="settingsModes">
+        <button onclick="setMode('classic'); this.blur();">Classic</button>
+        <button onclick="setMode('unicorn'); this.blur();">🦄 Unicorn</button>
+        <button onclick="setMode('badweather'); this.blur();">🌧️ Bad Weather</button>
+        <button onclick="setMode('ww2'); this.blur();">🪖 WW2</button>
+        <button onclick="setMode('alien'); this.blur();">👽 Alien</button>
+        <button onclick="setMode('night'); this.blur();">🌙 Night</button>
+        <button onclick="setMode('blackhole'); this.blur();">🕳️ Black Hole</button>
+      </div>
+      <button class="startBtn" onclick="toggleMobile(); this.blur();">📱 Mobile Controls On/Off</button>
+      <button class="startBtn" onclick="closeSettings(); this.blur();">◀ Back</button>
+    </div>
+  </div>
+
   <!-- Pause menu (shown when you press ESC) -->
   <div id="pauseMenu" style="display:none">
     <!-- main pause screen -->

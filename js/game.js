@@ -306,10 +306,30 @@ let pilot = null;        // the parachuting pilot, when ejected
 let playerRespawn = 0;   // counts down while dead, then a fresh plane flies in
 let frameCount = 0;      // ticks up every frame (used for blinking warnings)
 let paused = false;      // ESC pauses/unpauses the game
+let gameStarted = false; // false = on the title/start screen (attract mode)
+
+// --- Title / Start screen ---
+// START begins play; SETTINGS opens the look-picker. The canvas behind shows
+// live AI dogfights the whole time. Dying never comes back here.
+function startGame() {
+  gameStarted = true;
+  const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'none';
+  const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';
+  const tb = document.getElementById('topBar'); if (tb) tb.style.display = 'flex';
+  spawnPlane(camera.x + CONFIG.GAME_W / 2);   // fly the player in where the camera is
+}
+function openSettings() {
+  const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'none';
+  const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'flex';
+}
+function closeSettings() {
+  const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';
+  const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'flex';
+}
 
 // Pause/unpause and show/hide the pause menu. Used by the ESC key AND by the
 // on-screen "ESC" button (so phones, with no keyboard, can open the menu too).
-function pauseToggle() { paused = !paused; updatePauseMenu(); }
+function pauseToggle() { if (!gameStarted) return; paused = !paused; updatePauseMenu(); }
 window.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && !e.repeat) pauseToggle();
 });
@@ -826,6 +846,13 @@ function pushKill(text, color) {
 // Start the game sitting on the ground, ready to take off.
 spawnPlane(100);
 
+// On load we're on the TITLE SCREEN: hide the top bar and park the player so
+// the background is pure AI dogfights until the user presses START.
+(function initTitleScreen() {
+  const tb = document.getElementById('topBar'); if (tb) tb.style.display = 'none';
+  player.alive = false;   // not playing yet (bots ignore it; it isn't drawn)
+})();
+
 // A simple "did these two things touch?" check (using the looping distance).
 function hits(a, b, radius) {
   const dx = wrapDX(a.x - b.x);
@@ -987,6 +1014,9 @@ function update() {
   const p2EjectPressed = Input.eject2 && !p2EjectWasDown;
   p2EjectWasDown = Input.eject2;
 
+  // Only run the player once the game has STARTED. On the title screen we skip
+  // it so the background is pure AI dogfights.
+  if (gameStarted) {
   // --- Split-screen: just fly both players (no takeoff lifecycle) ---
   if (splitScreen) {
     updateDuelPlayer(player,  missilePressed,   Input.fire,  ejectPressed);
@@ -1054,6 +1084,7 @@ function update() {
     if (playerRespawn <= 0) spawnPlane(camera.x + CONFIG.GAME_W / 2);
   }
   } // end single-player player handling
+  } // end gameStarted gate
 
   // Cheats from the modifier menu. Infinite Health = TRULY unkillable: we keep
   // health full AND keep the invincibility flag on, which already blocks bullets,
@@ -1191,7 +1222,9 @@ function update() {
     followCam(cam1, player,  CONFIG.GAME_W / 2);   // right half
     followCam(cam2, player2, CONFIG.GAME_W / 2);   // left half
   } else {
-    const focus = (playerState === 'chute' && pilot) ? pilot : player;
+    // On the title screen, watch a bot so the background shows live dogfights.
+    const focus = !gameStarted ? (enemies.find(e => e.alive) || player)
+                  : ((playerState === 'chute' && pilot) ? pilot : player);
     const targetX = focus.x - CONFIG.GAME_W / 2 + (focus.vx || 0) * CONFIG.CAM_LOOKAHEAD * 0.1;
     const targetY = focus.y - CONFIG.GAME_H / 2;
     camera.x += wrapDX(targetX - camera.x) * CONFIG.CAM_SMOOTH;
@@ -1215,7 +1248,7 @@ function draw() {
   } else {
     drawWorldView(camera, player, 0, CONFIG.GAME_W);
   }
-  drawHudLayer();
+  if (gameStarted) drawHudLayer();   // no HUD on the title screen
 }
 
 // Draw one view of the world: aim the active camera at camStore, clip to the
@@ -1359,8 +1392,10 @@ function drawWorldContents() {
   // --- Other online players ---
   if (Net.inServer) drawRemotePlayers();
 
-  // --- The player plane(s) ---
-  if (splitScreen) {
+  // --- The player plane(s) --- (skipped on the title screen / attract mode)
+  if (!gameStarted) {
+    /* no player drawn while on the title screen */
+  } else if (splitScreen) {
     if (player.alive)  player.draw(ctx);   // blue
     if (player2.alive) player2.draw(ctx);  // red
   } else if (playerState === 'flying' || playerState === 'takeoff') {

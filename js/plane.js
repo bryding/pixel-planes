@@ -50,6 +50,7 @@ class Plane {
     // Missiles you're carrying, and a timer that slowly refills them.
     this.missiles = CONFIG.MISSILE_MAX;
     this.missileTimer = 0;
+    this.missileFireCd = 0;  // min wait between launches, so missiles can't be spammed
 
     // Set true on any frame the plane is touching the ground.
     this.hitGround = false;
@@ -141,6 +142,8 @@ class Plane {
 
     // Count the gun cooldown down toward 0 so we can shoot again soon.
     if (this.fireCooldown > 0) this.fireCooldown -= 1;
+    // Count the missile reload down too (stops missile spamming).
+    if (this.missileFireCd > 0) this.missileFireCd -= 1;
 
     // Count the hit-flash down toward 0.
     if (this.flash > 0) this.flash -= 1;
@@ -166,8 +169,10 @@ class Plane {
   // Launch one homing missile at the nearest enemy (if we have any left).
   // "planes" is every plane, so we can find the closest enemy to lock onto.
   fireMissile(missiles, planes) {
+    if (this.missileFireCd > 0) return;   // still reloading -> can't spam missiles
     if (this.missiles <= 0) return;
     this.missiles -= 1;
+    this.missileFireCd = CONFIG.MISSILE_FIRE_COOLDOWN;
 
     // Find the closest enemy (a plane on another team) to chase.
     let target = null, bestDist = Infinity;
