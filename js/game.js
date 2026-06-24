@@ -563,7 +563,7 @@ Net.onChange = function () {
   refreshLobbyUI();
   maybeQuickJoin();
 };
-autoQuickPlay();   // local WiFi play: connect + join the shared room automatically
+// autoQuickPlay();   // ONLINE PAUSED: not auto-connecting for now (refine later)
 
 // ===========================================================================
 //  ONLINE LIVE SYNC — see the other players fly on their own devices.
