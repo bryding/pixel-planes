@@ -241,7 +241,7 @@ class Enemy {
   shoot(bullets) {
     const nx = this.x + Math.cos(this.angle) * 17;
     const ny = this.y + Math.sin(this.angle) * 17;
-    const col = CONFIG.COLORS.enemyBullet; // all bot bullets look the same
+    const col = CONFIG.COLORS.bullet; // enemy bullets look EXACTLY like yours
     if (this.wideTimer > 0) { // turret power-up: 5-bullet wide shot
       for (let i = -2; i <= 2; i++) {
         bullets.push(new Bullet(nx, ny, this.angle + i * CONFIG.WIDE_SHOT_SPREAD,

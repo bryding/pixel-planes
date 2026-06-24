@@ -124,31 +124,42 @@ const Sound = {
     src.start(w); src.stop(w + 0.45);
   },
 
-  // Explosion boom: a deep pitch-drop thump + a low noise blast.
+  // Explosion BOOM: a deep, long pitch-drop rumble + a muffled low blast
+  // (kept low so it booms instead of pops).
   boom() {
     if (!this.ctx || this.volume <= 0) return;
     const ctx = this.ctx, t = ctx.currentTime;
-    if (this._lastBoom && t - this._lastBoom < 0.05) return;   // throttle big swarms
+    if (this._lastBoom && t - this._lastBoom < 0.06) return;   // throttle big swarms
     this._lastBoom = t;
-    // low body
+    // deep body: low sine sweeping way down, long tail = the "boom"
     const o = ctx.createOscillator(); o.type = 'sine';
-    o.frequency.setValueAtTime(170, t);
-    o.frequency.exponentialRampToValueAtTime(40, t + 0.4);
+    o.frequency.setValueAtTime(130, t);
+    o.frequency.exponentialRampToValueAtTime(28, t + 0.6);
     const og = ctx.createGain();
-    og.gain.setValueAtTime(0.9, t);
-    og.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(1.0, t + 0.02);
+    og.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
     o.connect(og); og.connect(this.master);
-    o.start(t); o.stop(t + 0.55);
-    // noise blast
+    o.start(t); o.stop(t + 0.78);
+    // a second sub-octave for extra weight
+    const o2 = ctx.createOscillator(); o2.type = 'triangle';
+    o2.frequency.setValueAtTime(70, t);
+    o2.frequency.exponentialRampToValueAtTime(22, t + 0.6);
+    const o2g = ctx.createGain();
+    o2g.gain.setValueAtTime(0.5, t);
+    o2g.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+    o2.connect(o2g); o2g.connect(this.master);
+    o2.start(t); o2.stop(t + 0.72);
+    // muffled low rumble (lowpass swept down fast -> a thud, not a sharp crack)
     const src = ctx.createBufferSource(); src.buffer = this._longNoiseBuf();
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass';
-    lp.frequency.setValueAtTime(1400, t);
-    lp.frequency.exponentialRampToValueAtTime(180, t + 0.4);
+    lp.frequency.setValueAtTime(650, t);
+    lp.frequency.exponentialRampToValueAtTime(90, t + 0.45);
     const ng = ctx.createGain();
-    ng.gain.setValueAtTime(0.7, t);
-    ng.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+    ng.gain.setValueAtTime(0.55, t);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
     src.connect(lp); lp.connect(ng); ng.connect(this.master);
-    src.start(t); src.stop(t + 0.5);
+    src.start(t); src.stop(t + 0.55);
   },
 
   // ---- Title theme: a short military bugle-style fanfare that loops ----
