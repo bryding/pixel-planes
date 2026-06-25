@@ -140,6 +140,8 @@ function removeAllBots() {
 let mode = 'classic';
 let greenScore = 0, blackScore = 0; // WW2 team scores
 function setMode(m) {
+  // The shared online world is one fixed mode — don't let a menu desync you.
+  if (typeof Net !== 'undefined' && Net.inWorld) return;
   const prev = mode;
   mode = m;
   // "No Mod Mode" hides the whole Modifier Menu and turns the cheats off.
@@ -562,9 +564,11 @@ function enterWorld() {
   const gate = document.getElementById('clickGate'); if (gate) gate.style.display = 'none';
   const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'none';
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';
-  const tb = document.getElementById('topBar'); if (tb) tb.style.display = 'flex';
+  // Hide the offline modifier/mode menu — the shared world is one fixed mode.
+  const tb = document.getElementById('topBar'); if (tb) tb.style.display = 'none';
   gameStarted = true;
   splitScreen = false;
+  mode = 'classic';
   spawnPlane(camera.x + CONFIG.GAME_W / 2);      // fly in where the camera is
 }
 
@@ -750,6 +754,8 @@ if (typeof navigator !== 'undefined' && (navigator.maxTouchPoints > 0 || 'ontouc
 
 // Turn split-screen 2-player ON or OFF.
 function setSplitScreen(on) {
+  // Split-screen is a single-computer feature; not for the shared online world.
+  if (typeof Net !== 'undefined' && Net.inWorld) return;
   if (on === splitScreen) return;
   splitScreen = on;
   if (on) {
@@ -1211,7 +1217,7 @@ function update() {
 
   // --- Power-ups: spawn over time, float, and get collected (not in tag mode) ---
   powerupTimer -= 1;
-  if (powerupTimer <= 0 && mode !== 'alien' && !splitScreen) { spawnPowerUp(); powerupTimer = CONFIG.POWERUP_INTERVAL; }
+  if (powerupTimer <= 0 && mode !== 'alien' && !splitScreen && !Net.inWorld) { spawnPowerUp(); powerupTimer = CONFIG.POWERUP_INTERVAL; }
   for (const p of powerups) p.update();
   if (playerState === 'flying' || playerState === 'takeoff') {
     for (const p of powerups) {
