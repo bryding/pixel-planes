@@ -63,6 +63,21 @@ function cleanPlayerName(n) {
   return s || 'Player';
 }
 
+// Light anti-cheat (FR-014): a real plane can't jump more than this far between
+// two reports. Generous so laggy-but-honest players are never kicked; it only
+// catches gross teleports. (Roughly a second of top-speed travel.)
+const MAX_JUMP = CONFIG.MAX_SPEED * 80;
+function plausibleMove(prev, next) {
+  if (!prev) return true;                       // first report — nothing to compare
+  const W = CONFIG.WORLD_WIDTH;
+  let dx = ((next.x - prev.x) % W + W) % W; if (dx > W / 2) dx -= W; // shortest way round
+  return Math.abs(dx) <= MAX_JUMP && Math.abs(next.y - prev.y) <= MAX_JUMP;
+}
+
+// Hit reports are rate-limited per shooter so nobody can spam damage (a wide
+// shot is 5 bullets, the gun fires ~6/sec, so ~40/sec is plenty of headroom).
+const MAX_HITS_PER_SEC = 40;
+
 wss.on('connection', (ws) => {
   ws.id = nextId++;
   ws.joined = false;          // becomes true once they send a valid "hello"
@@ -78,10 +93,15 @@ wss.on('connection', (ws) => {
       // The player picked a name and wants into the world.
       case 'hello': {
         if (ws.joined) break;                       // already in — ignore repeats
+        // Hard cap: protect the little server from too many people at once.
+        if (World.humanCount() >= World.world.hardCap) {
+          send(ws, { t: 'denied', msg: 'The world is full right now — please try again in a moment.' });
+          break;
+        }
         const name = cleanPlayerName(m.name);
         const player = {
           id: ws.id, name, ws,
-          lastState: null, alive: true, score: 0,
+          lastState: null, alive: true, score: 0, lastHitBy: null,
         };
         World.addPlayer(player);
         ws.joined = true;
@@ -92,10 +112,52 @@ wss.on('connection', (ws) => {
       }
 
       // The client's own plane this frame — remember it for the next snapshot.
-      // We stamp on the real id and name so nobody can spoof another plane.
+      // We stamp on the real id and name so nobody can spoof another plane, and
+      // ignore impossible jumps (light anti-cheat, FR-014).
       case 'state': {
         if (!ws.joined || !m.s) break;
-        ws.player.lastState = Object.assign({}, m.s, { id: ws.id, name: ws.player.name });
+        const p = ws.player;
+        if (!plausibleMove(p.lastState, m.s)) break;       // teleport — drop it
+        p.lastState = Object.assign({}, m.s, { id: ws.id, name: p.name });
+        p.score = m.s.score || 0;
+        // If a player's plane just went from alive to not-alive, that's a death:
+        // announce it and credit whoever last hit them (FR-013 scoring).
+        const nowAlive = m.s.alive !== false;
+        if (p.alive && !nowAlive) {
+          broadcast({ t: 'down', victimId: ws.id, byId: p.lastHitBy });
+          p.lastHitBy = null;
+        }
+        p.alive = nowAlive;
+        break;
+      }
+
+      // The player fired — relay it so everyone else can draw the shot + SFX.
+      // (Visual only; actual damage is decided by the 'hit' message below.)
+      case 'fire': {
+        if (!ws.joined) break;
+        broadcast({ t: 'fire', id: ws.id, kind: m.kind, x: m.x, y: m.y, heading: m.heading });
+        break;
+      }
+
+      // The shooter says one of their shots struck targetId. We trust it only
+      // loosely: rate-limit, then either damage a bot here or forward the hit to
+      // the human victim (whose own client applies the damage). FR-015.
+      case 'hit': {
+        if (!ws.joined) break;
+        const now = Date.now();
+        if (now - (ws.hitWindowStart || 0) >= 1000) { ws.hitWindowStart = now; ws.hitsThisSec = 0; }
+        if (++ws.hitsThisSec > MAX_HITS_PER_SEC) break;     // too many — ignore
+        const targetId = m.targetId;
+        const dmg = (m.kind === 'missile') ? CONFIG.MISSILE_DAMAGE : 1;
+        if (World.world.bots.has(targetId)) {
+          if (World.damageBot(targetId, dmg)) broadcast({ t: 'down', victimId: targetId, byId: ws.id });
+        } else {
+          const victim = World.world.players.get(targetId);
+          if (victim && victim.alive) {
+            victim.lastHitBy = ws.id;
+            send(victim.ws, { t: 'hit', targetId: targetId, byId: ws.id, kind: m.kind });
+          }
+        }
         break;
       }
     }
@@ -114,8 +176,12 @@ function leave(ws) {
   broadcast({ t: 'player-left', id: ws.id });
 }
 
-// The beating heart of the world: send everyone a snapshot ~NET_TICK_HZ/sec.
-const snapshotTimer = World.startSnapshotLoop(broadcast);
+// The beating heart of the world: ~NET_TICK_HZ/sec, broadcast a snapshot and
+// deliver any world events (a bot fired, someone was shot down).
+const snapshotTimer = World.startSnapshotLoop({
+  broadcast,
+  toPlayer: (id, msg) => { const p = World.world.players.get(id); if (p && p.ws.readyState === 1) send(p.ws, msg); },
+});
 
 // --- Heartbeat: every 30s, ping everyone; drop anyone who didn't answer last
 // time. This clears out "ghost" players from dropped connections. ---

@@ -111,13 +111,13 @@ place, per-life score; server applies light sanity checks.
 **Independent Test**: Get shot down → explode → auto-respawn in the same world after a short delay
 with score reset to 0, never sent to the name screen (quickstart V4, SC-005/SC-008).
 
-- [ ] T020 [US4] Fire visuals relay in `js/game.js` + `server/server.js`: client sends `fire {kind,x,y,heading}` on shooting; server broadcasts; other clients render the shot + SFX (reuse `js/bullet.js`/`js/missile.js`/`js/audio.js`). Visual only — damage is handled by `hit` (T021)
-- [ ] T021 [US4] Hit detection + report in `js/game.js`: detect when YOUR OWN bullets strike another plane (using snapshot positions) and send `hit {targetId, kind}` (FR-015, contract)
-- [ ] T022 [US4] Server hit handling in `server/world.js` + `server/server.js`: validate loosely + rate-limit; if `targetId` is a bot apply damage server-side; if human, forward `hit {targetId, byId}`; on destruction broadcast `down {victimId, byId}`
-- [ ] T023 [US4] Damage + death + auto-respawn in `js/game.js`: on inbound `hit` apply damage to own plane; at 0 health → explosion (`js/explosion.js`), mark dead, auto-respawn after `RESPAWN_DELAY` at a safe spawn (spawn protection), no name-screen return (FR-009)
-- [ ] T024 [US4] Per-life score in `js/game.js`: increment when a `down` credits you, include `score` in outbound `state`, reset to 0 on own death; display own score (and a simple live scoreboard) (FR-013, SC-008)
-- [ ] T025 [US4] Light sanity checks in `server/world.js`: reject/clamp inbound `state` with implausible position delta or speed before broadcasting (FR-014)
-- [ ] T026 [US4] Hard cap in `server/server.js`: refuse connections beyond `HARD_CAP` humans with `denied {msg}`; client shows the message (websocket-protocol invariant 5)
+- [X] T020 [US4] Fire visuals relay in `js/game.js` + `server/server.js`: client sends `fire {kind,x,y,heading}` on shooting; server broadcasts; other clients render the shot + SFX (reuse `js/bullet.js`/`js/missile.js`/`js/audio.js`). Visual only — damage is handled by `hit` (T021)
+- [X] T021 [US4] Hit detection + report in `js/game.js`: detect when YOUR OWN bullets strike another plane (using snapshot positions) and send `hit {targetId, kind}` (FR-015, contract)
+- [X] T022 [US4] Server hit handling in `server/world.js` + `server/server.js`: validate loosely + rate-limit; if `targetId` is a bot apply damage server-side; if human, forward `hit {targetId, byId}`; on destruction broadcast `down {victimId, byId}`
+- [X] T023 [US4] Damage + death + auto-respawn in `js/game.js`: on inbound `hit` apply damage to own plane; at 0 health → explosion (`js/explosion.js`), mark dead, auto-respawn after `RESPAWN_DELAY` at a safe spawn (spawn protection), no name-screen return (FR-009)
+- [X] T024 [US4] Per-life score in `js/game.js`: increment when a `down` credits you, include `score` in outbound `state`, reset to 0 on own death; display own score (and a simple live scoreboard) (FR-013, SC-008)
+- [X] T025 [US4] Light sanity checks in `server/world.js`: reject/clamp inbound `state` with implausible position delta or speed before broadcasting (FR-014)
+- [X] T026 [US4] Hard cap in `server/server.js`: refuse connections beyond `HARD_CAP` humans with `denied {msg}`; client shows the message (websocket-protocol invariant 5)
 
 **Checkpoint**: All four user stories work; the world is a live free-for-all with backfill bots.
 

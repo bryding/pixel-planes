@@ -29,6 +29,9 @@ const Net = {
   onSnapshot: null,      // (planes) => ...   array of every plane
   onLeft: null,          // (id) => ...   a plane left
   onDenied: null,        // (msg) => ...  join refused (e.g. world is full)
+  onFire: null,          // (id,kind,x,y,heading) => ... someone fired (visual+SFX)
+  onHit: null,           // (byId,kind) => ... YOU got hit — take the damage
+  onDown: null,          // (victimId,byId) => ... a plane was destroyed
 
   _url: null,
   _want: false,          // do we want to stay connected? (drives auto-reconnect)
@@ -137,6 +140,12 @@ const Net = {
   // Send our own plane's position for this frame.
   sendState(state) { this.send({ t: 'state', s: state }); },
 
+  // Tell everyone we fired (so they can draw the shot + play the sound).
+  sendFire(kind, x, y, heading) { this.send({ t: 'fire', kind: kind, x: x, y: y, heading: heading }); },
+
+  // Tell the server our shot struck `targetId` (the server decides the damage).
+  sendHit(targetId, kind) { this.send({ t: 'hit', targetId: targetId, kind: kind }); },
+
   // Handle one message from the server. (Public so it can be unit-tested.)
   _handle(m) {
     switch (m.t) {
@@ -153,6 +162,15 @@ const Net = {
         break;
       case 'player-left':
         if (typeof this.onLeft === 'function') this.onLeft(m.id);
+        break;
+      case 'fire':
+        if (typeof this.onFire === 'function') this.onFire(m.id, m.kind, m.x, m.y, m.heading);
+        break;
+      case 'hit':
+        if (typeof this.onHit === 'function') this.onHit(m.byId, m.kind);
+        break;
+      case 'down':
+        if (typeof this.onDown === 'function') this.onDown(m.victimId, m.byId);
         break;
       case 'denied':
         this.lastError = m.msg || 'The world is full right now — try again in a moment.';

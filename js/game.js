@@ -496,7 +496,7 @@ Net.onSnapshot = function (planes) {
     if (!r) r = remotePlayers[s.id] = { x: s.x, y: s.y, angle: s.angle || 0 };
     r.tx = s.x; r.ty = s.y; r.angle = s.angle || 0;
     r.throttle = s.throttle; r.health = s.health; r.isUfo = s.isUfo;
-    r.alive = (s.alive !== false); r.name = s.name;
+    r.alive = (s.alive !== false); r.name = s.name; r.score = s.score || 0;
   }
   // Anyone who dropped out of the snapshot has left — remove them (FR-010).
   for (const id in remotePlayers) { if (!seen[id]) delete remotePlayers[id]; }
@@ -581,6 +581,78 @@ function playOffline() {
   const el = document.getElementById('nameInput');
   if (el) el.value = getUsername();
 })();
+
+// ===========================================================================
+//  ONLINE COMBAT — fire visuals, shooter-detected hits, damage & respawn.
+//  The rule (FR-015): the SHOOTER's computer notices when its own bullet hits
+//  someone and tells the server; the server then deals the damage. Bullets you
+//  see from other players are just for show — they never hurt you by themselves.
+// ===========================================================================
+const REMOTE_TEAM = -1;   // marks bullets/missiles that came from OTHER players
+
+function remoteName(id) { const r = remotePlayers[id]; return (r && r.name) || 'a plane'; }
+
+// Did one of MY shots reach a remote plane? If so, tell the server (it decides
+// the damage). Called for my own bullets/missiles while online.
+function onlineHitCheck(proj, kind) {
+  if (proj.dead) return;
+  const radius = (kind === 'missile') ? 16 : 14;
+  for (const id in remotePlayers) {
+    const r = remotePlayers[id];
+    if (!r || r.alive === false || r.x === undefined) continue;
+    if (hits(proj, r, radius)) {
+      proj.dead = true;
+      if (kind === 'missile') {
+        explosions.push(new Explosion(proj.x, proj.y, CONFIG.COLORS.explosion));
+        if (typeof Sound !== 'undefined') Sound.boom();
+      }
+      Net.sendHit(parseInt(id, 10), kind);
+      break;
+    }
+  }
+}
+
+// Someone else fired: draw their shot + play the sound (no damage here).
+Net.onFire = function (id, kind, x, y, heading) {
+  if (id === Net.myId) return;
+  if (kind === 'missile') {
+    const mo = new Missile(x, y, heading, REMOTE_TEAM, null);
+    mo.visual = true; missiles.push(mo);
+    if (typeof Sound !== 'undefined') Sound.missileLaunch();
+  } else {
+    const b = new Bullet(x, y, heading, 0, 0, REMOTE_TEAM, CONFIG.COLORS.enemyBullet, 'green');
+    b.visual = true; bullets.push(b);
+    if (typeof Sound !== 'undefined') Sound.gun();
+  }
+};
+
+// The server says YOU got hit. Take the damage; if it's fatal, explode and
+// auto-respawn in place (never back to the name screen), score reset (FR-009).
+Net.onHit = function (byId, kind) {
+  if (playerState !== 'flying' && playerState !== 'takeoff') return;
+  if (player.invincibleTimer > 0) return;          // shield
+  player.health -= (kind === 'missile') ? CONFIG.MISSILE_DAMAGE : 1;
+  player.flash = 6;
+  if (player.health <= 0) {
+    bigExplosion(player.x, player.y);
+    if (typeof Sound !== 'undefined') Sound.boom();
+    pushKill('🛩️ You were shot down 💥', '#ff8a65');
+    playerDies(player.x, player.y, 'SHOT DOWN!');  // resets score + starts respawn timer
+    // Send one last state so the server knows we died and can credit the kill.
+    Net.sendState({ x: player.x, y: player.y, angle: player.angle, vx: 0, vy: 0,
+                    throttle: 0, health: 0, alive: false, isUfo: false, score: 0 });
+  }
+};
+
+// A plane was destroyed. If WE got the kill, score a point. Show the boom.
+Net.onDown = function (victimId, byId) {
+  if (byId === Net.myId && victimId !== Net.myId) {
+    score += 1;
+    pushKill('🎯 You shot down ' + remoteName(victimId) + '!', '#7CFC00');
+  }
+  const r = remotePlayers[victimId];
+  if (r && r.x !== undefined) { bigExplosion(r.x, r.y); r.alive = false; }
+};
 
 // Draw the other online players (with name tags). Called from drawWorldContents.
 function drawRemotePlayers() {
@@ -932,7 +1004,12 @@ function onPlanePopped(target, shooterTeam, shooterFaction) {
 // Draw the leaderboard panel on the right side: who has the most points.
 function drawLeaderboard() {
   const rows = [{ name: '🛩️ YOU', score: score, you: true }];
-  for (const e of enemies) rows.push({ name: e.name, score: e.score });
+  if (Net.inWorld) {
+    // Online: everyone else comes from the live snapshots.
+    for (const id in remotePlayers) rows.push({ name: remotePlayers[id].name || 'player', score: remotePlayers[id].score || 0 });
+  } else {
+    for (const e of enemies) rows.push({ name: e.name, score: e.score });
+  }
   rows.sort((a, b) => b.score - a.score);
   const top = rows.slice(0, 8);
 
@@ -1013,14 +1090,27 @@ function update() {
     } else if (player.frozenTimer <= 0 && mode !== 'alien') {
       // Flying (or safely rolling on the ground): normal controls.
       // WW2 mode has NO missiles and NO ejecting.
-      if (Input.fire) player.tryShoot(bullets);
+      if (Input.fire) {
+        const wasReady = player.fireCooldown <= 0;
+        player.tryShoot(bullets);
+        // Online: if a shot really went off, tell everyone so they see it.
+        if (Net.inWorld && wasReady && player.fireCooldown > 0) {
+          Net.sendFire('gun', player.x + Math.cos(player.angle) * 17,
+                              player.y + Math.sin(player.angle) * 17, player.angle);
+        }
+      }
       if (mode !== 'ww2') {
+        const mBefore = missiles.length;
         if (infiniteMissiles && Input.missile) {
           // ∞ Missiles cheat: HOLD X to rapid-fire a swarm (~300/sec)!
           for (let i = 0; i < CONFIG.INF_MISSILE_RATE && missiles.length < CONFIG.INF_MISSILE_CAP; i++)
             player.fireMissile(missiles, planes, true);
         } else if (missilePressed) {
           player.fireMissile(missiles, planes);   // normal: one per press, ammo-limited
+        }
+        if (Net.inWorld && missiles.length > mBefore) {
+          Net.sendFire('missile', player.x + Math.cos(player.angle) * 17,
+                                  player.y + Math.sin(player.angle) * 17, player.angle);
         }
       }
       if (ejectPressed && mode !== 'ww2') eject();
@@ -1079,6 +1169,10 @@ function update() {
   for (const bullet of bullets) {
     bullet.update();
 
+    // Online: my own bullets report hits on remote planes; shots relayed from
+    // other players are visual-only. Either way, skip the offline collision.
+    if (Net.inWorld) { if (!bullet.visual) onlineHitCheck(bullet, 'gun'); continue; }
+
     for (const target of planes) {
       if (!target.alive) continue;               // can't hit a downed plane
       // Friendly fire is off for your own team (WW2 = faction; otherwise team).
@@ -1098,6 +1192,8 @@ function update() {
   // --- Missiles: move them, then check if they hit a plane ---
   for (const missile of missiles) {
     missile.update();
+
+    if (Net.inWorld) { if (!missile.visual) onlineHitCheck(missile, 'missile'); continue; }
 
     for (const target of planes) {
       if (!target.alive) continue;
