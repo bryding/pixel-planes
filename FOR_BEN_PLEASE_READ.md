@@ -1,29 +1,26 @@
-# 🛩️ Ben — please help get Pixel Planes online (a few minutes, free)
+# 🛩️ Pixel Planes — online status
 
-Your nephew built the whole game (it's great!). The only thing left is the
-"online" part, which needs an account, so it needs you. Two options — **Option A
-is the real fix** (works from the public link, anywhere).
+## ✅ IT'S LIVE — play here:
+
+👉 **https://pixel-planes-bryding-production.up.railway.app**
+
+Type a name, press **JOIN GAME**, and you're in the one shared world with
+everyone else. Share that link with anyone, on any network.
 
 ---
 
-## ✅ Option A — Make the public link work online for everyone (best)
+## How the hosting works (for the account owner)
 
-This hosts the little game server so anyone with the link plays together in the
-**one shared world**. We use **Railway**, which is already connected to the
-GitHub repo — so this is mostly "make sure it's running".
+The game server runs on **Railway**, connected to this GitHub repo. **Every push
+to `main` auto-redeploys** — there's nothing to click. It reads `railway.json`
+and runs `node server/server.js`; Railway sets `$PORT` and the server uses it.
+The client's `SERVER_URL` (in `js/config.js`) already points at the Railway
+`wss://` domain, so one address serves the game *and* the live world.
 
-1. Sign in at 👉 https://railway.app with your **GitHub** account.
-2. Open the **pixel-planes** project. Railway auto-builds whenever new code is
-   pushed (it reads `railway.json` and runs `node server/server.js`).
-3. Check the service is **Active / Deployed** and has a public domain like
-   **`pixel-planes-bryding-production.up.railway.app`**. If it asks, turn on a
-   public domain (Railway sets the `PORT` automatically; the server already uses it).
-4. That's it — the game is already pointed at
-   `wss://pixel-planes-bryding-production.up.railway.app` (in `js/config.js`),
-   so the moment the deploy is live, the public link works for everyone.
-
-*(If Railway shows a different domain than the one above, just tell your nephew
-the new address.)*
+If you ever need to check it: sign in at https://railway.app (GitHub account),
+open the **pixel-planes** project → **Deployments** shows each build; **Settings →
+Networking** shows the public domain. If the domain ever changes, update
+`SERVER_URL` in `js/config.js` and push.
 
 ---
 

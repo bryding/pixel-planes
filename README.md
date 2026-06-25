@@ -1,20 +1,21 @@
 # Pixel Planes ✈️
 
-A little airplane game you fly with the arrow keys. Made for learning how to
-build games!
+A browser airplane game you fly with the arrow keys, in **one always-on shared
+world** — type a name, join, and dogfight everyone else in the same sky. Made
+for learning how to build games!
 
 ## How to play it
 
-**The easy way:** find the file `index.html` and double-click it. It opens in
-your web browser and you can play.
+**The easy way — just open the live link:**
 
-**If that doesn't work**, open a terminal in this folder and type:
+👉 **https://pixel-planes-bryding-production.up.railway.app**
 
-```
-python3 -m http.server
-```
+Type a name, press **JOIN GAME**, and you're flying with everyone else. Bots fill
+the empty spots so the sky is never lonely. Share the link and friends join the
+same world.
 
-Then open your browser to **http://localhost:8000**
+(Want to run it yourself for development or same-WiFi play? See
+[Online play](#-online-play--one-shared-world) below.)
 
 ## Controls
 
@@ -65,21 +66,17 @@ It prints addresses like:
 
 Open **http://localhost:8080**, type a name, press **JOIN GAME**. Friends on the
 same WiFi open the `192.168…:8080` address it printed. Keep the window open while
-you play (Ctrl+C to stop). There's also a **🛩 Play offline** button if you just
-want the single-player game with no server.
+you play (Ctrl+C to stop).
 
-### 🌍 Play worldwide — one-time deploy to Railway
+### 🌍 Play worldwide — already deployed on Railway
 
-The public github.io link is **https**, and a browser will only let an https
-page talk to a **secure `wss://`** server, so the server has to be hosted online
-(a grown-up with the accounts does this once — see `FOR_BEN_PLEASE_READ.md`).
-
-This repo is set up for **Railway**: it has a `railway.json` and a root
-`package.json` whose `start` script runs `node server/server.js`. Railway is
-already connected to the GitHub repo, so pushing the code auto-builds it at
-**`https://pixel-planes-bryding-production.up.railway.app`**. The game is already
-pointed there (`SERVER_URL` in `js/config.js`), so once the deploy is live the
-public link works for everyone, on any device.
+The public game is **live** at
+**https://pixel-planes-bryding-production.up.railway.app** (one address serves
+the game *and* the live world over `wss://`). It's hosted on **Railway**, which is
+connected to this GitHub repo, so **every push to `main` auto-redeploys** — there's
+nothing to do but `git push`. The config (`railway.json` + the root `package.json`
+`start` script) and the client's `SERVER_URL` (in `js/config.js`) already point
+there. Setup notes for the account owner are in `FOR_BEN_PLEASE_READ.md`.
 
 > A page on **https** can ONLY use **wss://** (never `ws://`) — a browser rule on
 > every device. When you run the server yourself over `http://localhost`, the
@@ -95,8 +92,10 @@ file**, so there's only one place to change things:
 - `HARD_CAP` — most real people allowed at once (default 32)
 - `RESPAWN_DELAY` — how long before you fly back in after being shot down
 
-There's also a quick self-check for the server's math:
+There are quick self-checks (no browser needed):
 
 ```
-npm test        # runs server/checks.js (bot counts, name cleaning, anti-cheat)
+npm test        # server math: bot counts, name cleaning, anti-cheat (21 checks)
+npm run validate # end-to-end protocol: join, see others, bots, combat, respawn
+npm run smoke   # loads the client + runs the whole play path under a fake DOM
 ```

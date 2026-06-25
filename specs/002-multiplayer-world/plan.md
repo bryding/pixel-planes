@@ -4,6 +4,22 @@
 
 **Input**: Feature specification from `/specs/002-multiplayer-world/spec.md`
 
+> **Status (post-v1): SHIPPED & LIVE.** All tasks T001–T031 complete; deployed on
+> Railway at `https://pixel-planes-bryding-production.up.railway.app` (auto-deploys
+> on push to `main`).
+>
+> **Post-v1 decision — multiplayer-only.** The plan below assumed the legacy
+> single-player systems would be *reused, not deleted* (kept playable via an
+> offline path). After v1 shipped, the project owner chose to make the app
+> **purely the shared world**: the offline title/attract screen, split-screen,
+> the alternate modes (WW2/Alien/Black Hole/Unicorn/Bad Weather/Night), cheats,
+> power-ups, and eject/parachute were removed; `js/enemy.js`, `js/powerup.js`,
+> `js/pilot.js` were deleted. The shared flight/render modules (`plane.js`,
+> `scenery.js`, `bullet.js`, …) are still reused; `mode='classic'`/`splitScreen=
+> false` are pinned so they behave normally. `bot-ai.js` remains (the server uses
+> it). This supersedes the "reused, not deleted" notes in Phasing / Constitution
+> Check below.
+
 ## Summary
 
 Turn Pixel Planes into a single always-on multiplayer world: a player opens the app, types a
