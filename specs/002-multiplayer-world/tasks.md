@@ -79,9 +79,9 @@ a shared world (quickstart V1).
 **Independent Test**: Two browsers, move one plane, the other sees it move smoothly with the right
 name; closing one removes its plane (quickstart V2).
 
-- [ ] T013 [US2] Render remote planes from the interpolated snapshot map in `js/game.js`, reusing the existing plane drawing in `js/plane.js`/`js/sprites.js`
-- [ ] T014 [US2] Draw each remote plane's name label above it in `js/game.js`
-- [ ] T015 [US2] Remove planes promptly in `js/game.js` on `player-left` and when an id drops out of snapshots (FR-010)
+- [X] T013 [US2] Render remote planes from the interpolated snapshot map in `js/game.js`, reusing the existing plane drawing in `js/plane.js`/`js/sprites.js`
+- [X] T014 [US2] Draw each remote plane's name label above it in `js/game.js`
+- [X] T015 [US2] Remove planes promptly in `js/game.js` on `player-left` and when an id drops out of snapshots (FR-010)
 
 **Checkpoint**: Multiple players see each other fly smoothly with names.
 

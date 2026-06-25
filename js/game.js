@@ -587,6 +587,7 @@ function drawRemotePlayers() {
   for (const id in remotePlayers) {
     const r = remotePlayers[id];
     if (r.x === undefined) continue;
+    if (r.alive === false) continue;     // shot down — their explosion shows instead
     const sx = worldToScreenX(r.x), sy = r.y - camera.y;
     if (mode === 'alien' && r.isUfo) drawUfoCraft(ctx, sx, sy, frameCount, false);
     else drawPlaneSprite(ctx, remoteSprite(parseInt(id, 10)), sx, sy, r.angle || 0, frameCount, false);
