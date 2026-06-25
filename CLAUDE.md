@@ -64,3 +64,8 @@ Prioritize **game feel** — flying should feel satisfying before adding more.
 Easiest: double-click `index.html`. If sounds/scripts get blocked, run a tiny
 server from the project folder: `python3 -m http.server` then open
 http://localhost:8000 .
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
