@@ -142,8 +142,6 @@ let greenScore = 0, blackScore = 0; // WW2 team scores
 function setMode(m) {
   const prev = mode;
   mode = m;
-  // Online: if I'm the HOST, switch everyone in my server to this mode too.
-  if (typeof Net !== 'undefined' && Net.inServer && Net.isHost) Net.setMode(m);
   // "No Mod Mode" hides the whole Modifier Menu and turns the cheats off.
   const modGroup = document.getElementById('modGroup');
   if (modGroup) modGroup.style.display = (m === 'nomod') ? 'none' : 'flex';
@@ -169,8 +167,6 @@ function setMode(m) {
   if (m === 'blackhole') startBlackHole();
   // Leaving a space mini-game -> put a normal flying plane back.
   if ((prev === 'alien' || prev === 'blackhole') && m !== 'alien' && m !== 'blackhole') spawnPlane(100);
-  // In an online server, a guest must not regain the Mode/Modifier menus.
-  if (typeof applyHostPermissions === 'function') applyHostPermissions();
 }
 
 // Put the player on GREEN and split the bots: the first few are BLACK,
@@ -419,8 +415,7 @@ function chooseNormal() { setSplitScreen(false); paused = false; updatePauseMenu
 function chooseSplit()  { setSplitScreen(true);  paused = false; updatePauseMenu(); }
 
 // ===========================================================================
-//  ONLINE SERVER LOBBY (Create Server / Server List / join+password).
-//  Talks to the server through Net (js/net.js).
+//  PLAYER NAME + SERVER ADDRESS  (used by the name screen and the pause menu)
 // ===========================================================================
 
 // Your display name (so other players know who you are). Saved between visits.
@@ -431,207 +426,26 @@ function saveUsername(name) {
   try { localStorage.setItem('pp_username', name); } catch (e) {}
 }
 
-// The server address to use:
-//  1. an address you typed in the lobby (saved) always wins, else
-//  2. if the game is being served by our own server (i.e. you opened it over
+// Which server to talk to:
+//  1. if the game is being served by our own server (i.e. you opened it over
 //     http, not the public https link), talk to that SAME computer/port -- so
 //     local + same-WiFi play "just works" with nothing to type, else
-//  3. the public deployed server in config.js (for the https github.io link).
+//  2. the public deployed server in config.js (for the https link).
 function serverUrl() {
-  // LOCAL play: if the game was opened from our own server (any http address
-  // like http://localhost:8080 or http://192.168.x.x:8080), ALWAYS talk to that
-  // same computer. This is always correct and ignores any stale typed-in
-  // address, so same-WiFi play can't get pointed at the wrong place.
   if (typeof location !== 'undefined' && location.host && location.protocol !== 'https:') {
     return 'ws://' + location.host;
   }
-  // PUBLIC https link: a saved address (typed in the lobby) wins, else the
-  // configured deployed server.
-  try { const saved = localStorage.getItem('pp_serverurl'); if (saved) return saved; } catch (e) {}
   return CONFIG.SERVER_URL;
 }
-// Type a new address and connect to it (so connection issues can be fixed
-// without editing files). Accepts "host:port" and adds ws:// for you.
-function applyServerUrl(inputId) {
-  const el = document.getElementById(inputId);
-  let url = ((el && el.value) || '').trim();
-  if (url && !/^wss?:\/\//i.test(url)) url = 'ws://' + url;
-  try { if (url) localStorage.setItem('pp_serverurl', url); } catch (e) {}
-  Net.disconnect();
-  Net.connect(serverUrl());
-  refreshLobbyUI();
-}
 
-// Make sure we're connected to the online server (lazy: only when you open a
-// server panel, so single-player never waits on the network).
-function ensureConnected() { Net.connect(serverUrl()); }
-
-// Switch which pause panel is showing.
+// Switch which pause-menu panel is showing (the main one, or the color picker).
 function showPausePanel(id) {
-  ['pauseMain', 'createServer', 'serverList', 'inServer', 'colorPanel'].forEach(p => {
+  ['pauseMain', 'colorPanel'].forEach(p => {
     const el = document.getElementById(p);
     if (el) el.style.display = (p === id) ? 'flex' : 'none';
   });
 }
-function backToPause() { showPausePanel(Net.inServer ? 'inServer' : 'pauseMain'); }
-
-function showCreateServer() {
-  ensureConnected();
-  showPausePanel('createServer');
-  const n = document.getElementById('csName'); if (n) n.value = getUsername();
-  const s = document.getElementById('csServer'); if (s) s.value = '';
-  const p = document.getElementById('csPass'); if (p) p.value = '';
-  const m = document.getElementById('csMsg'); if (m) m.textContent = '';
-  refreshLobbyUI();
-  if (n && !n.value) n.focus(); else if (s) s.focus();
-}
-function showServerList() {
-  ensureConnected();
-  Net.refreshList();
-  showPausePanel('serverList');
-  const n = document.getElementById('slName'); if (n) n.value = getUsername();
-  const m = document.getElementById('slMsg'); if (m) m.textContent = '';
-  refreshLobbyUI();
-}
-
-// Create a server: name = letters+numbers only; password optional. The creator
-// becomes the HOST (the only one who gets the Mode/Modifier menus).
-function doCreateServer() {
-  const msg = document.getElementById('csMsg');
-  const name = (document.getElementById('csName').value || '').trim();
-  const server = (document.getElementById('csServer').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const pass = (document.getElementById('csPass').value || '');
-  if (!name) { setMsg(msg, '#ffd24a', 'Please type your name first.'); return; }
-  if (!server) { setMsg(msg, '#ffd24a', 'Please type a server name (letters & numbers).'); return; }
-  if (Net.status !== 'online') { setMsg(msg, '#ff6b6b', 'Not connected to the server yet…'); return; }
-  saveUsername(name);
-  Net.setName(name);
-  Net.createServer(server, pass);
-  setMsg(msg, '#9be7ff', 'Creating "' + server + '"…');
-}
-
-// Join a server by name (used by the Join buttons in the list). Asks for a
-// password first if the server is locked.
-function joinServerByName(name, hasPassword) {
-  const who = (document.getElementById('slName').value || '').trim();
-  const msg = document.getElementById('slMsg');
-  if (!who) { setMsg(msg, '#ffd24a', 'Please type your name first.'); return; }
-  if (Net.status !== 'online') { setMsg(msg, '#ff6b6b', 'Not connected to the server yet…'); return; }
-  saveUsername(who);
-  Net.setName(who);
-  let pass = '';
-  if (hasPassword) {
-    pass = window.prompt('Password for "' + name + '":', '');
-    if (pass === null) return;            // cancelled
-  }
-  Net.joinServer(name, pass);
-  setMsg(msg, '#9be7ff', 'Joining "' + name + '"…');
-}
-
-function doLeaveServer() {
-  Net.leaveServer();
-  applyHostPermissions();
-  showPausePanel('pauseMain');
-}
-
-function setMsg(el, color, text) { if (el) { el.style.color = color; el.textContent = text; } }
-
-// Redraw the live lobby (status text + the server list rows). Called by Net
-// whenever anything changes (connection, list update, joined, denied…).
-function refreshLobbyUI() {
-  const statusTxt = Net.status === 'online' ? '🟢 Connected' :
-                    Net.status === 'connecting' ? '🟡 Connecting…' :
-                    ('🔴 Offline' + (Net.lastError ? ' — ' + Net.lastError : ''));
-  const sc = document.getElementById('netStatusCreate'); if (sc) sc.textContent = statusTxt;
-  const sl = document.getElementById('netStatusList');
-  if (sl) sl.textContent = (Net.status === 'online') ? ('🟢 Connected — ' + Net.servers.length + ' server(s)') : statusTxt;
-
-  // Pre-fill the server-address boxes with the current address.
-  const cu = document.getElementById('csUrl'); if (cu && !cu.value) cu.value = serverUrl();
-  const lu = document.getElementById('slUrl'); if (lu && !lu.value) lu.value = serverUrl();
-
-  // The list of joinable servers.
-  const box = document.getElementById('serverListItems');
-  if (box) {
-    box.innerHTML = '';
-    if (!Net.servers.length) {
-      const e = document.createElement('div');
-      e.className = 'serverEmpty';
-      e.textContent = (Net.status === 'online') ? 'No servers yet — create one!' : 'Connecting…';
-      box.appendChild(e);
-    }
-    Net.servers.forEach(s => {
-      const row = document.createElement('div');
-      row.className = 'serverRow';
-      const info = document.createElement('div');
-      info.innerHTML = '<div class="srvName">' + (s.hasPassword ? '🔒 ' : '') + escapeHtml(s.name) +
-                       '</div><div class="srvMeta">' + s.players + ' player' + (s.players === 1 ? '' : 's') + '</div>';
-      const btn = document.createElement('button');
-      btn.textContent = 'Join';
-      btn.onclick = () => { joinServerByName(s.name, s.hasPassword); };
-      row.appendChild(info); row.appendChild(btn);
-      box.appendChild(row);
-    });
-  }
-
-  // Error/denied messages (wrong password, taken name, etc.).
-  if (Net.lastError) {
-    setMsg(document.getElementById('csMsg'), '#ff6b6b', '❌ ' + Net.lastError);
-    setMsg(document.getElementById('slMsg'), '#ff6b6b', '❌ ' + Net.lastError);
-  }
-
-  // If we just joined a server, jump to the in-server panel.
-  if (Net.inServer && paused) {
-    const t = document.getElementById('inServerTitle');
-    if (t) t.textContent = '🌐 ' + Net.serverName;
-    const i = document.getElementById('inServerInfo');
-    if (i) i.textContent = (Net.isHost ? 'You are the HOST — you control the Mode & Modifier menus.'
-                                       : 'You joined as ' + (Net.username || 'a player') + '. The host controls the menus.');
-    updateInvite();
-    const showing = document.getElementById('createServer').style.display !== 'none' ||
-                    document.getElementById('serverList').style.display !== 'none';
-    if (showing) showPausePanel('inServer');
-  }
-  applyHostPermissions();
-}
-
-// Show how friends on the same WiFi can join: the address + a scannable QR.
-let _inviteUrl = null;
-function updateInvite() {
-  const info = document.getElementById('inServerInvite');
-  const qr = document.getElementById('inviteQR');
-  if (!info) return;
-  const show = (url) => {
-    info.innerHTML = 'Friends on your WiFi: open <b>' + url + '</b>&nbsp; or scan ⤵';
-    if (qr) {
-      qr.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
-      qr.style.display = 'inline-block';
-    }
-  };
-  if (_inviteUrl) { show(_inviteUrl); return; }
-  // Ask our own server for its WiFi address (only works during local play).
-  try {
-    fetch('/ip').then((r) => r.json()).then((d) => {
-      if (d && d.ip) { _inviteUrl = 'http://' + d.ip + ':' + d.port; show(_inviteUrl); }
-      else { info.textContent = ''; if (qr) qr.style.display = 'none'; }
-    }).catch(() => { info.textContent = ''; if (qr) qr.style.display = 'none'; });
-  } catch (e) {}
-}
-function escapeHtml(s) { return ('' + s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-
-// In an online server, ONLY the host gets the Mode & Modifier menus.
-function applyHostPermissions() {
-  const lockedAway = Net.inServer && !Net.isHost;   // a guest in someone's server
-  const modGroup = document.getElementById('modGroup');
-  const modeGroup = document.getElementById('modeGroup');
-  if (modGroup && mode !== 'nomod') modGroup.style.display = lockedAway ? 'none' : 'flex';
-  if (modeGroup) modeGroup.style.display = lockedAway ? 'none' : 'flex';
-}
-
-// The host changed the mode -> everyone in the server follows.
-function onNetMode(m) {
-  if (typeof m === 'string' && m !== mode) setMode(m);
-}
+function backToPause() { showPausePanel('pauseMain'); }
 
 // Net tells us when its status changes. The name screen reads Net.status and
 // Net.lastError directly, so here we just keep the on-screen status fresh.

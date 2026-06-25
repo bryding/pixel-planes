@@ -62,56 +62,7 @@
       <button onclick="chooseNormal(); this.blur();">🎮 1 Player (Normal)</button>
       <button onclick="chooseSplit(); this.blur();">👥 2 Player — Split Screen</button>
       <button onclick="showColorPanel(); this.blur();">🎨 Plane Color</button>
-      <!-- Online is paused for now: buttons stay, but do nothing (refine later). -->
-      <button onclick="this.blur();">➕ Create Server</button>
-      <button onclick="this.blur();">📡 Server List</button>
       <p class="pauseHint">Split: LEFT = WASD Q E F &nbsp;•&nbsp; RIGHT = Arrows B N M</p>
-    </div>
-
-    <!-- create an online server: name (letters+numbers) + optional password -->
-    <div class="pauseInner" id="createServer" style="display:none">
-      <h1>CREATE SERVER</h1>
-      <p id="netStatusCreate" class="roomHint"></p>
-      <div class="connRow">
-        <input id="csUrl" class="urlInput" placeholder="ws://localhost:8080" />
-        <button onclick="applyServerUrl('csUrl'); this.blur();">Connect</button>
-      </div>
-      <input id="csName" class="nameInput" maxlength="14" placeholder="YOUR NAME"
-             oninput="this.value=this.value.replace(/[^A-Za-z0-9 _-]/g,'')" />
-      <input id="csServer" class="roomInput" maxlength="16" placeholder="SERVER NAME"
-             oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" />
-      <input id="csPass" class="nameInput" maxlength="16" placeholder="PASSWORD (optional)" />
-      <button onclick="doCreateServer(); this.blur();">Create ▶</button>
-      <p id="csMsg" class="roomMsg"></p>
-      <button onclick="backToPause(); this.blur();">◀ Back</button>
-    </div>
-
-    <!-- browse all servers and join one (locked ones ask for a password) -->
-    <div class="pauseInner" id="serverList" style="display:none">
-      <h1>SERVER LIST</h1>
-      <input id="slName" class="nameInput" maxlength="14" placeholder="YOUR NAME"
-             oninput="this.value=this.value.replace(/[^A-Za-z0-9 _-]/g,'')" />
-      <p id="netStatusList" class="roomHint"></p>
-      <div class="connRow">
-        <input id="slUrl" class="urlInput" placeholder="ws://localhost:8080" />
-        <button onclick="applyServerUrl('slUrl'); this.blur();">Connect</button>
-      </div>
-      <div id="serverListItems" class="serverList"></div>
-      <p id="slMsg" class="roomMsg"></p>
-      <div class="rowButtons">
-        <button onclick="Net.refreshList(); this.blur();">↻ Refresh</button>
-        <button onclick="backToPause(); this.blur();">◀ Back</button>
-      </div>
-    </div>
-
-    <!-- shown while you ARE in a server -->
-    <div class="pauseInner" id="inServer" style="display:none">
-      <h1 id="inServerTitle">SERVER</h1>
-      <p id="inServerInfo" class="roomHint"></p>
-      <p id="inServerInvite" class="roomHint"></p>
-      <img id="inviteQR" alt="invite QR" style="display:none;width:170px;height:170px;border:5px solid #fff;border-radius:8px;background:#fff" />
-      <button onclick="resumeGame(); this.blur();">▶ Back to Game</button>
-      <button onclick="doLeaveServer(); this.blur();">🚪 Leave Server</button>
     </div>
 
     <!-- pick your plane color: presets + a color wheel -->
