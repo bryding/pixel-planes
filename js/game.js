@@ -547,45 +547,65 @@ function drawRemotePlayers() {
   }
 }
 
-// The on-top info layer.
-function drawHudLayer() { drawHud(); drawLeaderboard(); drawKillFeed(); drawMinimap(); }
+// The on-top info layer. We blow the WHOLE thing up by CONFIG.HUD_SCALE so the
+// writing is easy to read. Each panel inside uses W/H (the screen size AFTER
+// the zoom) to stay tucked into its corner instead of sliding off the edge.
+function drawHudLayer() {
+  const S = CONFIG.HUD_SCALE;
+  ctx.save();
+  ctx.scale(S, S);
+  drawHud(); drawLeaderboard(); drawKillFeed(); drawMinimap();
+  ctx.restore();
+}
+
+// The screen size as the HUD "sees" it once it's been zoomed by HUD_SCALE.
+// (Drawing at x = HUD_W - 80 still lands 80 units in from the right edge.)
+function hudW() { return CONFIG.GAME_W / CONFIG.HUD_SCALE; }
+function hudH() { return CONFIG.GAME_H / CONFIG.HUD_SCALE; }
 
 function drawHud() {
-  // --- Your plane stats, in a panel along the bottom ---
-  const pw = 360, ph = 70;
-  const px0 = Math.round(CONFIG.GAME_W / 2 - pw / 2);
-  const py0 = CONFIG.GAME_H - ph - 26;
-  const barX = px0 + 106, barW = 244;
-  ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(px0, py0, pw, ph);
-  ctx.font = '10px monospace'; ctx.textAlign = 'left';
+  const W = hudW(), H = hudH();
+  // --- Your plane stats, tucked into the BOTTOM-LEFT corner. The camera keeps
+  // your plane in the MIDDLE of the screen, so the corner is the one spot the
+  // panel never covers your plane or the ground right under you. ---
+  const pw = 196, ph = 64;
+  const px0 = 12, py0 = H - ph - 12;
+  const barX = px0 + 70, barW = pw - 70 - 10, barH = 9;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(px0, py0, pw, ph);
+  ctx.font = '11px monospace'; ctx.textAlign = 'left';
 
-  ctx.fillStyle = '#ffffff'; ctx.fillText('THROTTLE', px0 + 10, py0 + 16);
-  ctx.strokeStyle = '#ffffff'; ctx.strokeRect(barX, py0 + 9, barW, 8);
-  ctx.fillStyle = '#f1c40f'; ctx.fillRect(barX + 1, py0 + 10, (barW - 2) * player.throttle, 6);
+  // THROTTLE bar (how much gas you're giving it).
+  ctx.fillStyle = '#ffffff'; ctx.fillText('THROTTLE', px0 + 8, py0 + 18);
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.strokeRect(barX, py0 + 10, barW, barH);
+  ctx.fillStyle = '#f1c40f'; ctx.fillRect(barX + 1, py0 + 11, (barW - 2) * player.throttle, barH - 2);
 
-  ctx.fillStyle = '#ffffff'; ctx.fillText('HEALTH', px0 + 10, py0 + 34);
-  ctx.strokeStyle = '#ffffff'; ctx.strokeRect(barX, py0 + 27, barW, 8);
+  // HEALTH bar (turns yellow then red as you get hurt).
+  ctx.fillStyle = '#ffffff'; ctx.fillText('HEALTH', px0 + 8, py0 + 36);
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.strokeRect(barX, py0 + 28, barW, barH);
   const healthFrac = Math.max(0, player.health) / CONFIG.PLAYER_HEALTH;
   ctx.fillStyle = healthFrac > 0.5 ? '#2ecc71' : (healthFrac > 0.25 ? '#f39c12' : '#e74c3c');
-  ctx.fillRect(barX + 1, py0 + 28, (barW - 2) * healthFrac, 6);
+  ctx.fillRect(barX + 1, py0 + 29, (barW - 2) * healthFrac, barH - 2);
 
-  ctx.fillStyle = '#ffffff'; ctx.fillText('MISSILES', px0 + 10, py0 + 54);
+  // MISSILES (one filled box per missile you're carrying; the next one fills
+  // up slowly as it reloads).
+  ctx.fillStyle = '#ffffff'; ctx.fillText('MISSILES', px0 + 8, py0 + 56);
+  const pipPitch = barW / CONFIG.MISSILE_MAX, pipW = pipPitch - 4;
   for (let i = 0; i < CONFIG.MISSILE_MAX; i++) {
-    const bx = barX + i * 18, by = py0 + 46;
-    ctx.strokeStyle = '#ffffff'; ctx.strokeRect(bx, by, 14, 9);
-    if (i < player.missiles) { ctx.fillStyle = CONFIG.COLORS.missile; ctx.fillRect(bx + 1, by + 1, 12, 7); }
+    const bx = barX + i * pipPitch, by = py0 + 47;
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.strokeRect(bx, by, pipW, 10);
+    if (i < player.missiles) { ctx.fillStyle = CONFIG.COLORS.missile; ctx.fillRect(bx + 1, by + 1, pipW - 2, 8); }
     else if (i === player.missiles) {
       const frac = player.missileTimer / (CONFIG.MISSILE_REFILL_SECONDS * 60);
-      ctx.fillStyle = '#7f8c8d'; ctx.fillRect(bx + 1, by + 1, 12 * frac, 7);
+      ctx.fillStyle = '#7f8c8d'; ctx.fillRect(bx + 1, by + 1, (pipW - 2) * frac, 8);
     }
   }
 
   // --- Your score, top-right under the leaderboard area ---
-  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(CONFIG.GAME_W - 80, 6, 74, 16);
-  ctx.fillStyle = '#ffffff'; ctx.fillText('SCORE ' + score, CONFIG.GAME_W - 74, 17);
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(W - 80, 6, 74, 16);
+  ctx.fillStyle = '#ffffff'; ctx.fillText('SCORE ' + score, W - 74, 17);
 
   // --- Altitude gauge on the right edge (top = ceiling, bottom = ground) ---
-  const gx = CONFIG.GAME_W - 22, gy = 30, gh = 240;
+  const gx = W - 22, gy = 30, gh = 240;
   const top = CONFIG.CEILING, bot = CONFIG.GROUND_Y;
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(gx - 2, gy - 2, 14, gh + 4);
   const aym = Math.max(gy, Math.min(gy + gh, gy + gh * (player.y - top) / (bot - top)));
@@ -595,22 +615,26 @@ function drawHud() {
   // --- Blinking STALL! warning when the wings lose lift ---
   if (playerState === 'flying' && player.stalling && (frameCount % 30 < 20)) {
     ctx.fillStyle = '#ff3b30'; ctx.font = '18px monospace'; ctx.textAlign = 'center';
-    ctx.fillText('STALL!', CONFIG.GAME_W / 2, 44); ctx.textAlign = 'left'; ctx.font = '8px monospace';
+    ctx.fillText('STALL!', W / 2, 44); ctx.textAlign = 'left'; ctx.font = '8px monospace';
   }
 
   // --- Big middle-of-screen message when you're shot down ---
   if (playerState === 'dead') {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffffff'; ctx.font = '22px monospace';
-    ctx.fillText(deathMsg, CONFIG.GAME_W / 2, CONFIG.GAME_H / 2);
+    ctx.fillText(deathMsg, W / 2, H / 2);
     ctx.font = '11px monospace';
-    ctx.fillText('flying back in…', CONFIG.GAME_W / 2, CONFIG.GAME_H / 2 + 20);
+    ctx.fillText('flying back in…', W / 2, H / 2 + 20);
     ctx.textAlign = 'left';
   }
 
   // --- Friendly controls reminder along the bottom ---
-  ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.textAlign = 'center';
-  ctx.fillText('Arrows: fly    Space: guns    X: missile', CONFIG.GAME_W / 2, CONFIG.GAME_H - 14);
+  // Set our OWN font here so the hint is always the same size. (Without this it
+  // borrowed whatever font was used last -- tiny 8px normally, but 11px after
+  // the death message ran, which is why it kept changing size.)
+  ctx.font = '12px monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.textAlign = 'center';
+  ctx.fillText('Arrows / WASD: fly    Space: guns    X: missile', W / 2, H - 14);
   ctx.textAlign = 'left';
 }
 
@@ -621,7 +645,7 @@ function drawLeaderboard() {
   rows.sort((a, b) => b.score - a.score);
   const top = rows.slice(0, 8);
 
-  const w = 220, rh = 17, x = CONFIG.GAME_W - w - 34, y = 28;
+  const w = 220, rh = 17, x = hudW() - w - 34, y = 28;
   ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(x, y, w, 22 + top.length * rh);
   ctx.fillStyle = '#ffd23f'; ctx.font = '11px monospace'; ctx.textAlign = 'left';
   ctx.fillText('LEADERBOARD', x + 8, y + 15);
@@ -649,7 +673,7 @@ function drawKillFeed() {
 // A little map up top: side-to-side is where you are across the world, up-down
 // is your height. Other planes are gold dots; you're the blue one.
 function drawMinimap() {
-  const mw = 240, mh = 120, mx = Math.round(CONFIG.GAME_W * 0.5) - mw / 2, my = 12;
+  const mw = 240, mh = 120, mx = Math.round(hudW() * 0.5) - mw / 2, my = 12;
   const W = CONFIG.WORLD_WIDTH, top = CONFIG.CEILING, bot = CONFIG.GROUND_Y, H = bot - top, innerH = mh - 4;
   ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(mx, my, mw, mh);
   ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1; ctx.strokeRect(mx + 0.5, my + 0.5, mw - 1, mh - 1);

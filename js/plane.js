@@ -17,6 +17,11 @@ class Plane {
     // 0 means pointing to the right. We start flying to the right.
     this.angle = 0;
 
+    // How fast the nose is turning right now. It eases up to full turn speed
+    // when you hold a key and eases back to 0 when you let go, so the plane
+    // turns SMOOTHLY instead of snapping. (This is what makes it feel nice.)
+    this.turnRate = 0;
+
     // The throttle is like a gas pedal: 0 = off, 1 = full power.
     this.throttle = CONFIG.START_THROTTLE;
 
@@ -92,9 +97,19 @@ class Plane {
       this.throttle = Math.max(0, Math.min(1, this.throttle));
 
       const tm = (mode === 'ww2') ? CONFIG.WW2_TURN_MULT : 1; // WW2 planes turn slowly
-      if (kLeft)  this.angle -= CONFIG.TURN_SPEED * tm;
-      if (kRight) this.angle += CONFIG.TURN_SPEED * tm;
+
+      // Smooth turning: figure out the turn we WANT (left, right, or none),
+      // then ease the actual turn toward it. Holding a key ramps the nose up
+      // to full turn speed; letting go eases it back to straight. A quick tap
+      // only nudges the nose a little, so flying feels gentle, not twitchy.
+      let turnWanted = 0;
+      if (kLeft)  turnWanted -= CONFIG.TURN_SPEED * tm;
+      if (kRight) turnWanted += CONFIG.TURN_SPEED * tm;
+      this.turnRate += (turnWanted - this.turnRate) * CONFIG.TURN_EASE;
+    } else {
+      this.turnRate += (0 - this.turnRate) * CONFIG.TURN_EASE; // frozen: ease to straight
     }
+    this.angle += this.turnRate;
 
     // --- 2. Realistic flight. Lift scales with throttle, so cutting the
     // throttle kills your lift and you fall. ---
