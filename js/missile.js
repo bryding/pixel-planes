@@ -83,16 +83,32 @@ class Missile {
     }
     ctx.globalAlpha = 1; // always reset, so nothing else turns see-through
 
-    // The missile itself, pointing where it's heading.
+    // The missile itself, pointing where it's heading. It's drawn bigger now,
+    // with a dark outline and a little glow, so it's easy to spot against the
+    // pale sky instead of being a faint white speck.
     ctx.save();
     ctx.translate(worldToScreenX(this.x), this.y - camera.y);
     ctx.rotate(this.angle);
-    ctx.fillStyle = C.missileFin;
-    ctx.fillRect(-6, -3, 3, 6);   // tail fins
-    ctx.fillStyle = C.missile;
-    ctx.fillRect(-5, -2, 10, 4);  // body
+
+    // A soft glow halo around it (helps it stand out anywhere).
+    ctx.globalAlpha = 0.35;
     ctx.fillStyle = C.missileTip;
-    ctx.fillRect(5, -1, 3, 2);    // nose
+    ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Dark outline drawn a touch bigger than each part, so a thin dark border
+    // shows around the missile no matter what colour the sky is behind it.
+    ctx.fillStyle = 'rgba(20,20,20,0.8)';
+    ctx.fillRect(-11, -6, 6, 12);   // outline behind the tail fins
+    ctx.fillRect(-9, -4, 23, 8);    // outline behind the body + nose
+
+    // The colourful missile on top of the outline.
+    ctx.fillStyle = C.missileFin;
+    ctx.fillRect(-10, -5, 4, 10);   // tail fins
+    ctx.fillStyle = C.missile;
+    ctx.fillRect(-8, -3, 14, 6);    // body
+    ctx.fillStyle = C.missileTip;
+    ctx.fillRect(6, -2, 6, 4);      // nose
     ctx.restore();
   }
 }
