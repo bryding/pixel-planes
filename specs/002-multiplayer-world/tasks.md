@@ -94,10 +94,10 @@ name; closing one removes its plane (quickstart V2).
 **Independent Test**: Join as the only human → see `target − 1` bots; add humans → bot count drops
 one per human; bots are not visually marked (quickstart V3, SC-003/SC-004).
 
-- [ ] T016 [P] [US3] Extract the DOM-free bot decision logic from `js/enemy.js` into `js/bot-ai.js` (no canvas/DOM/global refs), and have `js/enemy.js` call it so legacy behavior is unchanged
-- [ ] T017 [US3] In `server/world.js`, simulate bots: maintain `bots = max(0, targetPopulation − players.size)`, step each bot via `js/bot-ai.js`, and assign ordinary-looking names (blend in, per spec Clarification)
-- [ ] T018 [US3] Include bots in the snapshot `planes` array (same `PlaneState` shape, NO `isBot` flag) and recompute bot count on every join/leave in `server/world.js`
-- [ ] T019 [US3] Confirm the client in `js/game.js` renders bots identically to humans (no special-casing); adjust only if bots reveal themselves
+- [X] T016 [P] [US3] Extract the DOM-free bot decision logic from `js/enemy.js` into `js/bot-ai.js` (no canvas/DOM/global refs), and have `js/enemy.js` call it so legacy behavior is unchanged
+- [X] T017 [US3] In `server/world.js`, simulate bots: maintain `bots = max(0, targetPopulation − players.size)`, step each bot via `js/bot-ai.js`, and assign ordinary-looking names (blend in, per spec Clarification)
+- [X] T018 [US3] Include bots in the snapshot `planes` array (same `PlaneState` shape, NO `isBot` flag) and recompute bot count on every join/leave in `server/world.js`
+- [X] T019 [US3] Confirm the client in `js/game.js` renders bots identically to humans (no special-casing); adjust only if bots reveal themselves
 
 **Checkpoint**: The sky is never empty; bot math is correct and observable.
 
