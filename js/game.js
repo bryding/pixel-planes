@@ -281,17 +281,17 @@ Net.onFire = function (id, kind, x, y, heading) {
 // auto-respawn in place (never back to the name screen), score reset (FR-009).
 Net.onHit = function (byId, kind) {
   if (playerState !== 'flying' && playerState !== 'takeoff') return;
-  player.health -= (kind === 'missile') ? CONFIG.MISSILE_DAMAGE : 1;
-  player.flash = 6;
-  if (player.health <= 0) {
-    bigExplosion(player.x, player.y);
-    if (typeof Sound !== 'undefined') Sound.boom();
-    pushKill('🛩️ You were shot down 💥', '#ff8a65');
-    playerDies('SHOT DOWN!');
-    // Send one last state so the server knows we died and can credit the kill.
-    Net.sendState({ x: player.x, y: player.y, angle: player.angle, vx: 0, vy: 0,
-                    throttle: 0, health: 0, alive: false, score: 0 });
-  }
+  // takeHit() applies the damage + flash, but ignores it while spawn-protected
+  // (invincibleTimer). It returns true only when this hit was fatal.
+  const dmg = (kind === 'missile') ? CONFIG.MISSILE_DAMAGE : 1;
+  if (!player.takeHit(dmg)) return;
+  bigExplosion(player.x, player.y);
+  if (typeof Sound !== 'undefined') Sound.boom();
+  pushKill('🛩️ You were shot down 💥', '#ff8a65');
+  playerDies('SHOT DOWN!');
+  // Send one last state so the server knows we died and can credit the kill.
+  Net.sendState({ x: player.x, y: player.y, angle: player.angle, vx: 0, vy: 0,
+                  throttle: 0, health: 0, alive: false, score: 0 });
 };
 
 // A plane was destroyed. If WE got the kill, score a point. Show the boom.
@@ -374,6 +374,7 @@ function spawnPlane(x) {
   player.missiles = CONFIG.MISSILE_MAX;
   player.missileTimer = 0;
   player.hitGround = true;
+  player.invincibleTimer = CONFIG.SPAWN_PROTECT;   // brief shield so you're not shot the instant you fly in
   playerState = 'takeoff';
   explosions.push(new Explosion(player.x - 8, CONFIG.GROUND_Y - 2, '#cbb58a')); // dust
 }

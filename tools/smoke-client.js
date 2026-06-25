@@ -64,6 +64,9 @@ const DRIVER = `
   Net.onFire(1000001,"missile",player.x+10,player.y,0);
   for(let i=0;i<3;i++){ update(); draw(); }
   log("V2 others firing rendered; missiles="+missiles.length);
+  Net.onHit(2,"gun");           // a hit DURING spawn protection should do nothing
+  log("V4 shielded hit: health="+player.health+" (expect still 10)");
+  player.invincibleTimer = 0;   // expire spawn protection so the test kill lands
   const before=player.health;
   for(let i=0;i<12;i++) Net.onHit(2,"gun");
   log("V4 took fire: health "+before+" -> "+player.health+"; playerState="+playerState);

@@ -32,6 +32,10 @@ const CONFIG = {
   // you automatically pop back into the SAME world. No trip back to the menu!
   RESPAWN_DELAY: 90,
 
+  // When you (re)spawn you get a few seconds of "shield" so you can't be shot
+  // the instant you fly in. A glowing bubble shows while it lasts.
+  SPAWN_PROTECT: 120,
+
   // ---- The size of the game picture (in pixels) ----
   // Small numbers make a chunky, retro pixel look. The picture is stretched
   // bigger to fill your screen, but it's really only drawn this small.
