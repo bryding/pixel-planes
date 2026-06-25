@@ -34,7 +34,7 @@ in `server/`. The server also serves the static client.
 **Purpose**: Add the tunable knobs and confirm dependencies before touching netcode.
 
 - [X] T001 [P] Make `js/config.js` the SINGLE source of tunables for browser AND Node: add `TARGET_POPULATION` (10), `HARD_CAP` (32), `NET_TICK_HZ` (18), `RESPAWN_DELAY`; keep `SERVER_URL` (Railway value set in T028); append `if (typeof module !== 'undefined') module.exports = CONFIG;` so the server can `require` it (resolves analysis F1)
-- [ ] T002 [P] Point the server at the shared config in `server/server.js` / `server/world.js`: `require('../js/config.js')` for `TARGET_POPULATION`, `HARD_CAP`, `NET_TICK_HZ` — NO separate server gameplay config file
+- [X] T002 [P] Point the server at the shared config in `server/server.js` / `server/world.js`: `require('../js/config.js')` for `TARGET_POPULATION`, `HARD_CAP`, `NET_TICK_HZ` — NO separate server gameplay config file
 - [X] T003 Verify server dependency installs cleanly: `cd server && npm install` (confirms `ws` present)
 
 ---
@@ -46,12 +46,12 @@ and a slimmed client net layer. NO user story can be demoed until this is done.
 
 **⚠️ CRITICAL**: Blocks all user stories.
 
-- [ ] T004 In `server/server.js`, collapse the lobby into ONE persistent world: remove `create`/`join`/`quickjoin`/`setmode`/host hand-off code paths; keep connection handling, static file serving, and heartbeat; add a single in-memory world object holding a `players` map (per data-model.md)
-- [ ] T005 In `server/server.js`, implement `hello` handling per contract: clean + length-cap the name (no content filter, FR-011), add the player to the world, reply `welcome {id, target, tickHz}`
-- [ ] T006 [P] Add the snapshot broadcast loop in `server/world.js` (new): every `tickHz`, build the `planes` array from players' `lastState` and broadcast `{t:"snapshot", planes}` to all clients (per websocket-protocol.md)
-- [ ] T007 In `server/server.js`, handle inbound `state` (store `lastState`) and disconnect/`close` (remove player, broadcast `player-left {id}` within a few seconds, FR-010)
-- [ ] T008 Slim down `js/net.js`: remove lobby/host/password methods (`createServer`/`joinServer`/`quickJoin`/`setMode`); keep connect/timeout/reconnect; on open send `hello {name}`; handle `welcome`, `snapshot`, `player-left`, `denied` via callbacks
-- [ ] T009 In `js/game.js`, maintain a client-side map of remote planes from `snapshot` messages with a short interpolation buffer (smooth movement between ticks, per research D5)
+- [X] T004 In `server/server.js`, collapse the lobby into ONE persistent world: remove `create`/`join`/`quickjoin`/`setmode`/host hand-off code paths; keep connection handling, static file serving, and heartbeat; add a single in-memory world object holding a `players` map (per data-model.md)
+- [X] T005 In `server/server.js`, implement `hello` handling per contract: clean + length-cap the name (no content filter, FR-011), add the player to the world, reply `welcome {id, target, tickHz}`
+- [X] T006 [P] Add the snapshot broadcast loop in `server/world.js` (new): every `tickHz`, build the `planes` array from players' `lastState` and broadcast `{t:"snapshot", planes}` to all clients (per websocket-protocol.md)
+- [X] T007 In `server/server.js`, handle inbound `state` (store `lastState`) and disconnect/`close` (remove player, broadcast `player-left {id}` within a few seconds, FR-010)
+- [X] T008 Slim down `js/net.js`: remove lobby/host/password methods (`createServer`/`joinServer`/`quickJoin`/`setMode`); keep connect/timeout/reconnect; on open send `hello {name}`; handle `welcome`, `snapshot`, `player-left`, `denied` via callbacks
+- [X] T009 In `js/game.js`, maintain a client-side map of remote planes from `snapshot` messages with a short interpolation buffer (smooth movement between ticks, per research D5)
 
 **Checkpoint**: Server runs one world and broadcasts snapshots; client connects and ingests them.
 

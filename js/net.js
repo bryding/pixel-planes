@@ -1,7 +1,10 @@
 // ===========================================================================
 //  NET  --  the client side of online play. Talks to the Pixel Planes server
-//  over a WebSocket: fetches the server list, creates/joins servers (with
-//  optional passwords), tracks whether YOU are the host, and relays planes.
+//  over a WebSocket to join the ONE shared world: send your name, then send
+//  your plane's position and receive everyone else's.
+//
+//  There are no rooms/hosts/passwords any more — connecting and saying "hello"
+//  with a name puts you straight into the single live sky.
 //
 //  Robust connection handling:
 //   • clear status (offline / connecting / online) and friendly error text
@@ -15,12 +18,17 @@ const Net = {
   status: 'offline',     // 'offline' | 'connecting' | 'online'
   myId: null,
   username: '',
-  inServer: false,
-  isHost: false,
-  serverName: null,
-  servers: [],           // [{name, hasPassword, players}]
+  inWorld: false,        // have we said hello and been welcomed?
+  target: 0,             // how many planes the world wants (from welcome)
+  tickHz: 0,             // snapshot rate the server runs at (from welcome)
   lastError: '',
-  onChange: null,        // game.js sets this to refresh the lobby UI
+  onChange: null,        // game.js sets this to refresh status UI
+
+  // game.js fills these in to receive world events:
+  onWelcome: null,       // (id) => ...   you're in the world
+  onSnapshot: null,      // (planes) => ...   array of every plane
+  onLeft: null,          // (id) => ...   a plane left
+  onDenied: null,        // (msg) => ...  join refused (e.g. world is full)
 
   _url: null,
   _want: false,          // do we want to stay connected? (drives auto-reconnect)
@@ -56,7 +64,7 @@ const Net = {
     if (typeof location !== 'undefined' && location.protocol === 'https:' && /^ws:\/\//i.test(url)) {
       this.status = 'offline';
       this.lastError = 'This page is secure (https), so it can only connect to a secure server (wss://). ' +
-                       'For testing on one computer, open the game over http (e.g. http://localhost:8000).';
+                       'For testing on one computer, open the game over http (e.g. http://localhost:8080).';
       this._notify();
       return;   // don't auto-retry a connection the browser will always block
     }
@@ -81,8 +89,8 @@ const Net = {
       this.status = 'online';
       this._retryDelay = 1000;
       this.lastError = '';
-      if (this.username) this.send({ t: 'setname', name: this.username });
-      this.send({ t: 'list' });
+      // Say hello with our name — that's what puts us in the world.
+      this.send({ t: 'hello', name: this.username });
       this._notify();
     };
     ws.onmessage = (e) => {
@@ -94,7 +102,7 @@ const Net = {
       clearTimeout(this._connectTimer);
       const wasTrying = (this.status === 'connecting');
       this.status = 'offline';
-      this.inServer = false; this.isHost = false; this.serverName = null;
+      this.inWorld = false;
       if (!this.lastError) {
         this.lastError = wasTrying
           ? "Couldn't reach the server. Is it running, and is the address right?"
@@ -123,32 +131,33 @@ const Net = {
   },
   _notify() { if (typeof this.onChange === 'function') this.onChange(); },
 
-  setName(n) { this.username = n; this.send({ t: 'setname', name: n }); },
-  refreshList() { this.send({ t: 'list' }); },
-  createServer(name, password) { this.lastError = ''; this.send({ t: 'create', name: name, password: password }); },
-  joinServer(name, password) { this.lastError = ''; this.send({ t: 'join', name: name, password: password }); },
-  quickJoin(name) { this.lastError = ''; this.send({ t: 'quickjoin', name: name }); }, // join it, or make it
-  leaveServer() { this.send({ t: 'leave' }); this.inServer = false; this.isHost = false; this.serverName = null; this._notify(); },
-  setMode(mode) { if (this.isHost) this.send({ t: 'setmode', mode: mode }); },
+  // Remember the name to send on connect (and re-send if already online).
+  setName(n) { this.username = n; if (this.status === 'online') this.send({ t: 'hello', name: n }); },
+
+  // Send our own plane's position for this frame.
   sendState(state) { this.send({ t: 'state', s: state }); },
 
   // Handle one message from the server. (Public so it can be unit-tested.)
   _handle(m) {
     switch (m.t) {
-      case 'welcome': this.myId = m.id; break;
-      case 'list':    this.servers = m.servers || []; break;
-      case 'joined':
-        this.inServer = true; this.isHost = !!m.isHost; this.serverName = m.name; this.lastError = '';
-        if (m.mode && typeof onNetMode === 'function') onNetMode(m.mode);
-        if (typeof onNetJoined === 'function') onNetJoined();
+      case 'welcome':
+        this.myId = m.id;
+        this.target = m.target || 0;
+        this.tickHz = m.tickHz || 0;
+        this.inWorld = true;
+        this.lastError = '';
+        if (typeof this.onWelcome === 'function') this.onWelcome(m.id);
         break;
-      case 'denied':  this.lastError = m.msg || 'Denied.'; break;
-      case 'error':   this.lastError = m.msg || 'Error.'; break;
-      case 'mode':    if (typeof onNetMode === 'function') onNetMode(m.mode); break;
-      case 'you-are-host': this.isHost = true; break;
-      case 'host':    this.isHost = (m.id === this.myId); break;
-      case 'state':       if (typeof onNetState === 'function') onNetState(m.id, m.name, m.s); break;
-      case 'player-left': if (typeof onNetLeft === 'function')  onNetLeft(m.id); break;
+      case 'snapshot':
+        if (typeof this.onSnapshot === 'function') this.onSnapshot(m.planes || []);
+        break;
+      case 'player-left':
+        if (typeof this.onLeft === 'function') this.onLeft(m.id);
+        break;
+      case 'denied':
+        this.lastError = m.msg || 'The world is full right now — try again in a moment.';
+        if (typeof this.onDenied === 'function') this.onDenied(this.lastError);
+        break;
     }
     this._notify();
   },

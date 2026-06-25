@@ -633,37 +633,22 @@ function onNetMode(m) {
   if (typeof m === 'string' && m !== mode) setMode(m);
 }
 
-// ---- Quick Play: on local (WiFi) play, auto-join ONE shared room so opening
-// the address on any device drops you straight into the game together. ----
-let quickJoinSent = false;
-function autoQuickPlay() {
-  if (typeof location === 'undefined' || !location.host) return; // file:// -> skip
-  if (location.protocol === 'https:') return;                    // public link uses the lobby
-  let name = getUsername();
-  if (!name) { name = 'Pilot' + (1000 + Math.floor(Math.random() * 9000)); saveUsername(name); }
-  Net.username = name;
-  Net._quickRoom = 'HOME';
-  ensureConnected();
-}
-function maybeQuickJoin() {
-  if (!Net._quickRoom || Net.inServer || quickJoinSent) return;
-  if (Net.status === 'online') { quickJoinSent = true; Net.quickJoin(Net._quickRoom); }
-}
-
-// Hook Net's updates to the UI (+ auto quick-join when connected).
+// Net tells us when its status changes. The name screen reads Net.status and
+// Net.lastError directly, so here we just keep the on-screen status fresh.
 Net.onChange = function () {
-  if (Net.status !== 'online') quickJoinSent = false;  // re-join after a reconnect
-  refreshLobbyUI();
-  maybeQuickJoin();
+  if (typeof refreshJoinStatus === 'function') refreshJoinStatus();
 };
-// autoQuickPlay();   // ONLINE PAUSED: not auto-connecting for now (refine later)
 
 // ===========================================================================
-//  ONLINE LIVE SYNC — see the other players fly on their own devices.
-//  Each client sends its plane a few times a second; everyone draws the others.
+//  ONLINE LIVE SYNC — the ONE shared world.
+//  The server sends a SNAPSHOT of every plane ~NET_TICK_HZ times a second. We
+//  fly OUR OWN plane locally and draw everyone else from the snapshots, gliding
+//  them smoothly between updates so movement still looks nice (interpolation).
 // ===========================================================================
-const remotePlayers = {};       // id -> {x,y,tx,ty,angle,throttle,health,isUfo,name,last}
+const remotePlayers = {};       // id -> {x,y,tx,ty,angle,throttle,health,isUfo,alive,name}
 let netStateTimer = 0;
+// Send our plane this often (in frames). 60fps / 18Hz ≈ every 3 frames.
+const NET_SEND_EVERY = Math.max(1, Math.round(60 / CONFIG.NET_TICK_HZ));
 const REMOTE_COLORS = ['#e0524a', '#3fae54', '#e0a93a', '#9b59b6', '#e84393', '#1abc9c', '#ff7f50'];
 const _remoteSprites = {};
 function remoteSprite(id) {
@@ -671,36 +656,47 @@ function remoteSprite(id) {
   if (!_remoteSprites[c]) _remoteSprites[c] = makePlaneSetFromColor(c);
   return _remoteSprites[c];
 }
-// Just joined an online server: drop bots (online = just the humans) and clear
-// any leftover remote players.
-function onNetJoined() {
+
+// The server welcomed us into the world: ditch the offline bots and any stale
+// remote planes, then make sure we're flying. (US1 also flips to the game view.)
+Net.onWelcome = function () {
   removeAllBots();
   for (const k in remotePlayers) delete remotePlayers[k];
-  if (playerState === 'dead' || playerState === 'chute') spawnPlane(camera.x + CONFIG.GAME_W / 2);
-}
-// Got another player's plane from the server.
-function onNetState(id, name, s) {
-  if (!s) return;
-  let r = remotePlayers[id];
-  if (!r) r = remotePlayers[id] = { x: s.x, y: s.y, angle: s.angle || 0 };
-  r.name = name; r.tx = s.x; r.ty = s.y; r.angle = s.angle || 0;
-  r.throttle = s.throttle; r.health = s.health; r.isUfo = s.isUfo; r.dead = s.dead;
-  r.last = frameCount;
-}
-function onNetLeft(id) { delete remotePlayers[id]; }
+};
 
-// Run online each frame: send my plane, smooth the others, forget silent ones.
+// A fresh snapshot of the whole world: update each OTHER plane's target spot
+// (we glide toward it). Skip our own plane — we draw that one ourselves.
+Net.onSnapshot = function (planes) {
+  const seen = {};
+  for (const s of planes) {
+    if (s.id === Net.myId) continue;
+    seen[s.id] = true;
+    let r = remotePlayers[s.id];
+    if (!r) r = remotePlayers[s.id] = { x: s.x, y: s.y, angle: s.angle || 0 };
+    r.tx = s.x; r.ty = s.y; r.angle = s.angle || 0;
+    r.throttle = s.throttle; r.health = s.health; r.isUfo = s.isUfo;
+    r.alive = (s.alive !== false); r.name = s.name;
+  }
+  // Anyone who dropped out of the snapshot has left — remove them (FR-010).
+  for (const id in remotePlayers) { if (!seen[id]) delete remotePlayers[id]; }
+};
+
+// The server says this plane left — drop it right away (FR-010).
+Net.onLeft = function (id) { delete remotePlayers[id]; };
+
+// Run each frame while we're in the world: send our plane, glide the others.
 function netSyncStep() {
   netStateTimer += 1;
-  if (netStateTimer >= 2 && (playerState === 'flying' || playerState === 'takeoff')) {
+  if (netStateTimer >= NET_SEND_EVERY && (playerState === 'flying' || playerState === 'takeoff')) {
     netStateTimer = 0;
-    Net.sendState({ x: player.x, y: player.y, angle: player.angle, throttle: player.throttle,
-                    health: player.health, isUfo: player.isUfo });
+    Net.sendState({ x: player.x, y: player.y, angle: player.angle, vx: player.vx, vy: player.vy,
+                    throttle: player.throttle, health: player.health, alive: player.alive,
+                    isUfo: player.isUfo, score: score });
   }
+  // Ease every remote plane toward the latest spot the server told us about.
   for (const id in remotePlayers) {
     const r = remotePlayers[id];
     if (r.tx !== undefined) { r.x = wrapX(r.x + wrapDX(r.tx - r.x) * 0.35); r.y += (r.ty - r.y) * 0.35; }
-    if (frameCount - (r.last || 0) > 300) delete remotePlayers[id]; // stopped sending -> gone
   }
 }
 
@@ -1180,7 +1176,7 @@ function update() {
   if (infiniteMissiles) { player.missiles = CONFIG.MISSILE_MAX; player.missileTimer = 0; }
 
   // Online: send my plane to the others and smooth their planes.
-  if (Net.inServer) netSyncStep();
+  if (Net.inWorld) netSyncStep();
 
   // Alien Invasion: spread the UFO bots across different runners first.
   if (mode === 'alien') assignUfoTargets();
@@ -1548,7 +1544,7 @@ function drawWorldContents() {
   }
 
   // --- Other online players ---
-  if (Net.inServer) drawRemotePlayers();
+  if (Net.inWorld) drawRemotePlayers();
 
   // --- The player plane(s) --- (skipped on the title screen / attract mode)
   if (!gameStarted) {
