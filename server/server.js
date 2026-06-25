@@ -103,12 +103,17 @@ wss.on('connection', (ws) => {
       case 'state': {
         if (!ws.joined || !m.s) break;
         const p = ws.player;
-        if (!plausibleMove(p.lastState, m.s)) break;       // teleport — drop it
+        const nowAlive = m.s.alive !== false;
+        // The anti-cheat jump check only applies between two LIVE frames. A death
+        // or a respawn legitimately repositions the plane, so we accept those and
+        // let them reset the baseline (otherwise a respawn would look like a
+        // teleport and the player could never reappear).
+        const betweenLiveFrames = p.alive && nowAlive;
+        if (betweenLiveFrames && !plausibleMove(p.lastState, m.s)) break; // teleport — drop it
         p.lastState = Object.assign({}, m.s, { id: ws.id, name: p.name });
         p.score = m.s.score || 0;
         // If a player's plane just went from alive to not-alive, that's a death:
         // announce it and credit whoever last hit them (FR-013 scoring).
-        const nowAlive = m.s.alive !== false;
         if (p.alive && !nowAlive) {
           broadcast({ t: 'down', victimId: ws.id, byId: p.lastHitBy });
           p.lastHitBy = null;
