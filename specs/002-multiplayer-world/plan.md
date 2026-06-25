@@ -61,7 +61,7 @@ constitution **v2.0.0**.
 |-----------|--------|------------------------|
 | I. Beginner-Friendly & Learning-First | ✅ PASS | Server stays one small, heavily-commented file; tunables stay named in config; work lands in small stages. |
 | II. Simple by Default, Tools Only When Needed | ✅ PASS | A server is exactly the "feature genuinely needs it" case the amendment allows. Client adds **zero** dependencies and no build step (native WebSocket); server depends only on `ws`. |
-| III. Tweakable by Design | ✅ PASS | `TARGET_POPULATION`, tick rate, bot stats, hard cap all live in config (client `js/config.js` + a small server config). |
+| III. Tweakable by Design | ✅ PASS | `TARGET_POPULATION`, tick rate, bot stats, hard cap all live in ONE file `js/config.js`, which the Node server also reads (single source of truth — no client/server drift). |
 | IV. Always Runnable, Commit Often | ✅ PASS | Staged rollout (see Phasing); the game stays playable each step; single-player systems are reused, not deleted mid-flight. |
 | V. Game Feel First | ✅ PASS | Remote planes are interpolated/smoothed so flight still feels good over the network before extra features. |
 
@@ -89,7 +89,8 @@ specs/002-multiplayer-world/
 ```text
 index.html               # Loads client scripts (existing)
 js/
-├── config.js            # + TARGET_POPULATION, NET_TICK_HZ, hard cap, reuse ENEMY_* for bots
+├── config.js            # SINGLE source of tunables (browser global + Node-requireable):
+│                        #   + TARGET_POPULATION, NET_TICK_HZ, HARD_CAP, RESPAWN_DELAY, reuse ENEMY_*
 ├── net.js               # SIMPLIFY: drop rooms/host/passwords → connect + setname + join one world
 ├── game.js              # Entry flow → name screen → join; render remote planes & server bots
 ├── plane.js / physics.js# Reused for local plane simulation (client-authoritative own plane)
@@ -100,8 +101,7 @@ server/
 ├── server.js            # EVOLVE: one world, server-run bots, snapshot broadcast, sanity checks
 ├── world.js             # NEW (optional split): world state + bot stepping, kept small
 ├── bot-ai.js            # NEW: DOM-free bot decision logic shared with client enemy.js
-├── config.server.js     # NEW: server-side tunables (target, tick, cap) — mirrors client knobs
-└── package.json         # `ws` dependency (existing)
+└── package.json         # `ws` dependency (existing); server reads ../js/config.js for tunables
 
 railway.json (or Procfile / root package.json)   # NEW: tell Railway to run node server/server.js
 render.yaml              # RETIRE or keep as alt; primary deploy becomes Railway

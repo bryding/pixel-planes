@@ -87,6 +87,33 @@ native-WebSocket client `net.js`, client-side bots in `enemy.js`) and the amende
   static root path resolves correctly when Railway's build root is the repo root — verify during
   the Railway cutover phase.
 
+## D8. Single config source of truth (resolves analysis F1)
+
+- **Decision**: Keep **all** gameplay tunables in `js/config.js` and let the Node server read that
+  same file. Append `if (typeof module !== 'undefined') module.exports = CONFIG;` so the browser
+  still gets the global `CONFIG` while the server can `require('../js/config.js')`. No separate
+  server gameplay config.
+- **Rationale**: FR-007 and Principle III require tuning values to live in `js/config.js`. Because
+  bot population is server-authoritative, a mirrored server copy would become the *real* value and
+  silently diverge (analysis finding F1). One shared file keeps the spec literally true and is the
+  simplest thing for a beginner to reason about.
+- **Alternatives considered**: A shared `config.json` read by both sides (extra fetch/loader on the
+  browser, more moving parts); a separate `server/config.server.js` mirror (the rejected source of
+  F1 drift).
+
+## D9. Combat hit model (resolves analysis C1)
+
+- **Decision**: **Shooter-detected hits** (FR-015). A client detects when *its own* bullets strike
+  another plane and sends `hit {targetId}`. The server validates loosely + rate-limits, then: for a
+  **bot** target it applies damage server-side; for a **human** target it forwards `hit` so that
+  client damages itself. A destroyed plane triggers `down {victimId, byId}`, crediting the shooter
+  (drives FR-013 scoring). The `fire` message stays separate and is visual-only.
+- **Rationale**: Makes combat and scoring actually function without server-side trajectory
+  re-simulation. Matches the accepted low-stakes anti-cheat posture (FR-014) and reuses the existing
+  client bullet/collision code.
+- **Alternatives considered**: Full server-authoritative hit detection (re-simulate every bullet —
+  too heavy for v1); pure visual `fire` relay with no damage (the C1 gap — combat wouldn't work).
+
 ## Resolved unknowns
 
 No `NEEDS CLARIFICATION` markers remain from the spec (resolved in `/speckit-clarify`). Remaining

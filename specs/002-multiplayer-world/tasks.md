@@ -33,8 +33,8 @@ in `server/`. The server also serves the static client.
 
 **Purpose**: Add the tunable knobs and confirm dependencies before touching netcode.
 
-- [ ] T001 [P] Create server tunables file `server/config.server.js` exporting `targetPopulation` (10), `hardCap` (32), `tickHz` (18), respawn delay, and bot stats (mirrors client knobs)
-- [ ] T002 [P] Add client net tunables to `js/config.js`: `TARGET_POPULATION` (10), `NET_TICK_HZ` (18), `RESPAWN_DELAY`; keep `SERVER_URL` (Railway value set later in T026)
+- [ ] T001 [P] Make `js/config.js` the SINGLE source of tunables for browser AND Node: add `TARGET_POPULATION` (10), `HARD_CAP` (32), `NET_TICK_HZ` (18), `RESPAWN_DELAY`; keep `SERVER_URL` (Railway value set in T028); append `if (typeof module !== 'undefined') module.exports = CONFIG;` so the server can `require` it (resolves analysis F1)
+- [ ] T002 [P] Point the server at the shared config in `server/server.js` / `server/world.js`: `require('../js/config.js')` for `TARGET_POPULATION`, `HARD_CAP`, `NET_TICK_HZ` — NO separate server gameplay config file
 - [ ] T003 Verify server dependency installs cleanly: `cd server && npm install` (confirms `ws` present)
 
 ---
@@ -105,17 +105,19 @@ one per human; bots are not visually marked (quickstart V3, SC-003/SC-004).
 
 ## Phase 6: User Story 4 - Combat, death, and auto-respawn (Priority: P2)
 
-**Goal**: Free-for-all combat, explode on death, auto-respawn in place, per-life score; server
-applies light sanity checks.
+**Goal**: Free-for-all combat (shooter-detected hits, FR-015), explode on death, auto-respawn in
+place, per-life score; server applies light sanity checks.
 
 **Independent Test**: Get shot down → explode → auto-respawn in the same world after a short delay
 with score reset to 0, never sent to the name screen (quickstart V4, SC-005/SC-008).
 
-- [ ] T020 [US4] Relay `fire` events in `js/game.js` + `server/server.js`: client sends `fire {kind,x,y,heading}` on shooting; server broadcasts; other clients render the shot + SFX (reuse `js/bullet.js`/`js/missile.js`/`js/audio.js`)
-- [ ] T021 [US4] Death + auto-respawn in `js/game.js`: on local plane health 0 → explosion (`js/explosion.js`), mark dead, auto-respawn after `RESPAWN_DELAY` at a safe spawn (spawn protection), no name-screen return
-- [ ] T022 [US4] Per-life score in `js/game.js`: track kills, include `score` in outbound `state`, reset to 0 on death; display own score (and a simple live scoreboard) (FR-013, SC-008)
-- [ ] T023 [US4] Light sanity checks in `server/world.js`: reject/clamp inbound `state` with implausible position delta or speed before broadcasting (FR-014)
-- [ ] T024 [US4] Hard cap in `server/server.js`: refuse connections beyond `hardCap` humans with `denied {msg}`; client shows the message (websocket-protocol invariant 5)
+- [ ] T020 [US4] Fire visuals relay in `js/game.js` + `server/server.js`: client sends `fire {kind,x,y,heading}` on shooting; server broadcasts; other clients render the shot + SFX (reuse `js/bullet.js`/`js/missile.js`/`js/audio.js`). Visual only — damage is handled by `hit` (T021)
+- [ ] T021 [US4] Hit detection + report in `js/game.js`: detect when YOUR OWN bullets strike another plane (using snapshot positions) and send `hit {targetId, kind}` (FR-015, contract)
+- [ ] T022 [US4] Server hit handling in `server/world.js` + `server/server.js`: validate loosely + rate-limit; if `targetId` is a bot apply damage server-side; if human, forward `hit {targetId, byId}`; on destruction broadcast `down {victimId, byId}`
+- [ ] T023 [US4] Damage + death + auto-respawn in `js/game.js`: on inbound `hit` apply damage to own plane; at 0 health → explosion (`js/explosion.js`), mark dead, auto-respawn after `RESPAWN_DELAY` at a safe spawn (spawn protection), no name-screen return (FR-009)
+- [ ] T024 [US4] Per-life score in `js/game.js`: increment when a `down` credits you, include `score` in outbound `state`, reset to 0 on own death; display own score (and a simple live scoreboard) (FR-013, SC-008)
+- [ ] T025 [US4] Light sanity checks in `server/world.js`: reject/clamp inbound `state` with implausible position delta or speed before broadcasting (FR-014)
+- [ ] T026 [US4] Hard cap in `server/server.js`: refuse connections beyond `HARD_CAP` humans with `denied {msg}`; client shows the message (websocket-protocol invariant 5)
 
 **Checkpoint**: All four user stories work; the world is a live free-for-all with backfill bots.
 
@@ -123,11 +125,11 @@ with score reset to 0, never sent to the name screen (quickstart V4, SC-005/SC-0
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T025 [P] Remove now-dead single-player-only entry paths and leftover lobby code; confirm the game still runs by opening the served page (Principle IV)
-- [ ] T026 Railway cutover: add a Railway run config (`railway.json` or root `Procfile`/`package.json` start → `node server/server.js`), set `js/config.js` `SERVER_URL` to `wss://pixel-planes-bryding-production.up.railway.app`, and retire `render.yaml` as the primary deploy
-- [ ] T027 [P] (Optional) Pure-function Node checks in `server/` for the bot-count math and the sanity-check function (no framework; a plain `node` assert script)
-- [ ] T028 Run all `quickstart.md` validations V1–V5 locally, then V (Railway) on the live URL across two devices
-- [ ] T029 [P] Update `README.md` / `FOR_BEN_PLEASE_READ.md` with how to run and deploy the multiplayer world
+- [ ] T027 [P] Remove now-dead single-player-only entry paths and leftover lobby code; confirm the game still runs by opening the served page (Principle IV)
+- [ ] T028 Railway cutover: add a Railway run config (`railway.json` or root `Procfile`/`package.json` start → `node server/server.js`), set `js/config.js` `SERVER_URL` to `wss://pixel-planes-bryding-production.up.railway.app`, and retire `render.yaml` as the primary deploy
+- [ ] T029 [P] (Optional) Pure-function Node checks in `server/` for the bot-count math, the sanity-check function, and the `hit` validation (no framework; a plain `node` assert script)
+- [ ] T030 Run all `quickstart.md` validations V1–V5 locally, then V (Railway) on the live URL across two devices
+- [ ] T031 [P] Update `README.md` / `FOR_BEN_PLEASE_READ.md` with how to run and deploy the multiplayer world
 
 ---
 
@@ -140,7 +142,7 @@ with score reset to 0, never sent to the name screen (quickstart V4, SC-005/SC-0
 - **User Stories (Phases 3–6)**: all require Foundational. US1 is the MVP and should land first
   because US2–US4 are easiest to demo once you can join. After Foundational, US2/US3/US4 are
   largely independent of each other and can be parallelized by different people.
-- **Polish (Phase 7)**: after the desired user stories; T026 (Railway) can be done any time after
+- **Polish (Phase 7)**: after the desired user stories; T028 (Railway) can be done any time after
   US1 works locally, but is grouped here as the production cutover.
 
 ### User Story Dependencies
@@ -160,7 +162,7 @@ with score reset to 0, never sent to the name screen (quickstart V4, SC-005/SC-0
 - Setup: T001 + T002 in parallel (different files).
 - Foundational: T006 (`server/world.js`) can progress alongside client T008/T009 edits.
 - Across stories (post-Foundational): US2, US3, US4 can be staffed in parallel.
-- Polish: T025, T027, T029 in parallel.
+- Polish: T027, T029, T031 in parallel.
 
 ---
 
@@ -168,8 +170,8 @@ with score reset to 0, never sent to the name screen (quickstart V4, SC-005/SC-0
 
 ```bash
 # Different files, no dependency — do together:
-Task: "Create server/config.server.js tunables"      # T001
-Task: "Add net tunables to js/config.js"             # T002
+Task: "Make js/config.js the single source of tunables (browser + Node)"   # T001
+Task: "Point the server at ../js/config.js"                                # T002
 ```
 
 ---
@@ -180,7 +182,7 @@ Task: "Add net tunables to js/config.js"             # T002
 
 1. Phase 1 Setup → 2. Phase 2 Foundational (critical) → 3. Phase 3 US1.
 4. **STOP & VALIDATE** quickstart V1 (you can name yourself and fly in one shared world).
-5. Optionally do T026 early to demo it live on Railway.
+5. Optionally do T028 early to demo it live on Railway.
 
 ### Incremental Delivery
 

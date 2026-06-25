@@ -47,7 +47,8 @@ WebSocket on the same origin, so the client connects with no mixed-content probl
      returning to the name screen; your score resets to 0 (SC-008).
 
 ### V5 — Tweakability (SC-006)
-1. Change `TARGET_POPULATION` in `js/config.js` (and the mirrored server value), restart the server.
+1. Change `TARGET_POPULATION` in `js/config.js` (the **single** source — the server reads this same
+   file), restart the server.
    - ✅ Pass: the filled world size changes on the next run with no other code edits.
 
 ## Deploy to Railway (production)

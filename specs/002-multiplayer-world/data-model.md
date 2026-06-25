@@ -72,8 +72,12 @@ players.size)`; add/remove bots until `bots.size === desiredBots`. Never below 0
 **Bot lifecycle**: mirrors player combat, plus **population control**: created when below target,
 removed (without an explosion needed) when a human takes the slot.
 
-## Configurable values (Principle III)
+## Configurable values (Principle III — single source of truth)
 
-Client `js/config.js`: `TARGET_POPULATION` (10), `NET_TICK_HZ` (18), `SERVER_URL`, `RESPAWN_DELAY`,
-reuse of `ENEMY_*` for bot feel. Server `config.server.js` mirrors `targetPopulation`, `hardCap`,
-`tickHz`, and bot stats so the authoritative side has its own readable knobs.
+All gameplay knobs live in **one place**, `js/config.js`: `TARGET_POPULATION` (10), `HARD_CAP`
+(32), `NET_TICK_HZ` (18), `SERVER_URL`, `RESPAWN_DELAY`, and the `ENEMY_*` stats reused for bot
+feel. The browser uses it as the global `CONFIG`; the Node server **reads the same file** (an
+`if (typeof module !== 'undefined') module.exports = CONFIG;` guard at the end of `config.js` lets
+the server `require('../js/config.js')`). There is intentionally **no** separate server config for
+gameplay values, so changing a number in `js/config.js` changes the real world (satisfies FR-007
+and Principle III; resolves analysis finding F1).

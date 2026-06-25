@@ -154,7 +154,9 @@ reappear flying in the same world a couple of seconds later with no menu interru
 - **FR-006**: Bots MUST be added back automatically when the population falls below target (e.g.
   players leave) and removed as human players take their slots.
 - **FR-007**: The target population value MUST live in the project's central tuning configuration
-  (`js/config.js`) so it can be changed easily without editing game logic.
+  (`js/config.js`) so it can be changed easily without editing game logic. The server MUST read
+  this same file (single source of truth) rather than keeping its own separate copy, so changing
+  the value in one place changes the actual world size.
 - **FR-008**: Players MUST be able to engage in combat (shoot/be shot) with other players and with
   bots in the shared world.
 - **FR-009**: When a plane is destroyed, the system MUST show an explosion and then automatically
@@ -172,6 +174,11 @@ reappear flying in the same world a couple of seconds later with no menu interru
 - **FR-014**: The server MUST relay player state between clients and apply light sanity checks that
   reject clearly impossible updates (e.g. teleporting or impossible speed); the server is NOT
   required to be a full physics/hit authority in v1.
+- **FR-015**: Combat hits MUST be resolved with a lightweight v1 model: a shooter's client detects
+  when its own shots strike another plane and reports the hit; the struck human plane applies the
+  damage to itself, while the server applies damage to bots; when a plane is destroyed the shooter
+  is credited with the kill. Full server-side hit authority and reliable bullet replication are out
+  of scope for v1 (see FR-014).
 
 ### Key Entities
 
@@ -214,6 +221,8 @@ reappear flying in the same world a couple of seconds later with no menu interru
   on the configured death behavior). No long-term saved accounts or stats are in scope for v1.
 - **Free-for-all combat**: Everyone (humans and bots) can damage everyone else; there are no teams
   in v1.
+- **Hit model**: Hits are shooter-detected and relayed (FR-015), not server-authoritative. This is
+  simple and good enough for a fun, low-stakes game; the cheating tradeoff is accepted (see FR-014).
 - **Score handling**: Each player has a per-life score that accumulates while alive and resets to
   zero on death/respawn (see FR-013); no score persists across lives or sessions in v1.
 - **Cheat-resistance**: The server relays state and rejects clearly impossible updates but is not a
