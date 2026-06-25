@@ -27,12 +27,15 @@ A browser-based 2D pixel-art airplane combat game, inspired by **BitPlanes**
   carries momentum. NOT a fixed Mario-style runner.
 - Pixel-art look, side-scrolling camera, dogfights against enemy planes.
 
-## Tech choices (kept deliberately simple)
+## Tech choices (simple by default)
 
-- Plain HTML5 Canvas + vanilla JavaScript. No build step, no frameworks.
-- Runs by opening `index.html` in a browser (or via a tiny local server).
+- The game in the browser is plain HTML5 Canvas + vanilla JavaScript — no
+  frameworks, and no build step. You can still open `index.html` to play.
 - Renders to a low internal resolution (480×270) scaled up for a crisp,
   chunky pixel look.
+- We add bigger tools (like a **server**) *only* when a feature truly needs
+  one. Multiplayer needs a server so players can share one world — that part
+  runs online (on Railway), while the browser game stays simple to read.
 
 ## File layout
 
