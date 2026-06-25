@@ -7,3 +7,6 @@
 
 # Personal/local Claude Code settings (not part of the game)
 .claude/settings.local.json
+
+# Installed dependencies
+node_modules/
