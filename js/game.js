@@ -658,10 +658,17 @@ function remoteSprite(id) {
 }
 
 // The server welcomed us into the world: ditch the offline bots and any stale
-// remote planes, then make sure we're flying. (US1 also flips to the game view.)
+// remote planes, then fly into the shared sky.
 Net.onWelcome = function () {
   removeAllBots();
   for (const k in remotePlayers) delete remotePlayers[k];
+  enterWorld();
+};
+
+// Join refused (e.g. the world is full): show why, back on the name screen.
+Net.onDenied = function (msg) {
+  Net.disconnect();
+  setJoinStatus(msg, '#ff6b6b');
 };
 
 // A fresh snapshot of the whole world: update each OTHER plane's target spot
@@ -699,6 +706,67 @@ function netSyncStep() {
     if (r.tx !== undefined) { r.x = wrapX(r.x + wrapDX(r.tx - r.x) * 0.35); r.y += (r.ty - r.y) * 0.35; }
   }
 }
+
+// ===========================================================================
+//  JOINING THE SHARED WORLD  (the name screen → fly in)
+// ===========================================================================
+
+// Tidy up a typed name the same way the server does: trim, keep a safe set of
+// characters, and cap the length. Empty becomes '' (we ask for a real one).
+function capName(n) {
+  return ('' + (n || '')).trim().replace(/[^A-Za-z0-9 _-]/g, '').slice(0, 14);
+}
+// Show a message on the name screen (connecting / errors).
+function setJoinStatus(text, color) {
+  const el = document.getElementById('joinStatus');
+  if (el) { el.textContent = text; el.style.color = color || 'rgba(255,255,255,0.85)'; }
+}
+// Net calls this when its connection status changes, so the name screen can
+// show "Connecting…" or why a connection failed.
+function refreshJoinStatus() {
+  if (Net.inWorld) return;                       // already flying — nothing to say
+  if (Net.status === 'connecting') setJoinStatus('Connecting…', '#9be7ff');
+  else if (Net.status === 'offline' && Net.lastError) setJoinStatus(Net.lastError, '#ff6b6b');
+}
+
+// JOIN GAME button: take the typed name and dive into the one shared world.
+function joinWorld() {
+  const el = document.getElementById('nameInput');
+  const name = capName((el && el.value) || '');
+  if (!name) { setJoinStatus('Please type a name first.', '#ffd24a'); return; }
+  saveUsername(name);
+  if (typeof Sound !== 'undefined') {            // a click — sound is now allowed
+    Sound.init(); Sound.stopTheme(); Sound.stopEngine();
+  }
+  Net.setName(name);
+  Net.connect(serverUrl());
+  setJoinStatus('Connecting…', '#9be7ff');
+}
+
+// We're in! Hide the name screen and fly our plane into the shared sky.
+function enterWorld() {
+  const gate = document.getElementById('clickGate'); if (gate) gate.style.display = 'none';
+  const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'none';
+  const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';
+  const tb = document.getElementById('topBar'); if (tb) tb.style.display = 'flex';
+  gameStarted = true;
+  splitScreen = false;
+  spawnPlane(camera.x + CONFIG.GAME_W / 2);      // fly in where the camera is
+}
+
+// "Play offline" — the classic single-player game, no server needed (so the
+// game always works even if the server is down).
+function playOffline() {
+  const gate = document.getElementById('clickGate'); if (gate) gate.style.display = 'none';
+  enterTitle();    // unlock sound + title music
+  startGame();     // classic single-player
+}
+
+// Start the name box with your last-used name filled in.
+(function prefillName() {
+  const el = document.getElementById('nameInput');
+  if (el) el.value = getUsername();
+})();
 
 // Draw the other online players (with name tags). Called from drawWorldContents.
 function drawRemotePlayers() {

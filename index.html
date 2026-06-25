@@ -10,13 +10,22 @@
   <!-- This is the box the whole game is drawn onto -->
   <canvas id="game"></canvas>
 
-  <!-- CLICK GATE: nothing loads until you click (this also turns on sound, which
-       browsers block until the first click/tap). Clicking starts the title. -->
-  <div id="clickGate" onclick="enterTitle()">
+  <!-- NAME GATE: the first thing you see. Type a name and JOIN to fly into the
+       one shared world with everyone else. (Clicking also turns on sound, which
+       browsers block until your first click/tap.) Live AI dogfights play behind. -->
+  <div id="clickGate">
     <div class="gateInner">
       <div class="titleBanner">PIXEL&nbsp;PLANES</div>
-      <button class="startBtn" onclick="enterTitle()">▶ CLICK TO PLAY</button>
-      <p class="startHint">click to turn on sound 🔊</p>
+      <p class="startHint">Pick a name and join the live sky! ✈️</p>
+      <input id="nameInput" class="nameInput" maxlength="14" placeholder="Your name"
+             autocomplete="off" spellcheck="false"
+             onkeydown="if (event.key === 'Enter') { joinWorld(); this.blur(); }" />
+      <button class="startBtn" onclick="joinWorld(); this.blur();">▶ JOIN GAME</button>
+      <p id="joinStatus" class="startHint">click to turn on sound 🔊</p>
+      <div class="gateExtras">
+        <button class="startBtn small" onclick="playOffline(); this.blur();">🛩 Play offline</button>
+        <button class="startBtn small" onclick="openSettings(); this.blur();">⚙ Settings</button>
+      </div>
     </div>
   </div>
 

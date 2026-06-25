@@ -64,9 +64,9 @@ and a slimmed client net layer. NO user story can be demoed until this is done.
 **Independent Test**: Open the app fresh, enter a name, click Join, confirm you control a plane in
 a shared world (quickstart V1).
 
-- [ ] T010 [US1] Replace the current entry/"Click to Play" gate with a name-entry screen in `index.html` + `js/game.js`: a text field + **Join Game** button, with client-side length/charset capping
-- [ ] T011 [US1] On Join in `js/game.js`: call `Net.setName`/`Net.connect(CONFIG.SERVER_URL)`, show connecting/error states, and transition to the flying state once `welcome` arrives
-- [ ] T012 [US1] On join in `js/game.js`, spawn the local player plane (reuse `js/plane.js`) and start sending its own `state` at `NET_TICK_HZ`
+- [X] T010 [US1] Replace the current entry/"Click to Play" gate with a name-entry screen in `index.html` + `js/game.js`: a text field + **Join Game** button, with client-side length/charset capping
+- [X] T011 [US1] On Join in `js/game.js`: call `Net.setName`/`Net.connect(CONFIG.SERVER_URL)`, show connecting/error states, and transition to the flying state once `welcome` arrives
+- [X] T012 [US1] On join in `js/game.js`, spawn the local player plane (reuse `js/plane.js`) and start sending its own `state` at `NET_TICK_HZ`
 
 **Checkpoint**: A player can name themselves and fly in the one shared world (MVP demoable).
 
