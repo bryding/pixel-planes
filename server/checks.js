@@ -44,5 +44,13 @@ const far  = [self, { x: 99999, y: 0, vx: 0, vy: 0, alive: true, team: 2 }];
 ok('shoots a close, lined-up enemy', BotAI.think(self, near, CONFIG, false).shoot === true);
 ok('holds fire on a far enemy',      BotAI.think(self, far, CONFIG, false).shoot === false);
 ok('ignores a teammate',             BotAI.think(self, [self, { x: 60, y: 0, vx: 0, vy: 0, alive: true, team: 1 }], CONFIG, false).target === null);
+ok('never launches missiles in WW2', BotAI.think(self, near, CONFIG, true).missile === false);
+// In WW2 (offline) targeting is by FACTION, not team. A same-faction plane on a
+// different team is a friend; an other-faction plane is a target.
+const ace = { x: 0, y: 0, vx: 0, vy: 0, angle: 0, health: 10, style: s, propSpin: 0, fireCooldown: 0, missileCooldown: 0, team: 1, faction: 'green' };
+const sameFaction = [ace, { x: 60, y: 0, vx: 0, vy: 0, alive: true, team: 9, faction: 'green' }];
+const foeFaction  = [ace, { x: 60, y: 0, vx: 0, vy: 0, alive: true, team: 9, faction: 'black' }];
+ok('WW2 spares a same-faction plane', BotAI.think(ace, sameFaction, CONFIG, true).target === null);
+ok('WW2 targets the other faction',   BotAI.think(ace, foeFaction, CONFIG, true).target !== null);
 
 console.log('\nAll ' + count + ' checks passed. 🎉');
