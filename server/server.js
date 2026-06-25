@@ -23,6 +23,7 @@ const { WebSocketServer } = require('ws');
 // never drifts out of sync with the client. Change a number there, restart.
 const CONFIG = require('../js/config.js');
 const World = require('./world.js');
+const { cleanPlayerName, plausibleMove } = require('./rules.js');
 
 const PORT = process.env.PORT || 8080;
 let nextId = 1;
@@ -56,23 +57,8 @@ function broadcast(obj) {
   wss.clients.forEach((c) => { if (c.readyState === 1) send(c, obj); });
 }
 
-// Player names: trimmed, a safe set of characters, max 14, default "Player".
-// We do NOT filter words (kept simple on purpose — FR-011); duplicates are fine.
-function cleanPlayerName(n) {
-  const s = ('' + (n || '')).trim().replace(/[^A-Za-z0-9 _-]/g, '').slice(0, 14);
-  return s || 'Player';
-}
-
-// Light anti-cheat (FR-014): a real plane can't jump more than this far between
-// two reports. Generous so laggy-but-honest players are never kicked; it only
-// catches gross teleports. (Roughly a second of top-speed travel.)
-const MAX_JUMP = CONFIG.MAX_SPEED * 80;
-function plausibleMove(prev, next) {
-  if (!prev) return true;                       // first report — nothing to compare
-  const W = CONFIG.WORLD_WIDTH;
-  let dx = ((next.x - prev.x) % W + W) % W; if (dx > W / 2) dx -= W; // shortest way round
-  return Math.abs(dx) <= MAX_JUMP && Math.abs(next.y - prev.y) <= MAX_JUMP;
-}
+// Name cleaning (FR-011) and the light anti-cheat move check (FR-014) live in
+// server/rules.js so they're easy to read and test (see server/checks.js).
 
 // Hit reports are rate-limited per shooter so nobody can spam damage (a wide
 // shot is 5 bullets, the gun fires ~6/sec, so ~40/sec is plenty of headroom).

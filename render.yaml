@@ -1,3 +1,7 @@
+# NOTE: Railway is now the PRIMARY deploy (see railway.json + root package.json,
+# and FOR_BEN_PLEASE_READ.md). This Render blueprint is kept only as a backup
+# option. Either one runs the same server/server.js.
+#
 # Render.com blueprint — deploys the Pixel Planes online server for free,
 # with a secure wss:// address that works from the https game link.
 #

@@ -12,7 +12,7 @@ const CONFIG = {
   // everyone automatically. For LOCAL testing, just run the server yourself
   // (`node server/server.js`) and open http://localhost:8080 — the game then
   // connects to its own address, so you don't need to change this line.
-  SERVER_URL: 'wss://pixel-planes-bryding.onrender.com',
+  SERVER_URL: 'wss://pixel-planes-bryding-production.up.railway.app',
 
   // How many planes we want flying in the shared world. If there aren't this
   // many real people online, the server fills the empty spots with bots, so the

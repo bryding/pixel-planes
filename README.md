@@ -22,6 +22,8 @@ Then open your browser to **http://localhost:8000**
 - **Down arrow** = less gas (slow down)
 - **Left arrow** = turn the nose left
 - **Right arrow** = turn the nose right
+- **Space** = shoot your guns
+- **X** = fire a homing missile
 
 Try to keep flying without crashing into the ground! Gravity always pulls you
 down, so you need gas to stay up.
@@ -33,73 +35,68 @@ like how fast the plane goes, how strong gravity is, and the colors.
 Change a number, save the file, and refresh your browser to see what happens.
 You can't break anything — just experiment and have fun!
 
-## 🌐 Online play (the server)
+## 🌐 Online play — one shared world
 
-Online play (server list, creating/joining servers, passwords, host control)
-needs a little **server program** to run. The game itself can be on GitHub
-Pages, but the server has to run somewhere too. It lives in the **`server/`**
-folder.
+There are no rooms or passwords any more. You open the game, **type a name**,
+click **JOIN GAME**, and you're flying in the **one shared sky** with everyone
+else (like agar.io). If only a few real people are online, the server fills the
+empty spots with **bots** so the sky is never lonely. It's a free-for-all:
+shoot others down, get shot down, and **respawn right away** with a fresh score.
 
-### ▶️ Play online on your WiFi — EASIEST (no installs, no accounts)
+This needs a little **server program** (in the **`server/`** folder) that also
+hands out the game files, so one address does everything.
 
-**Double-click `Play Pixel Planes (same WiFi).command`** in this folder.
-(It uses Python, which every Mac already has — nothing to install.)
+### ▶️ Run it on your computer (and same-WiFi friends)
 
-A black window opens and prints addresses like:
+Install Node from **https://nodejs.org**, then from this folder:
+
+```
+cd server
+npm install        # one time — installs "ws"
+cd ..
+node server/server.js
+```
+
+It prints addresses like:
 ```
 - on THIS computer:  http://localhost:8080
 - others on WiFi:    http://192.168.1.16:8080
 ```
-Open the `http://localhost:8080` one in your browser, press **ESC → Create
-Server**, and you're online. Anyone on your WiFi opens the `192.168…:8080`
-address it printed. Keep that black window open while you play (close it / press
-Ctrl+C to stop).
 
-*(First time, your Mac might ask if you're sure — right-click the file → Open →
-Open.)*
+Open **http://localhost:8080**, type a name, press **JOIN GAME**. Friends on the
+same WiFi open the `192.168…:8080` address it printed. Keep the window open while
+you play (Ctrl+C to stop). There's also a **🛩 Play offline** button if you just
+want the single-player game with no server.
 
-### Alternative: run it with Node instead of Python
-
-If you'd rather use Node: install it from **https://nodejs.org**, then
-`cd server`, `npm install`, `npm start`. Same result.
-
-When it's running, everyone opens the printed address, presses **ESC → Create
-Server** (or Server
-   List), and you're playing together. Nothing to type — it connects to the
-   same computer automatically. Keep the terminal window open while you play.
-
-### 🌍 Play worldwide (from the public https link) — needs a one-time deploy
+### 🌍 Play worldwide — one-time deploy to Railway
 
 The public github.io link is **https**, and a browser will only let an https
-page talk to a **secure `wss://`** server. So for the link to work for anyone
-anywhere, the server has to be hosted online (a grown-up with the accounts
-should do this part):
+page talk to a **secure `wss://`** server, so the server has to be hosted online
+(a grown-up with the accounts does this once — see `FOR_BEN_PLEASE_READ.md`).
 
-- **Worldwide (from the https game link):** the server must have a **secure
-  `wss://`** address. Deploy it free on **Render** — basically one click:
+This repo is set up for **Railway**: it has a `railway.json` and a root
+`package.json` whose `start` script runs `node server/server.js`. Railway is
+already connected to the GitHub repo, so pushing the code auto-builds it at
+**`https://pixel-planes-bryding-production.up.railway.app`**. The game is already
+pointed there (`SERVER_URL` in `js/config.js`), so once the deploy is live the
+public link works for everyone, on any device.
 
-  **[➡️ Click here to Deploy to Render](https://render.com/deploy?repo=https://github.com/bryding/pixel-planes)**
+> A page on **https** can ONLY use **wss://** (never `ws://`) — a browser rule on
+> every device. When you run the server yourself over `http://localhost`, the
+> game connects to that same address automatically, so there's nothing to type.
 
-  1. Sign in with your GitHub account (free).
-  2. Click **Apply** — Render reads `render.yaml` and builds the `server/` folder.
-  3. Wait ~2 minutes. It creates a server at
-     **`https://pixel-planes-bryding.onrender.com`**.
+### 🔧 Change the world
 
-  The game is already pointed at `wss://pixel-planes-bryding.onrender.com`
-  (in `js/config.js`), so the moment that deploy is live, **the public game
-  link works online for everyone, on any device/OS** — no other changes needed.
+Everything tweakable is in **`js/config.js`** — and the server reads that **same
+file**, so there's only one place to change things:
 
-  > Notes: a page on **https** can ONLY use **wss://** (never `ws://`) — that's
-  > a browser rule on every device. If Render gives a slightly different URL,
-  > paste it into the lobby's server box (or tell me and I'll update the
-  > default). The free tier sleeps when idle, so the first connect after a quiet
-  > spell takes ~30–60s to wake — the game keeps retrying, just wait a moment.
+- `TARGET_POPULATION` — how many planes fill the sky (default 10)
+- `NET_TICK_HZ` — how often the server updates everyone (default 18)
+- `HARD_CAP` — most real people allowed at once (default 32)
+- `RESPAWN_DELAY` — how long before you fly back in after being shot down
 
-### 4. Play
-Press **ESC** → **Create Server** (pick a name + optional password) or
-**Server List** (join one). The person who creates a server is the **host** —
-only they get the Mode and Modifier menus.
+There's also a quick self-check for the server's math:
 
-> Heads-up: right now this is the **lobby** — creating, listing, joining, and
-> host control all work. *Seeing each other fly in the same sky* is the next
-> piece we're building on top of this.
+```
+npm test        # runs server/checks.js (bot counts, name cleaning, anti-cheat)
+```

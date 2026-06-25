@@ -126,10 +126,10 @@ with score reset to 0, never sent to the name screen (quickstart V4, SC-005/SC-0
 ## Phase 7: Polish & Cross-Cutting Concerns
 
 - [X] T027 [P] Remove now-dead single-player-only entry paths and leftover lobby code; confirm the game still runs by opening the served page (Principle IV)
-- [ ] T028 Railway cutover: add a Railway run config (`railway.json` or root `Procfile`/`package.json` start → `node server/server.js`), set `js/config.js` `SERVER_URL` to `wss://pixel-planes-bryding-production.up.railway.app`, and retire `render.yaml` as the primary deploy
-- [ ] T029 [P] (Optional) Pure-function Node checks in `server/` for the bot-count math, the sanity-check function, and the `hit` validation (no framework; a plain `node` assert script)
+- [X] T028 Railway cutover: add a Railway run config (`railway.json` or root `Procfile`/`package.json` start → `node server/server.js`), set `js/config.js` `SERVER_URL` to `wss://pixel-planes-bryding-production.up.railway.app`, and retire `render.yaml` as the primary deploy
+- [X] T029 [P] (Optional) Pure-function Node checks in `server/` for the bot-count math, the sanity-check function, and the `hit` validation (no framework; a plain `node` assert script)
 - [ ] T030 Run all `quickstart.md` validations V1–V5 locally, then V (Railway) on the live URL across two devices
-- [ ] T031 [P] Update `README.md` / `FOR_BEN_PLEASE_READ.md` with how to run and deploy the multiplayer world
+- [X] T031 [P] Update `README.md` / `FOR_BEN_PLEASE_READ.md` with how to run and deploy the multiplayer world
 
 ---
 

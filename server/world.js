@@ -12,6 +12,7 @@
 
 const CONFIG = require('../js/config.js');
 const BotAI = require('../js/bot-ai.js');
+const { desiredBots } = require('./rules.js');
 
 // The single world. There are no rooms or lobbies any more — connect, pick a
 // name, and you're in here with everybody else.
@@ -103,7 +104,7 @@ function damageBot(id, dmg) {
 // Keep the bot count at exactly max(0, target − humans): add bots when there's
 // room, remove them when people take the slots (FR-004/005/006).
 function syncBotCount() {
-  const desired = Math.max(0, world.targetPopulation - world.players.size);
+  const desired = desiredBots(world.targetPopulation, world.players.size);
   while (world.bots.size < desired) { const b = spawnBot(); world.bots.set(b.id, b); }
   while (world.bots.size > desired) { const firstId = world.bots.keys().next().value; world.bots.delete(firstId); }
 }

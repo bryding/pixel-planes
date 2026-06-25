@@ -1,0 +1,13 @@
+{
+  "name": "pixel-planes",
+  "version": "1.0.0",
+  "description": "Browser airplane combat with one always-on shared multiplayer world.",
+  "private": true,
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "node server/checks.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
