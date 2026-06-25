@@ -6,13 +6,31 @@
 
 const CONFIG = {
 
-  // ---- Online play ----
+  // ---- Online play (the one shared world) ----
   // The public game link (https) can ONLY use a secure "wss://" server, so this
-  // points at the free Render server the project deploys (see render.yaml).
-  // Once you deploy it (one click — see README), the public link works for
-  // everyone automatically. For LOCAL testing, open the game over http and type
-  // "ws://localhost:8080" in the lobby's server box instead.
+  // points at the deployed server. Once it's deployed the public link works for
+  // everyone automatically. For LOCAL testing, just run the server yourself
+  // (`node server/server.js`) and open http://localhost:8080 — the game then
+  // connects to its own address, so you don't need to change this line.
   SERVER_URL: 'wss://pixel-planes-bryding.onrender.com',
+
+  // How many planes we want flying in the shared world. If there aren't this
+  // many real people online, the server fills the empty spots with bots, so the
+  // sky is never lonely. Change this one number to make the world busier!
+  TARGET_POPULATION: 10,
+
+  // The most real people allowed in the world at once (bots don't count). This
+  // is just a safety limit so the little server never gets overwhelmed.
+  HARD_CAP: 32,
+
+  // How many times per second the server tells everyone where all the planes
+  // are. 18 is smooth enough (the game fills in the gaps), and easy on the
+  // network. Bigger = smoother but more data.
+  NET_TICK_HZ: 18,
+
+  // How long (in frames, 60 = 1 second) you wait after being shot down before
+  // you automatically pop back into the SAME world. No trip back to the menu!
+  RESPAWN_DELAY: 90,
 
   // ---- The size of the game picture (in pixels) ----
   // Small numbers make a chunky, retro pixel look. The picture is stretched
@@ -233,3 +251,9 @@ const CONFIG = {
     treeLeafLt: '#5fae4a', // tree canopy highlight
   },
 };
+
+// In the browser, CONFIG is just a global the game uses. But our little Node
+// server ALSO needs these numbers (like TARGET_POPULATION) so the world stays
+// in sync. This one line lets the server do `require('../js/config.js')` and
+// get the exact same CONFIG — one file, one source of truth, no drift.
+if (typeof module !== 'undefined') module.exports = CONFIG;

@@ -33,9 +33,9 @@ in `server/`. The server also serves the static client.
 
 **Purpose**: Add the tunable knobs and confirm dependencies before touching netcode.
 
-- [ ] T001 [P] Make `js/config.js` the SINGLE source of tunables for browser AND Node: add `TARGET_POPULATION` (10), `HARD_CAP` (32), `NET_TICK_HZ` (18), `RESPAWN_DELAY`; keep `SERVER_URL` (Railway value set in T028); append `if (typeof module !== 'undefined') module.exports = CONFIG;` so the server can `require` it (resolves analysis F1)
+- [X] T001 [P] Make `js/config.js` the SINGLE source of tunables for browser AND Node: add `TARGET_POPULATION` (10), `HARD_CAP` (32), `NET_TICK_HZ` (18), `RESPAWN_DELAY`; keep `SERVER_URL` (Railway value set in T028); append `if (typeof module !== 'undefined') module.exports = CONFIG;` so the server can `require` it (resolves analysis F1)
 - [ ] T002 [P] Point the server at the shared config in `server/server.js` / `server/world.js`: `require('../js/config.js')` for `TARGET_POPULATION`, `HARD_CAP`, `NET_TICK_HZ` — NO separate server gameplay config file
-- [ ] T003 Verify server dependency installs cleanly: `cd server && npm install` (confirms `ws` present)
+- [X] T003 Verify server dependency installs cleanly: `cd server && npm install` (confirms `ws` present)
 
 ---
 
