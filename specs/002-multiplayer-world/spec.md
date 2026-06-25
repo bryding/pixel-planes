@@ -8,6 +8,19 @@
 
 **Input**: User description: "we need to implement basic multiplayer. we can just have one persistent world running all the time that players can join. i have a railway setup that i have connected this github too (pixel-planes-bryding-production.up.railway.app), although we will need to setup the server and everything still. when players go to the app, it should ask them to enter a name and then join the game, kind of like agar.io"
 
+## Clarifications
+
+### Session 2026-06-24
+
+- Q: When a player is shot down and auto-respawns, what happens to their score? → A: Score resets
+  to 0 each life (agar.io-style per-life score).
+- Q: How should typed-in, publicly shown player names be handled for a kid-facing game? → A: Length
+  cap and character limits only; no profanity/content filter in v1.
+- Q: How important is cheat-resistance for v1? → A: Server relays player state and applies light
+  sanity checks (reject impossible moves); it is not a full physics authority.
+- Q: Should backfill bots look like regular players or be clearly marked? → A: Bots use ordinary
+  names and blend in; players are not told which planes are bots.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Enter a name and join the live world (Priority: P1)
@@ -60,7 +73,8 @@ that movement happen smoothly and sees the correct name label.
 
 To keep the world full and fun even when few humans are online, AI-controlled planes fill the
 empty slots. As more humans join, the number of bots goes down one-for-one, and as humans leave,
-bots come back to refill.
+bots come back to refill. Bots use ordinary-looking names and blend in with human planes — players
+are not told which planes are bots.
 
 **Why this priority**: Makes the world enjoyable at any population, including a single player
 alone. Important for feel but the world still functions for humans without it.
@@ -149,9 +163,15 @@ reappear flying in the same world a couple of seconds later with no menu interru
 - **FR-010**: When a player disconnects, the system MUST remove their plane from all other players'
   views within a few seconds.
 - **FR-011**: Player names MUST be validated to a maximum length and a non-empty value (with a
-  sensible default substituted if blank).
+  sensible default substituted if blank) and restricted to a safe character set. No
+  profanity/content filtering is applied in v1 (explicitly out of scope).
 - **FR-012**: Player identity MUST be ephemeral session-based identity only — no accounts,
   passwords, or login are required; a name plus a live connection is sufficient to play.
+- **FR-013**: Each player MUST have a score that accumulates during a single life and resets to
+  zero when their plane is destroyed (agar.io-style per-life score).
+- **FR-014**: The server MUST relay player state between clients and apply light sanity checks that
+  reject clearly impossible updates (e.g. teleporting or impossible speed); the server is NOT
+  required to be a full physics/hit authority in v1.
 
 ### Key Entities
 
@@ -160,7 +180,8 @@ reappear flying in the same world a couple of seconds later with no menu interru
 - **Player**: A connected human participant — has a chosen name, a live plane, a score for the
   current life, and an alive/respawning state. Ephemeral; exists only while connected.
 - **Bot**: An AI-controlled plane that exists only to backfill empty slots up to the target
-  population; behaves like an enemy plane in combat.
+  population; behaves like an enemy plane in combat. Presents with an ordinary-looking name and is
+  not visually distinguished from human planes (players cannot tell bots from humans).
 - **Plane State**: The per-plane data shared with everyone — position, heading, velocity/momentum,
   health, and owner label — so every client can draw every plane.
 
@@ -183,6 +204,8 @@ reappear flying in the same world a couple of seconds later with no menu interru
   world's filled size on the next run, with no other code edits required.
 - **SC-007**: The shared world supports at least the target population of simultaneous human
   players (default 10) flying and fighting together without noticeable degradation.
+- **SC-008**: A player's score is visible while alive, increases with kills during a life, and is
+  observed to reset to zero immediately after that player is shot down.
 
 ## Assumptions
 
@@ -191,9 +214,13 @@ reappear flying in the same world a couple of seconds later with no menu interru
   on the configured death behavior). No long-term saved accounts or stats are in scope for v1.
 - **Free-for-all combat**: Everyone (humans and bots) can damage everyone else; there are no teams
   in v1.
-- **Score handling**: Each player has a live score for their current life; the exact persistence of
-  score across respawns is a tuning detail to be decided in planning, defaulting to a simple live
-  scoreboard.
+- **Score handling**: Each player has a per-life score that accumulates while alive and resets to
+  zero on death/respawn (see FR-013); no score persists across lives or sessions in v1.
+- **Cheat-resistance**: The server relays state and rejects clearly impossible updates but is not a
+  full authority in v1 (see FR-014); some cheating is possible but bounded, accepted as a low-stakes
+  tradeoff for simplicity.
+- **Name moderation**: Names are length/character limited but not content-filtered in v1 (see
+  FR-011); profanity moderation is a possible future addition.
 - **Hard capacity cap**: Beyond the bot-backfill target, a reasonable maximum number of concurrent
   players (a configurable cap) protects the server; the default cap is a planning detail and is set
   comfortably above the default target of 10.
