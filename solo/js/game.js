@@ -359,7 +359,11 @@ function armTitleAudio() {
 }
 ['pointerdown', 'keydown', 'touchstart'].forEach((ev) =>
   window.addEventListener(ev, armTitleAudio, { passive: true }));
+// True while the Settings screen is open, so the title banner/plane don't draw
+// on the canvas behind it (which looked cluttered on top of "SETTINGS").
+let settingsOpen = false;
 function openSettings() {
+  settingsOpen = true;
   const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'none';
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'flex';
   // Show the current volume on the slider.
@@ -376,6 +380,7 @@ function setVolumePct(pct) {
   Sound.gun();                  // quick click so you HEAR the level as you set it
 }
 function closeSettings() {
+  settingsOpen = false;
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';
   const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'flex';
 }
@@ -1326,6 +1331,10 @@ function drawTitleScreen() {
   // Dim the live dogfights behind so the title reads clearly.
   ctx.fillStyle = 'rgba(8,12,26,0.5)';
   ctx.fillRect(0, 0, W, H);
+
+  // While Settings is open, don't draw the banner/plane — the Settings panel
+  // has its own title, and the canvas banner behind it looked messy.
+  if (settingsOpen) { if (typeof Sound !== 'undefined') Sound.setEngine(0, 100); return; }
 
   const bannerY = H * 0.30;
   const centerX = W / 2;

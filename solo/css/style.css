@@ -419,6 +419,8 @@ html, body {
   min-width: 300px;
 }
 .startBtn:hover { background: rgba(40, 80, 120, 0.97); }
+/* Some "buttons" are really links (e.g. Back to menu); make them match. */
+a.startBtn { display: inline-block; text-align: center; text-decoration: none; box-sizing: border-box; }
 .settingsModes { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 520px; }
 .settingsModes button {
   font-family: monospace; font-weight: bold; font-size: 15px; color: #fff;

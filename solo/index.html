@@ -4,35 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pixel Planes</title>
-  <link rel="stylesheet" href="css/style.css?v=14" />
+  <link rel="stylesheet" href="css/style.css?v=18" />
 </head>
 <body>
   <!-- This is the box the whole game is drawn onto -->
   <canvas id="game"></canvas>
 
-  <!-- CLICK-TO-PLAY GATE: the first thing you see in Single Player. Clicking
-       turns on sound (browsers block it until your first click/tap) and reveals
-       the title screen, where live AI dogfights play behind the banner. -->
-  <div id="clickGate">
-    <div class="gateInner">
-      <div class="titleBanner">PIXEL&nbsp;PLANES</div>
-      <p class="startHint">Single Player 🛩️</p>
-      <button class="startBtn" onclick="enterTitle(); this.blur();">▶ Click to Play</button>
-      <p id="joinStatus" class="startHint">click to turn on sound 🔊</p>
-      <div class="gateExtras">
-        <button class="startBtn small" onclick="openSettings(); this.blur();">⚙ Settings</button>
-        <a class="startBtn small" href="../index.html">◀ Back to menu</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- TITLE / START SCREEN (shown on load & refresh; the canvas behind it shows
-       live AI dogfights). Pressing START begins play. Dying does NOT return here. -->
+  <!-- TITLE / START SCREEN: the one and only menu you see first in Single Player.
+       The big PIXEL PLANES banner + the plane that tows it are drawn on the
+       CANVAS behind these buttons, with live AI dogfights flying around. Press
+       START to play. (Sound turns on the moment you click/tap anything.) -->
   <div id="startScreen">
-    <!-- The PIXEL PLANES banner + the plane that tows it are drawn on the CANVAS. -->
     <div class="startButtons">
       <button class="startBtn" onclick="startGame(); this.blur();">▶ START</button>
       <button class="startBtn" onclick="openSettings(); this.blur();">⚙ SETTINGS</button>
+      <a class="startBtn" href="../index.html">◀ Back to menu</a>
     </div>
   </div>
 
@@ -164,21 +150,21 @@
   </div>
 
   <!-- The scripts run top to bottom, so order matters here -->
-  <script src="js/config.js?v=14"></script>
-  <script src="js/audio.js?v=14"></script>
-  <script src="js/net.js?v=14"></script>
-  <script src="js/input.js?v=14"></script>
-  <script src="js/physics.js?v=14"></script>
-  <script src="js/bullet.js?v=14"></script>
-  <script src="js/missile.js?v=14"></script>
-  <script src="js/explosion.js?v=14"></script>
-  <script src="js/powerup.js?v=14"></script>
-  <script src="js/sprites.js?v=14"></script>
-  <script src="js/scenery.js?v=14"></script>
-  <script src="js/plane.js?v=14"></script>
-  <script src="js/bot-ai.js?v=14"></script>
-  <script src="js/enemy.js?v=14"></script>
-  <script src="js/pilot.js?v=14"></script>
-  <script src="js/game.js?v=14"></script>
+  <script src="js/config.js?v=18"></script>
+  <script src="js/audio.js?v=18"></script>
+  <script src="js/net.js?v=18"></script>
+  <script src="js/input.js?v=18"></script>
+  <script src="js/physics.js?v=18"></script>
+  <script src="js/bullet.js?v=18"></script>
+  <script src="js/missile.js?v=18"></script>
+  <script src="js/explosion.js?v=18"></script>
+  <script src="js/powerup.js?v=18"></script>
+  <script src="js/sprites.js?v=18"></script>
+  <script src="js/scenery.js?v=18"></script>
+  <script src="js/plane.js?v=18"></script>
+  <script src="js/bot-ai.js?v=18"></script>
+  <script src="js/enemy.js?v=18"></script>
+  <script src="js/pilot.js?v=18"></script>
+  <script src="js/game.js?v=18"></script>
 </body>
 </html>

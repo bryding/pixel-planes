@@ -17,6 +17,11 @@ class Plane {
     // 0 means pointing to the right. We start flying to the right.
     this.angle = 0;
 
+    // How fast the nose is turning right now. It eases up to full turn speed
+    // when you hold a key and eases back to 0 when you let go, so the plane
+    // turns SMOOTHLY instead of snapping. (This is what makes it feel nice.)
+    this.turnRate = 0;
+
     // The throttle is like a gas pedal: 0 = off, 1 = full power.
     this.throttle = CONFIG.START_THROTTLE;
 
@@ -80,11 +85,14 @@ class Plane {
   // This runs every frame to move the plane.
   update() {
     // --- 1. Read the controls (unless we're FROZEN by a bad power-up) ---
-    // Player 2 (split-screen) uses the WASD keys; everyone else uses arrows.
-    const kUp    = (this.keymap === 'p2') ? Input.up2    : Input.up;
-    const kDown  = (this.keymap === 'p2') ? Input.down2  : Input.down;
-    const kLeft  = (this.keymap === 'p2') ? Input.left2  : Input.left;
-    const kRight = (this.keymap === 'p2') ? Input.right2 : Input.right;
+    // In SPLIT-SCREEN: Player 2 flies with WASD, Player 1 with the arrows.
+    // In NORMAL single player there's only one plane, so it answers to BOTH
+    // the arrow keys AND WASD — fly with whichever feels comfy.
+    const solo1P = (this.keymap !== 'p2') && !splitScreen;
+    const kUp    = (this.keymap === 'p2') ? Input.up2    : (solo1P ? (Input.up    || Input.up2)    : Input.up);
+    const kDown  = (this.keymap === 'p2') ? Input.down2  : (solo1P ? (Input.down  || Input.down2)  : Input.down);
+    const kLeft  = (this.keymap === 'p2') ? Input.left2  : (solo1P ? (Input.left  || Input.left2)  : Input.left);
+    const kRight = (this.keymap === 'p2') ? Input.right2 : (solo1P ? (Input.right || Input.right2) : Input.right);
     if (this.frozenTimer <= 0) {
       if (kUp)   this.throttle += CONFIG.THROTTLE_UP_RATE; // slow to spin up
       if (kDown) this.throttle -= CONFIG.THROTTLE_RATE;
@@ -92,9 +100,19 @@ class Plane {
       this.throttle = Math.max(0, Math.min(1, this.throttle));
 
       const tm = (mode === 'ww2') ? CONFIG.WW2_TURN_MULT : 1; // WW2 planes turn slowly
-      if (kLeft)  this.angle -= CONFIG.TURN_SPEED * tm;
-      if (kRight) this.angle += CONFIG.TURN_SPEED * tm;
+
+      // Smooth turning: figure out the turn we WANT (left, right, or none),
+      // then ease the actual turn toward it. Holding a key ramps the nose up
+      // to full turn speed; letting go eases it back to straight. A quick tap
+      // only nudges the nose a little, so flying feels gentle, not twitchy.
+      let turnWanted = 0;
+      if (kLeft)  turnWanted -= CONFIG.TURN_SPEED * tm;
+      if (kRight) turnWanted += CONFIG.TURN_SPEED * tm;
+      this.turnRate += (turnWanted - this.turnRate) * CONFIG.TURN_EASE;
+    } else {
+      this.turnRate += (0 - this.turnRate) * CONFIG.TURN_EASE; // frozen: ease to straight
     }
+    this.angle += this.turnRate;
 
     // --- 2. Realistic flight. Lift scales with throttle, so cutting the
     // throttle kills your lift and you fall. ---

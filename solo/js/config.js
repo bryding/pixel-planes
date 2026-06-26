@@ -32,6 +32,10 @@ const CONFIG = {
   // you automatically pop back into the SAME world. No trip back to the menu!
   RESPAWN_DELAY: 90,
 
+  // When you (re)spawn you get a few seconds of "shield" so you can't be shot
+  // the instant you fly in. A glowing bubble shows while it lasts.
+  SPAWN_PROTECT: 120,
+
   // ---- The size of the game picture (in pixels) ----
   // Small numbers make a chunky, retro pixel look. The picture is stretched
   // bigger to fill your screen, but it's really only drawn this small.
@@ -40,11 +44,22 @@ const CONFIG = {
   GAME_W: 2560,
   GAME_H: 1440,
 
+  // ---- How big the on-screen info (the "HUD") is ----
+  // The score, leaderboard, map, throttle/health bars and messages. The game
+  // picture is drawn big and then squeezed onto your screen, which can make
+  // the writing look tiny. Turn this UP to make ALL the info bigger, DOWN to
+  // make it smaller. 1 = original size. Try 1.6 for comfy, 2 for chunky.
+  HUD_SCALE: 1.6,
+
   // ---- How the plane flies ----
   // (These are the fun ones to experiment with!)
 
   THRUST: 0.13,        // How hard the engine pushes. Bigger = faster plane.
-  TURN_SPEED: 0.065,   // How fast the nose turns. Bigger = spins quicker.
+  TURN_SPEED: 0.05,    // How fast the nose turns. Bigger = spins quicker.
+  TURN_EASE: 0.14,     // How quickly the nose eases INTO a turn (and back out).
+                       // Smaller = smoother & floatier; bigger = snappier turns.
+                       // This is the knob that makes flying feel gentle, not
+                       // twitchy. Try 0.1 (very smooth) up to 0.3 (sharp).
   GRAVITY: 0.05,       // How hard the ground pulls the plane down.
   DRAG: 0.987,         // Air resistance. Tuned so your cruise speed scales with
                        // the throttle (about throttle x MAX_SPEED).
@@ -70,6 +85,11 @@ const CONFIG = {
   START_THROTTLE: 0.6, // How much gas the plane starts with.
 
   MAX_SPEED: 10,       // The fastest the plane is allowed to go.
+
+  // How BIG every plane is drawn. This also makes them bigger TARGETS (the
+  // "can I hit it?" circle grows with the plane), so a higher number means
+  // easier dogfights. 1 = original size, 1.2 = 20% bigger.
+  PLANE_SCALE: 1.2,
 
   // ---- The camera (the view that follows the plane) ----
   CAM_SMOOTH: 0.08,    // How smoothly the camera catches up. Smaller = lazier.
