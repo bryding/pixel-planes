@@ -1,0 +1,326 @@
+/* Make the page a dark background and center the game */
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #10131a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: monospace;
+}
+
+/* The game canvas.
+   image-rendering: pixelated keeps the pixels sharp and chunky
+   instead of blurry when we scale the picture up bigger. */
+#game {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #87ceeb; /* sky blue, shows before the first frame draws */
+  /* The size on screen is set by JavaScript so it always fits the window. */
+}
+
+
+/* ---- Pause menu overlay (ESC) ---- */
+#pauseMenu {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* The container itself is click-through so the on-screen ESC button (which
+     sits behind it) stays tappable to CLOSE the menu. Only the panel catches taps. */
+  pointer-events: none;
+}
+#pauseMenu .pauseInner {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  padding: 28px 40px;
+}
+#pauseMenu h1 {
+  font-family: monospace;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+  letter-spacing: 4px;
+}
+#pauseMenu button {
+  font-family: monospace;
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffffff;
+  background: rgba(20, 40, 70, 0.9);
+  border: 2px solid #ffffff;
+  border-radius: 8px;
+  padding: 10px 22px;
+  cursor: pointer;
+  min-width: 320px;
+}
+#pauseMenu button:hover {
+  background: rgba(40, 80, 120, 0.95);
+}
+#pauseMenu .pauseHint {
+  font-family: monospace;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 8px 0 0 0;
+  text-align: center;
+}
+
+/* ---- Mobile touch controls (toggle with the 📱 Mobile button) ---- */
+#mobileControls {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;          /* empty space lets touches pass through */
+}
+#mobileControls .mcTurn,
+#mobileControls .mcActions,
+#mobileControls .mcThrottleWrap,
+#mobileControls .mcEscBtn { pointer-events: auto; }
+
+/* top-right pause/ESC button (only visible while mobile controls are on) */
+.mcEscBtn {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  width: 96px;
+  height: 46px;
+  font-size: 17px;
+  border-radius: 10px;
+}
+
+.mcBtn {
+  font-family: monospace;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.40);
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.mcBtn:active { background: rgba(255, 255, 255, 0.30); }
+
+/* bottom-left turn pad */
+.mcTurn {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  display: flex;
+  gap: 14px;
+}
+.mcTurnBtn { width: 78px; height: 78px; font-size: 32px; border-radius: 14px; }
+
+/* bottom-right action buttons */
+.mcActions {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+.mcCircle { width: 100px; height: 100px; font-size: 30px; border-radius: 50%; }
+.mcSquare { width: 72px;  height: 72px;  font-size: 26px; border-radius: 12px; }
+
+/* bottom-middle throttle slider */
+.mcThrottleWrap {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  width: 36%;
+  min-width: 220px;
+  text-align: center;
+  touch-action: none;
+}
+.mcSlider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 26px;
+  border-radius: 13px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  touch-action: none;
+  outline: none;
+}
+.mcSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f1c40f;
+  border: 2px solid #ffffff;
+  cursor: pointer;
+}
+.mcSlider::-moz-range-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f1c40f;
+  border: 2px solid #ffffff;
+  cursor: pointer;
+}
+.mcThrottleLbl {
+  font-family: monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 4px;
+}
+
+/* ---- Room (Create / Join) panels in the pause menu ---- */
+.roomHint {
+  font-family: monospace;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 4px 0;
+  max-width: 360px;
+  text-align: center;
+}
+/* name box on the name screen */
+.nameInput {
+  font-family: monospace;
+  font-size: 20px;
+  text-align: center;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid #ffffff;
+  border-radius: 8px;
+  padding: 9px 14px;
+  width: 300px;
+  outline: none;
+}
+.nameInput::placeholder { color: rgba(255, 255, 255, 0.35); }
+
+/* ---- Settings screen ---- */
+#settingsScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 30;                 /* above everything else */
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+.startCenter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  z-index: 32;
+}
+.titleBanner {
+  background: #e02a2a;
+  color: #ffffff;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 64px;
+  letter-spacing: 8px;
+  padding: 16px 46px;
+  border: 5px solid #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.35);
+  transform: rotate(-2deg);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+}
+.titleBanner.small { font-size: 34px; letter-spacing: 5px; padding: 10px 28px; transform: none; }
+.startHint { font-family: monospace; color: rgba(255,255,255,0.85); margin: 0; }
+.startBtn {
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 24px;
+  color: #ffffff;
+  background: rgba(20, 40, 70, 0.92);
+  border: 3px solid #ffffff;
+  border-radius: 10px;
+  padding: 14px 50px;
+  cursor: pointer;
+  min-width: 300px;
+}
+.startBtn:hover { background: rgba(40, 80, 120, 0.97); }
+
+/* ---- Plane color customizer ---- */
+.colorPresets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  max-width: 420px;
+}
+.colorPresets button {
+  width: 54px;
+  height: 54px;
+  border: 3px solid #ffffff;
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 0;
+}
+.colorPresets button:hover { transform: scale(1.08); }
+#colorWheel {
+  width: 220px;
+  height: 70px;
+  border: 3px solid #ffffff;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+}
+
+/* volume slider on the Settings screen */
+.volSlider {
+  -webkit-appearance: none; appearance: none;
+  width: 300px; height: 24px; border-radius: 12px;
+  background: rgba(0,0,0,0.5); border: 2px solid #fff; outline: none; cursor: pointer;
+}
+.volSlider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 34px; height: 34px; border-radius: 50%; background: #f1c40f; border: 2px solid #fff; cursor: pointer;
+}
+.volSlider::-moz-range-thumb { width: 34px; height: 34px; border-radius: 50%; background: #f1c40f; border: 2px solid #fff; cursor: pointer; }
+
+/* ---- Name gate (shown first; type a name and JOIN the shared world) ---- */
+#clickGate {
+  position: fixed;
+  inset: 0;
+  z-index: 40;                 /* above the title screen */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 16, 32, 0.72);  /* see the live dogfights behind */
+}
+.gateInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+/* the "type your name" box on the gate */
+.nameInput {
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 24px;
+  text-align: center;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.45);
+  border: 3px solid #ffffff;
+  border-radius: 10px;
+  padding: 12px 18px;
+  width: 300px;
+  outline: none;
+}
+.nameInput::placeholder { color: rgba(255, 255, 255, 0.5); }
+/* the smaller "Settings" button under JOIN */
+.gateExtras { display: flex; gap: 12px; }
+.startBtn.small { font-size: 16px; padding: 9px 18px; min-width: 0; }

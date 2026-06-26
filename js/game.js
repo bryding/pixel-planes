@@ -418,10 +418,11 @@ function resumeGame()  { paused = false; updatePauseMenu(); }
 function chooseNormal() { setSplitScreen(false); paused = false; updatePauseMenu(); }
 function chooseSplit()  { setSplitScreen(true);  paused = false; updatePauseMenu(); }
 
-// Open Ben's ONLINE multiplayer game in a NEW TAB, so your single-player game
-// stays open in this tab — just switch back to it whenever you want.
+// Open the ONLINE multiplayer game in a NEW TAB. This is YOUR labeled version
+// (bot/human nametags + auto-lock missiles) that connects to the SAME shared
+// server — so you're in the same world as your friends, just with the labels.
 function goMultiplayer() {
-  window.open(CONFIG.MULTIPLAYER_URL, '_blank', 'noopener');
+  window.open('online/', '_blank', 'noopener');
 }
 
 // ===========================================================================
