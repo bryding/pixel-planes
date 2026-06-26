@@ -242,7 +242,12 @@ function enterWorld() {
 // ===========================================================================
 const REMOTE_TEAM = -1;   // marks bullets/missiles that came from OTHER players
 
-function remoteName(id) { const r = remotePlayers[id]; return (r && r.name) || 'a plane'; }
+// Bots (server ids >= 1,000,000) all show as "Bot"; humans keep their chosen name.
+function isBotId(id) { return parseInt(id, 10) >= 1000000; }
+function remoteName(id) {
+  if (isBotId(id)) return 'Bot';
+  const r = remotePlayers[id]; return (r && r.name) || 'a plane';
+}
 
 // Did one of MY shots reach a remote plane? If so, tell the server.
 function onlineHitCheck(proj, kind) {
@@ -548,14 +553,14 @@ function drawRemotePlayers() {
     const sx = worldToScreenX(r.x), sy = r.y - camera.y;
     drawPlaneSprite(ctx, remoteSprite(parseInt(id, 10)), sx, sy, r.angle || 0, frameCount, false);
     ctx.textAlign = 'center';
-    // name tag
+    // name tag: bots all say "Bot", humans show their chosen name
+    const label = remoteName(id);
     ctx.font = '11px monospace';
-    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillText(r.name || 'player', sx + 1, sy - 21);
-    ctx.fillStyle = '#ffffff'; ctx.fillText(r.name || 'player', sx, sy - 22);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillText(label, sx + 1, sy - 21);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(label, sx, sy - 22);
     // who is it? Server bots get ids >= 1,000,000; real players are small ids.
-    const isBot = parseInt(id, 10) >= 1000000;
     ctx.font = '20px sans-serif';
-    ctx.fillText(isBot ? '🤖' : '🧑', sx, sy - 34);
+    ctx.fillText(isBotId(id) ? '🤖' : '🧑', sx, sy - 34);
     ctx.textAlign = 'left';
   }
 }
@@ -653,8 +658,10 @@ function drawHud() {
 
 // The scoreboard on the right: who has the most kills (you + everyone online).
 function drawLeaderboard() {
-  const rows = [{ name: '🛩️ YOU', score: score, you: true }];
-  for (const id in remotePlayers) rows.push({ name: remotePlayers[id].name || 'player', score: remotePlayers[id].score || 0 });
+  const rows = [{ icon: '🧑', name: 'YOU', score: score, you: true }];
+  for (const id in remotePlayers) {
+    rows.push({ icon: isBotId(id) ? '🤖' : '🧑', name: remoteName(id), score: remotePlayers[id].score || 0 });
+  }
   rows.sort((a, b) => b.score - a.score);
   const top = rows.slice(0, 8);
 
@@ -665,7 +672,7 @@ function drawLeaderboard() {
   top.forEach((e, i) => {
     const ty = y + 31 + i * rh;
     ctx.fillStyle = e.you ? '#7fbdef' : '#ffffff';
-    ctx.textAlign = 'left'; ctx.fillText((i + 1) + '. ' + e.name, x + 8, ty);
+    ctx.textAlign = 'left'; ctx.fillText((i + 1) + '. ' + e.icon + ' ' + e.name, x + 8, ty);
     ctx.textAlign = 'right'; ctx.fillText('' + e.score, x + w - 8, ty);
   });
   ctx.textAlign = 'left';
