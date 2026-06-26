@@ -249,6 +249,19 @@ function remoteName(id) {
   const r = remotePlayers[id]; return (r && r.name) || 'a plane';
 }
 
+// The nearest OTHER plane (real player or bot) to you — used to auto-lock missiles.
+function nearestRemotePlane() {
+  let best = null, bestDist = Infinity;
+  for (const id in remotePlayers) {
+    const r = remotePlayers[id];
+    if (!r || r.alive === false || r.x === undefined) continue;
+    const dx = wrapDX(r.x - player.x), dy = r.y - player.y;
+    const d = dx * dx + dy * dy;
+    if (d < bestDist) { bestDist = d; best = r; }
+  }
+  return best;
+}
+
 // Did one of MY shots reach a remote plane? If so, tell the server.
 function onlineHitCheck(proj, kind) {
   if (proj.dead) return;
@@ -440,8 +453,13 @@ function update() {
         // Missiles: one per press, ammo-limited.
         const mBefore = missiles.length;
         if (missilePressed) player.fireMissile(missiles, planes);
-        if (Net.inWorld && missiles.length > mBefore)
-          Net.sendFire('missile', player.x + Math.cos(player.angle) * 17, player.y + Math.sin(player.angle) * 17, player.angle);
+        if (missiles.length > mBefore) {
+          // AUTO-LOCK: aim the new missile at the nearest plane (player or bot).
+          const m = missiles[missiles.length - 1];
+          if (m && !m.visual) m.target = nearestRemotePlane();
+          if (Net.inWorld)
+            Net.sendFire('missile', player.x + Math.cos(player.angle) * 17, player.y + Math.sin(player.angle) * 17, player.angle);
+        }
       }
     } else { // 'dead' -> auto-respawn after the delay
       playerRespawn -= 1;
@@ -457,8 +475,10 @@ function update() {
     bullet.update();
     if (Net.inWorld && !bullet.visual) onlineHitCheck(bullet, 'gun');
   }
-  // Missiles: same idea.
+  // Missiles: same idea, but keep them auto-locked onto the nearest plane.
   for (const missile of missiles) {
+    if (!missile.visual && (!missile.target || missile.target.alive === false))
+      missile.target = nearestRemotePlane();
     missile.update();
     if (Net.inWorld && !missile.visual) onlineHitCheck(missile, 'missile');
   }
