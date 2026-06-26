@@ -93,7 +93,7 @@ wss.on('connection', (ws) => {
         ws.joined = true;
         ws.player = player;
         console.log('player ' + ws.id + ' (' + name + ') joined (' + World.humanCount() + ' online)');
-        send(ws, { t: 'welcome', id: ws.id, target: World.world.targetPopulation, tickHz: World.world.tickHz });
+        send(ws, { t: 'welcome', id: ws.id, target: World.world.targetPopulation, tickHz: World.world.tickHz, mode: World.world.mode });
         break;
       }
 
@@ -135,6 +135,17 @@ wss.on('connection', (ws) => {
       case 'cheat': {
         if (!ws.joined) break;
         if (typeof m.cmd === 'string') World.cheat(m.cmd, m.n);
+        break;
+      }
+
+      // "@hidden" Mode Menu: change the world's mode for EVERYONE.
+      case 'setmode': {
+        if (!ws.joined) break;
+        const ALLOWED = ['classic', 'unicorn', 'badweather', 'ww2', 'night', 'nomod'];
+        if (ALLOWED.indexOf(m.mode) >= 0) {
+          World.world.mode = m.mode;
+          broadcast({ t: 'mode', mode: m.mode });
+        }
         break;
       }
 

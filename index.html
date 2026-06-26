@@ -63,6 +63,15 @@
         <button onclick="cheat('clearbots'); this.blur();">🧹 Remove ALL Bots</button>
         <button onclick="cheat('resetbots'); this.blur();">↩️ Reset Bots</button>
       </div>
+      <!-- Mode Menu (hidden until @hidden). Changes the world's LOOK for EVERYONE. -->
+      <div id="modeBox" style="display:none">
+        <p class="cmdLabel">🎮 Mode Menu (changes for everyone)</p>
+        <button onclick="setMode('classic'); this.blur();">Classic</button>
+        <button onclick="setMode('unicorn'); this.blur();">🦄 Unicorn</button>
+        <button onclick="setMode('badweather'); this.blur();">🌧️ Bad Weather</button>
+        <button onclick="setMode('ww2'); this.blur();">🪖 WW2</button>
+        <button onclick="setMode('night'); this.blur();">🌙 Night</button>
+      </div>
     </div>
 
     <!-- pick your plane color: presets + a color wheel -->

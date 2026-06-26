@@ -20,6 +20,7 @@ const world = {
   targetPopulation: CONFIG.TARGET_POPULATION, // how many planes we want flying
   hardCap: CONFIG.HARD_CAP,                    // most real people allowed at once
   tickHz: CONFIG.NET_TICK_HZ,                  // snapshots per second
+  mode: 'classic',     // the world's look/mode (changed by the @hidden Mode Menu)
   players: new Map(),  // id -> { id, name, ws, lastState, alive, score, lastHitBy }
   bots: new Map(),     // id -> bot plane (we add/remove these to fill the world)
   botBullets: [],      // bullets the bots have fired (server-simulated)
