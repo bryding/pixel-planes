@@ -350,13 +350,13 @@ html, body {
 }
 #chatPanel {
   position: fixed; left: 16px; bottom: 80px; z-index: 25;
-  width: 300px; max-width: 72vw;
+  width: 340px; max-width: 80vw;
   display: flex; flex-direction: column; gap: 6px;
   background: rgba(0, 0, 0, 0.62); border: 2px solid rgba(255, 255, 255, 0.6);
   border-radius: 10px; padding: 8px;
 }
 #chatMessages {
-  height: 180px; max-height: 40vh; overflow-y: auto;
+  height: 300px; max-height: 55vh; overflow-y: auto;
   display: flex; flex-direction: column; gap: 3px;
   font-family: monospace; font-size: 13px; color: #fff;
 }

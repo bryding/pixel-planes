@@ -158,7 +158,8 @@ wss.on('connection', (ws) => {
         const now = Date.now();
         if (now - (ws.chatWindow || 0) >= 1000) { ws.chatWindow = now; ws.chatCount = 0; }
         if (++ws.chatCount > 3) break;
-        broadcast({ t: 'chat', name: ws.player.name, text: text });
+        // send to EVERYONE ELSE (the sender already shows their own message)
+        wss.clients.forEach((c) => { if (c !== ws && c.readyState === 1) send(c, { t: 'chat', name: ws.player.name, text: text }); });
         break;
       }
 
