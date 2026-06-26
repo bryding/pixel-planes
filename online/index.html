@@ -4,11 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pixel Planes</title>
-  <link rel="stylesheet" href="css/style.css?v=25" />
+  <link rel="stylesheet" href="css/style.css?v=27" />
 </head>
 <body>
   <!-- This is the box the whole game is drawn onto -->
   <canvas id="game"></canvas>
+
+  <!-- CHAT: a 💬 button in the corner. Click to open; type + Enter to send to all
+       real players. A red dot shows when there's an unread message. -->
+  <button id="chatBtn" onclick="toggleChat()" style="display:none">💬<span id="chatDot"></span></button>
+  <div id="chatPanel" style="display:none">
+    <div id="chatMessages"></div>
+    <input id="chatInput" type="text" maxlength="120" autocomplete="off"
+           placeholder="message…  (Enter to send)"
+           onkeydown="if(event.key==='Enter'){ sendChatMessage(); }" />
+  </div>
 
   <!-- NAME GATE: the first thing you see. Type a name and JOIN to fly into the
        one shared world with everyone else. (Clicking also turns on sound, which
@@ -120,17 +130,17 @@
   </div>
 
   <!-- The scripts run top to bottom, so order matters here -->
-  <script src="js/config.js?v=25"></script>
-  <script src="js/audio.js?v=25"></script>
-  <script src="js/net.js?v=25"></script>
-  <script src="js/input.js?v=25"></script>
-  <script src="js/physics.js?v=25"></script>
-  <script src="js/bullet.js?v=25"></script>
-  <script src="js/missile.js?v=25"></script>
-  <script src="js/explosion.js?v=25"></script>
-  <script src="js/sprites.js?v=25"></script>
-  <script src="js/scenery.js?v=25"></script>
-  <script src="js/plane.js?v=25"></script>
-  <script src="js/game.js?v=25"></script>
+  <script src="js/config.js?v=27"></script>
+  <script src="js/audio.js?v=27"></script>
+  <script src="js/net.js?v=27"></script>
+  <script src="js/input.js?v=27"></script>
+  <script src="js/physics.js?v=27"></script>
+  <script src="js/bullet.js?v=27"></script>
+  <script src="js/missile.js?v=27"></script>
+  <script src="js/explosion.js?v=27"></script>
+  <script src="js/sprites.js?v=27"></script>
+  <script src="js/scenery.js?v=27"></script>
+  <script src="js/plane.js?v=27"></script>
+  <script src="js/game.js?v=27"></script>
 </body>
 </html>

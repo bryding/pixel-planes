@@ -169,6 +169,39 @@ function cheat(c, n) {
   if (out) out.textContent = '✅ Sent to the world: ' + c + (n ? (' ' + n) : '');
 }
 
+// ---- Chat (the 💬 button in the corner) ----
+let chatOpen = false, chatUnread = false;
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const p = document.getElementById('chatPanel'); if (p) p.style.display = chatOpen ? 'flex' : 'none';
+  if (chatOpen) {
+    chatUnread = false; updateChatDot();
+    const i = document.getElementById('chatInput'); if (i) i.focus();
+  }
+}
+function updateChatDot() { const d = document.getElementById('chatDot'); if (d) d.style.display = chatUnread ? 'block' : 'none'; }
+function showChatButton(on) { const b = document.getElementById('chatBtn'); if (b) b.style.display = on ? 'flex' : 'none'; }
+function sendChatMessage() {
+  const i = document.getElementById('chatInput'); if (!i) return;
+  const text = i.value.trim();
+  if (text && typeof Net !== 'undefined' && Net.sendChat) Net.sendChat(text);
+  i.value = '';
+}
+function addChatLine(name, text) {
+  const box = document.getElementById('chatMessages'); if (!box) return;
+  const line = document.createElement('div'); line.className = 'chatLine';
+  const who = document.createElement('b'); who.textContent = (name || 'player') + ': ';
+  line.appendChild(who); line.appendChild(document.createTextNode(text || ''));  // textContent = safe (no HTML)
+  box.appendChild(line);
+  while (box.children.length > 50) box.removeChild(box.firstChild);
+  box.scrollTop = box.scrollHeight;
+}
+// net.js calls this when a chat message arrives.
+function onNetChat(name, text) {
+  addChatLine(name, text);
+  if (!chatOpen) { chatUnread = true; updateChatDot(); }   // red dot until you open it
+}
+
 // Leave the world and go back to the name screen.
 function leaveWorld() {
   Net.disconnect();
@@ -176,6 +209,8 @@ function leaveWorld() {
   gameStarted = false; player.alive = false; playerState = 'flying';
   for (const k in remotePlayers) delete remotePlayers[k];
   const gate = document.getElementById('clickGate'); if (gate) gate.style.display = 'flex';
+  showChatButton(false);                                   // hide chat off the name screen
+  chatOpen = false; const cp = document.getElementById('chatPanel'); if (cp) cp.style.display = 'none';
 }
 
 // Net tells us when its status changes; keep the name screen's status fresh.
@@ -268,6 +303,7 @@ function enterWorld() {
   const gate = document.getElementById('clickGate'); if (gate) gate.style.display = 'none';
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';
   gameStarted = true;
+  showChatButton(true);   // chat is available once you're in the world
   spawnPlane(camera.x + CONFIG.GAME_W / 2);
 }
 // Start the name box with your last-used name filled in.

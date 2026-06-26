@@ -152,6 +152,9 @@ const Net = {
   // "@hidden" Mode Menu: change the world's mode for everyone.
   sendMode(mode) { this.send({ t: 'setmode', mode: mode }); },
 
+  // Chat: send a message to everyone.
+  sendChat(text) { this.send({ t: 'chat', text: text }); },
+
   // Handle one message from the server. (Public so it can be unit-tested.)
   _handle(m) {
     switch (m.t) {
@@ -166,6 +169,9 @@ const Net = {
         break;
       case 'mode':   // someone changed the world's mode -> everyone follows
         if (typeof onNetMode === 'function') onNetMode(m.mode);
+        break;
+      case 'chat':   // a player sent a chat message
+        if (typeof onNetChat === 'function') onNetChat(m.name, m.text);
         break;
       case 'snapshot':
         if (typeof this.onSnapshot === 'function') this.onSnapshot(m.planes || []);
