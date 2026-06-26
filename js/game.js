@@ -519,7 +519,14 @@ function drawWorldContents() {
   if (Net.inWorld) drawRemotePlayers();
 
   // --- Your plane (only once you're flying) ---
-  if (gameStarted && (playerState === 'flying' || playerState === 'takeoff')) player.draw(ctx);
+  if (gameStarted && (playerState === 'flying' || playerState === 'takeoff')) {
+    player.draw(ctx);
+    // mark yourself as a real human player 🧑
+    const psx = worldToScreenX(player.x), psy = player.y - camera.y;
+    ctx.textAlign = 'center'; ctx.font = '20px sans-serif';
+    ctx.fillText('🧑', psx, psy - 34);
+    ctx.textAlign = 'left';
+  }
 
   // --- Arrows at the screen edge pointing at planes you can't see ---
   if (gameStarted) drawOffscreenIndicators();
@@ -540,9 +547,15 @@ function drawRemotePlayers() {
     if (r.x === undefined || r.alive === false) continue;
     const sx = worldToScreenX(r.x), sy = r.y - camera.y;
     drawPlaneSprite(ctx, remoteSprite(parseInt(id, 10)), sx, sy, r.angle || 0, frameCount, false);
-    ctx.font = '11px monospace'; ctx.textAlign = 'center';
+    ctx.textAlign = 'center';
+    // name tag
+    ctx.font = '11px monospace';
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillText(r.name || 'player', sx + 1, sy - 21);
     ctx.fillStyle = '#ffffff'; ctx.fillText(r.name || 'player', sx, sy - 22);
+    // who is it? Server bots get ids >= 1,000,000; real players are small ids.
+    const isBot = parseInt(id, 10) >= 1000000;
+    ctx.font = '20px sans-serif';
+    ctx.fillText(isBot ? '🤖' : '🧑', sx, sy - 34);
     ctx.textAlign = 'left';
   }
 }
