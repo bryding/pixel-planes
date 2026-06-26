@@ -85,11 +85,14 @@ class Plane {
   // This runs every frame to move the plane.
   update() {
     // --- 1. Read the controls (unless we're FROZEN by a bad power-up) ---
-    // Player 2 (split-screen) uses the WASD keys; everyone else uses arrows.
-    const kUp    = (this.keymap === 'p2') ? Input.up2    : Input.up;
-    const kDown  = (this.keymap === 'p2') ? Input.down2  : Input.down;
-    const kLeft  = (this.keymap === 'p2') ? Input.left2  : Input.left;
-    const kRight = (this.keymap === 'p2') ? Input.right2 : Input.right;
+    // In SPLIT-SCREEN: Player 2 flies with WASD, Player 1 with the arrows.
+    // In NORMAL single player there's only one plane, so it answers to BOTH
+    // the arrow keys AND WASD — fly with whichever feels comfy.
+    const solo1P = (this.keymap !== 'p2') && !splitScreen;
+    const kUp    = (this.keymap === 'p2') ? Input.up2    : (solo1P ? (Input.up    || Input.up2)    : Input.up);
+    const kDown  = (this.keymap === 'p2') ? Input.down2  : (solo1P ? (Input.down  || Input.down2)  : Input.down);
+    const kLeft  = (this.keymap === 'p2') ? Input.left2  : (solo1P ? (Input.left  || Input.left2)  : Input.left);
+    const kRight = (this.keymap === 'p2') ? Input.right2 : (solo1P ? (Input.right || Input.right2) : Input.right);
     if (this.frozenTimer <= 0) {
       if (kUp)   this.throttle += CONFIG.THROTTLE_UP_RATE; // slow to spin up
       if (kDown) this.throttle -= CONFIG.THROTTLE_RATE;

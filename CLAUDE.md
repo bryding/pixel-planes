@@ -43,14 +43,17 @@ The game now has TWO separate playable apps behind one menu, so single-player
 and multiplayer can't break each other:
 
 - `index.html` — the **chooser**: pick 🤖 Single Player or 🌍 Multiplayer.
-- `online.html` + root `js/`, `css/` — the **multiplayer** shared-world client
-  (runs against `server/`, deployed on Railway). Keep this untouched when working
-  on single-player.
-- `solo/` — a **self-contained copy** of the single-player game (its own
-  `index.html`, `css/`, and `js/`, including `enemy.js`, `powerup.js`, `pilot.js`).
-  This is the classic offline game with all the modes (Classic/Unicorn/WW2/Alien/
-  Night/Black Hole/Bad Weather), the Modifier/Cheat menu, power-ups, eject +
-  parachute, and 2-player split-screen. Edit single-player here.
+- `online.html` + `server/` — the **multiplayer** shared-world client (deployed
+  on Railway).
+- root `js/`, `css/` — the **shared engine** both games use: `config`, `audio`,
+  `physics`, `bullet`, `explosion`, `sprites`, `scenery`, `plane`, `bot-ai`. A
+  tweak here (flight feel, art, gravity) helps BOTH single-player and multiplayer.
+- `solo/` — the **single-player-only** parts: its own `index.html`, `css/`, and a
+  small `js/` with just `game.js` (offline game loop), `input.js` (two-player
+  keys), `missile.js`, `enemy.js` (AI bots), `powerup.js`, `pilot.js`. It loads
+  the shared engine from `../js/`. This is the classic offline game with all the
+  modes (Classic/Unicorn/WW2/Alien/Night/Black Hole/Bad Weather), the
+  Modifier/Cheat menu, power-ups, eject + parachute, and 2-player split-screen.
 
 Inside each app the key files are the same idea:
 

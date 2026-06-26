@@ -140,8 +140,6 @@ function removeAllBots() {
 let mode = 'classic';
 let greenScore = 0, blackScore = 0; // WW2 team scores
 function setMode(m) {
-  // The shared online world is one fixed mode — don't let a menu desync you.
-  if (typeof Net !== 'undefined' && Net.inWorld) return;
   const prev = mode;
   mode = m;
   // "No Mod Mode" hides the whole Modifier Menu and turns the cheats off.
@@ -335,17 +333,6 @@ function returnToMainMenu() {
   if (typeof Sound !== 'undefined') { Sound.startTheme(); Sound.startEngine(); }  // title music + engine
 }
 
-// The "Click to Play" gate: nothing shows until you click. Clicking hides the
-// gate, turns on sound, and starts the title (music, engine, banner fly-in).
-function enterTitle() {
-  const gate = document.getElementById('clickGate'); if (gate) gate.style.display = 'none';
-  if (typeof Sound !== 'undefined') {
-    Sound.init();
-    if (!gameStarted) { Sound.startTheme(); Sound.startEngine(); }
-  }
-  frameCount = 0;   // start the banner fly-in now, in sync with the sound
-}
-
 // Browsers block sound until you interact. On the FIRST click/key/tap, start the
 // title music + plane engine (and replay the fly-in so it's in sync with sound).
 function armTitleAudio() {
@@ -421,30 +408,6 @@ function resumeGame()  { paused = false; updatePauseMenu(); }
 function chooseNormal() { setSplitScreen(false); paused = false; updatePauseMenu(); }
 function chooseSplit()  { setSplitScreen(true);  paused = false; updatePauseMenu(); }
 
-// ===========================================================================
-//  PLAYER NAME + SERVER ADDRESS  (used by the name screen and the pause menu)
-// ===========================================================================
-
-// Your display name (so other players know who you are). Saved between visits.
-function getUsername() {
-  try { return localStorage.getItem('pp_username') || ''; } catch (e) { return ''; }
-}
-function saveUsername(name) {
-  try { localStorage.setItem('pp_username', name); } catch (e) {}
-}
-
-// Which server to talk to:
-//  1. if the game is being served by our own server (i.e. you opened it over
-//     http, not the public https link), talk to that SAME computer/port -- so
-//     local + same-WiFi play "just works" with nothing to type, else
-//  2. the public deployed server in config.js (for the https link).
-function serverUrl() {
-  if (typeof location !== 'undefined' && location.host && location.protocol !== 'https:') {
-    return 'ws://' + location.host;
-  }
-  return CONFIG.SERVER_URL;
-}
-
 // Switch which pause-menu panel is showing (the main one, or the color picker).
 function showPausePanel(id) {
   ['pauseMain', 'colorPanel'].forEach(p => {
@@ -453,231 +416,6 @@ function showPausePanel(id) {
   });
 }
 function backToPause() { showPausePanel('pauseMain'); }
-
-// Net tells us when its status changes. The name screen reads Net.status and
-// Net.lastError directly, so here we just keep the on-screen status fresh.
-Net.onChange = function () {
-  if (typeof refreshJoinStatus === 'function') refreshJoinStatus();
-};
-
-// ===========================================================================
-//  ONLINE LIVE SYNC — the ONE shared world.
-//  The server sends a SNAPSHOT of every plane ~NET_TICK_HZ times a second. We
-//  fly OUR OWN plane locally and draw everyone else from the snapshots, gliding
-//  them smoothly between updates so movement still looks nice (interpolation).
-// ===========================================================================
-const remotePlayers = {};       // id -> {x,y,tx,ty,angle,throttle,health,isUfo,alive,name}
-let netStateTimer = 0;
-// Send our plane this often (in frames). 60fps / 18Hz ≈ every 3 frames.
-const NET_SEND_EVERY = Math.max(1, Math.round(60 / CONFIG.NET_TICK_HZ));
-const REMOTE_COLORS = ['#e0524a', '#3fae54', '#e0a93a', '#9b59b6', '#e84393', '#1abc9c', '#ff7f50'];
-const _remoteSprites = {};
-function remoteSprite(id) {
-  const c = REMOTE_COLORS[((id % REMOTE_COLORS.length) + REMOTE_COLORS.length) % REMOTE_COLORS.length];
-  if (!_remoteSprites[c]) _remoteSprites[c] = makePlaneSetFromColor(c);
-  return _remoteSprites[c];
-}
-
-// The server welcomed us into the world: ditch the offline bots and any stale
-// remote planes, then fly into the shared sky.
-Net.onWelcome = function () {
-  removeAllBots();
-  for (const k in remotePlayers) delete remotePlayers[k];
-  enterWorld();
-};
-
-// Join refused (e.g. the world is full): show why, back on the name screen.
-Net.onDenied = function (msg) {
-  Net.disconnect();
-  setJoinStatus(msg, '#ff6b6b');
-};
-
-// A fresh snapshot of the whole world: update each OTHER plane's target spot
-// (we glide toward it). Skip our own plane — we draw that one ourselves.
-Net.onSnapshot = function (planes) {
-  const seen = {};
-  for (const s of planes) {
-    if (s.id === Net.myId) continue;
-    seen[s.id] = true;
-    let r = remotePlayers[s.id];
-    if (!r) r = remotePlayers[s.id] = { x: s.x, y: s.y, angle: s.angle || 0 };
-    r.tx = s.x; r.ty = s.y; r.angle = s.angle || 0;
-    r.throttle = s.throttle; r.health = s.health; r.isUfo = s.isUfo;
-    r.alive = (s.alive !== false); r.name = s.name; r.score = s.score || 0;
-  }
-  // Anyone who dropped out of the snapshot has left — remove them (FR-010).
-  for (const id in remotePlayers) { if (!seen[id]) delete remotePlayers[id]; }
-};
-
-// The server says this plane left — drop it right away (FR-010).
-Net.onLeft = function (id) { delete remotePlayers[id]; };
-
-// Run each frame while we're in the world: send our plane, glide the others.
-function netSyncStep() {
-  netStateTimer += 1;
-  if (netStateTimer >= NET_SEND_EVERY && (playerState === 'flying' || playerState === 'takeoff')) {
-    netStateTimer = 0;
-    Net.sendState({ x: player.x, y: player.y, angle: player.angle, vx: player.vx, vy: player.vy,
-                    throttle: player.throttle, health: player.health, alive: player.alive,
-                    isUfo: player.isUfo, score: score });
-  }
-  // Ease every remote plane toward the latest spot the server told us about.
-  for (const id in remotePlayers) {
-    const r = remotePlayers[id];
-    if (r.tx !== undefined) { r.x = wrapX(r.x + wrapDX(r.tx - r.x) * 0.35); r.y += (r.ty - r.y) * 0.35; }
-  }
-}
-
-// ===========================================================================
-//  JOINING THE SHARED WORLD  (the name screen → fly in)
-// ===========================================================================
-
-// Tidy up a typed name the same way the server does: trim, keep a safe set of
-// characters, and cap the length. Empty becomes '' (we ask for a real one).
-function capName(n) {
-  return ('' + (n || '')).trim().replace(/[^A-Za-z0-9 _-]/g, '').slice(0, 14);
-}
-// Show a message on the name screen (connecting / errors).
-function setJoinStatus(text, color) {
-  const el = document.getElementById('joinStatus');
-  if (el) { el.textContent = text; el.style.color = color || 'rgba(255,255,255,0.85)'; }
-}
-// Net calls this when its connection status changes, so the name screen can
-// show "Connecting…" or why a connection failed.
-function refreshJoinStatus() {
-  if (Net.inWorld) return;                       // already flying — nothing to say
-  if (Net.status === 'connecting') setJoinStatus('Connecting…', '#9be7ff');
-  else if (Net.status === 'offline' && Net.lastError) setJoinStatus(Net.lastError, '#ff6b6b');
-}
-
-// JOIN GAME button: take the typed name and dive into the one shared world.
-function joinWorld() {
-  const el = document.getElementById('nameInput');
-  const name = capName((el && el.value) || '');
-  if (!name) { setJoinStatus('Please type a name first.', '#ffd24a'); return; }
-  saveUsername(name);
-  if (typeof Sound !== 'undefined') {            // a click — sound is now allowed
-    Sound.init(); Sound.stopTheme(); Sound.stopEngine();
-  }
-  Net.setName(name);
-  Net.connect(serverUrl());
-  setJoinStatus('Connecting…', '#9be7ff');
-}
-
-// We're in! Hide the name screen and fly our plane into the shared sky.
-function enterWorld() {
-  const gate = document.getElementById('clickGate'); if (gate) gate.style.display = 'none';
-  const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'none';
-  const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';
-  // Hide the offline modifier/mode menu — the shared world is one fixed mode.
-  const tb = document.getElementById('topBar'); if (tb) tb.style.display = 'none';
-  gameStarted = true;
-  splitScreen = false;
-  mode = 'classic';
-  spawnPlane(camera.x + CONFIG.GAME_W / 2);      // fly in where the camera is
-}
-
-// "Play offline" — the classic single-player game, no server needed (so the
-// game always works even if the server is down).
-function playOffline() {
-  const gate = document.getElementById('clickGate'); if (gate) gate.style.display = 'none';
-  enterTitle();    // unlock sound + title music
-  startGame();     // classic single-player
-}
-
-// Start the name box with your last-used name filled in.
-(function prefillName() {
-  const el = document.getElementById('nameInput');
-  if (el) el.value = getUsername();
-})();
-
-// ===========================================================================
-//  ONLINE COMBAT — fire visuals, shooter-detected hits, damage & respawn.
-//  The rule (FR-015): the SHOOTER's computer notices when its own bullet hits
-//  someone and tells the server; the server then deals the damage. Bullets you
-//  see from other players are just for show — they never hurt you by themselves.
-// ===========================================================================
-const REMOTE_TEAM = -1;   // marks bullets/missiles that came from OTHER players
-
-function remoteName(id) { const r = remotePlayers[id]; return (r && r.name) || 'a plane'; }
-
-// Did one of MY shots reach a remote plane? If so, tell the server (it decides
-// the damage). Called for my own bullets/missiles while online.
-function onlineHitCheck(proj, kind) {
-  if (proj.dead) return;
-  const radius = (kind === 'missile') ? 16 : 14;
-  for (const id in remotePlayers) {
-    const r = remotePlayers[id];
-    if (!r || r.alive === false || r.x === undefined) continue;
-    if (hits(proj, r, radius)) {
-      proj.dead = true;
-      if (kind === 'missile') {
-        explosions.push(new Explosion(proj.x, proj.y, CONFIG.COLORS.explosion));
-        if (typeof Sound !== 'undefined') Sound.boom();
-      }
-      Net.sendHit(parseInt(id, 10), kind);
-      break;
-    }
-  }
-}
-
-// Someone else fired: draw their shot + play the sound (no damage here).
-Net.onFire = function (id, kind, x, y, heading) {
-  if (id === Net.myId) return;
-  if (kind === 'missile') {
-    const mo = new Missile(x, y, heading, REMOTE_TEAM, null);
-    mo.visual = true; missiles.push(mo);
-    if (typeof Sound !== 'undefined') Sound.missileLaunch();
-  } else {
-    const b = new Bullet(x, y, heading, 0, 0, REMOTE_TEAM, CONFIG.COLORS.enemyBullet, 'green');
-    b.visual = true; bullets.push(b);
-    if (typeof Sound !== 'undefined') Sound.gun();
-  }
-};
-
-// The server says YOU got hit. Take the damage; if it's fatal, explode and
-// auto-respawn in place (never back to the name screen), score reset (FR-009).
-Net.onHit = function (byId, kind) {
-  if (playerState !== 'flying' && playerState !== 'takeoff') return;
-  if (player.invincibleTimer > 0) return;          // shield
-  player.health -= (kind === 'missile') ? CONFIG.MISSILE_DAMAGE : 1;
-  player.flash = 6;
-  if (player.health <= 0) {
-    bigExplosion(player.x, player.y);
-    if (typeof Sound !== 'undefined') Sound.boom();
-    pushKill('🛩️ You were shot down 💥', '#ff8a65');
-    playerDies(player.x, player.y, 'SHOT DOWN!');  // resets score + starts respawn timer
-    // Send one last state so the server knows we died and can credit the kill.
-    Net.sendState({ x: player.x, y: player.y, angle: player.angle, vx: 0, vy: 0,
-                    throttle: 0, health: 0, alive: false, isUfo: false, score: 0 });
-  }
-};
-
-// A plane was destroyed. If WE got the kill, score a point. Show the boom.
-Net.onDown = function (victimId, byId) {
-  if (byId === Net.myId && victimId !== Net.myId) {
-    score += 1;
-    pushKill('🎯 You shot down ' + remoteName(victimId) + '!', '#7CFC00');
-  }
-  const r = remotePlayers[victimId];
-  if (r && r.x !== undefined) { bigExplosion(r.x, r.y); r.alive = false; }
-};
-
-// Draw the other online players (with name tags). Called from drawWorldContents.
-function drawRemotePlayers() {
-  for (const id in remotePlayers) {
-    const r = remotePlayers[id];
-    if (r.x === undefined) continue;
-    if (r.alive === false) continue;     // shot down — their explosion shows instead
-    const sx = worldToScreenX(r.x), sy = r.y - camera.y;
-    if (mode === 'alien' && r.isUfo) drawUfoCraft(ctx, sx, sy, frameCount, false);
-    else drawPlaneSprite(ctx, remoteSprite(parseInt(id, 10)), sx, sy, r.angle || 0, frameCount, false);
-    ctx.font = '11px monospace'; ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillText(r.name || 'player', sx + 1, sy - 21);
-    ctx.fillStyle = '#ffffff'; ctx.fillText(r.name || 'player', sx, sy - 22);
-    ctx.textAlign = 'left';
-  }
-}
 
 // ---- Mobile touch controls ----
 // On-screen buttons drive the SAME Input flags the keyboard does, so all the
@@ -759,8 +497,6 @@ if (typeof navigator !== 'undefined' && (navigator.maxTouchPoints > 0 || 'ontouc
 
 // Turn split-screen 2-player ON or OFF.
 function setSplitScreen(on) {
-  // Split-screen is a single-computer feature; not for the shared online world.
-  if (typeof Net !== 'undefined' && Net.inWorld) return;
   if (on === splitScreen) return;
   splitScreen = on;
   if (on) {
@@ -1015,12 +751,7 @@ function onPlanePopped(target, shooterTeam, shooterFaction) {
 // Draw the leaderboard panel on the right side: who has the most points.
 function drawLeaderboard() {
   const rows = [{ name: '🛩️ YOU', score: score, you: true }];
-  if (Net.inWorld) {
-    // Online: everyone else comes from the live snapshots.
-    for (const id in remotePlayers) rows.push({ name: remotePlayers[id].name || 'player', score: remotePlayers[id].score || 0 });
-  } else {
-    for (const e of enemies) rows.push({ name: e.name, score: e.score });
-  }
+  for (const e of enemies) rows.push({ name: e.name, score: e.score });
   rows.sort((a, b) => b.score - a.score);
   const top = rows.slice(0, 8);
 
@@ -1102,26 +833,15 @@ function update() {
       // Flying (or safely rolling on the ground): normal controls.
       // WW2 mode has NO missiles and NO ejecting.
       if (Input.fire) {
-        const wasReady = player.fireCooldown <= 0;
         player.tryShoot(bullets);
-        // Online: if a shot really went off, tell everyone so they see it.
-        if (Net.inWorld && wasReady && player.fireCooldown > 0) {
-          Net.sendFire('gun', player.x + Math.cos(player.angle) * 17,
-                              player.y + Math.sin(player.angle) * 17, player.angle);
-        }
       }
       if (mode !== 'ww2') {
-        const mBefore = missiles.length;
         if (infiniteMissiles && Input.missile) {
           // ∞ Missiles cheat: HOLD X to rapid-fire a swarm (~300/sec)!
           for (let i = 0; i < CONFIG.INF_MISSILE_RATE && missiles.length < CONFIG.INF_MISSILE_CAP; i++)
             player.fireMissile(missiles, planes, true);
         } else if (missilePressed) {
           player.fireMissile(missiles, planes);   // normal: one per press, ammo-limited
-        }
-        if (Net.inWorld && missiles.length > mBefore) {
-          Net.sendFire('missile', player.x + Math.cos(player.angle) * 17,
-                                  player.y + Math.sin(player.angle) * 17, player.angle);
         }
       }
       if (ejectPressed && mode !== 'ww2') eject();
@@ -1159,9 +879,6 @@ function update() {
   }
   if (infiniteMissiles) { player.missiles = CONFIG.MISSILE_MAX; player.missileTimer = 0; }
 
-  // Online: send my plane to the others and smooth their planes.
-  if (Net.inWorld) netSyncStep();
-
   // Alien Invasion: spread the UFO bots across different runners first.
   if (mode === 'alien') assignUfoTargets();
 
@@ -1179,10 +896,6 @@ function update() {
   // --- Bullets: move them and check if they hit any plane ---
   for (const bullet of bullets) {
     bullet.update();
-
-    // Online: my own bullets report hits on remote planes; shots relayed from
-    // other players are visual-only. Either way, skip the offline collision.
-    if (Net.inWorld) { if (!bullet.visual) onlineHitCheck(bullet, 'gun'); continue; }
 
     for (const target of planes) {
       if (!target.alive) continue;               // can't hit a downed plane
@@ -1204,8 +917,6 @@ function update() {
   for (const missile of missiles) {
     missile.update();
 
-    if (Net.inWorld) { if (!missile.visual) onlineHitCheck(missile, 'missile'); continue; }
-
     for (const target of planes) {
       if (!target.alive) continue;
       if (target.team === missile.team) continue;
@@ -1222,7 +933,7 @@ function update() {
 
   // --- Power-ups: spawn over time, float, and get collected (not in tag mode) ---
   powerupTimer -= 1;
-  if (powerupTimer <= 0 && mode !== 'alien' && !splitScreen && !Net.inWorld) { spawnPowerUp(); powerupTimer = CONFIG.POWERUP_INTERVAL; }
+  if (powerupTimer <= 0 && mode !== 'alien' && !splitScreen) { spawnPowerUp(); powerupTimer = CONFIG.POWERUP_INTERVAL; }
   for (const p of powerups) p.update();
   if (playerState === 'flying' || playerState === 'takeoff') {
     for (const p of powerups) {
@@ -1536,9 +1247,6 @@ function drawWorldContents() {
   for (const boom of explosions) {
     boom.draw(ctx);
   }
-
-  // --- Other online players ---
-  if (Net.inWorld) drawRemotePlayers();
 
   // --- The player plane(s) --- (skipped on the title screen / attract mode)
   if (!gameStarted) {
