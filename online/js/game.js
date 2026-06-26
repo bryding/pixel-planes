@@ -56,7 +56,11 @@ let missileWasDown = false;          // so one key press = one missile
 const planes = [player];
 
 // ---- Game state ----
-let score = 0;              // your kills THIS life (resets when you're shot down)
+let score = 0;              // your kills THIS life
+// Your TOTAL score: dying BANKS this life's points here instead of losing them,
+// so it keeps growing over time. Saved between visits, too.
+let totalScore = (function () { try { return parseInt(localStorage.getItem('pp_totalscore'), 10) || 0; } catch (e) { return 0; } })();
+function saveTotalScore() { try { localStorage.setItem('pp_totalscore', totalScore); } catch (e) {} }
 let playerState = 'flying'; // 'takeoff' | 'flying' | 'dead'
 let playerRespawn = 0;      // counts down while dead, then you fly back in
 let frameCount = 0;
@@ -406,9 +410,10 @@ function bigExplosion(x, y) {
   explosions.push(new Explosion(x, y - 8, '#888888'));
 }
 
-// You died: points reset to 0, then auto-respawn after a short delay (FR-009).
+// You died: BANK this life's points into your total (never lost), then respawn.
 function playerDies(msg) {
   deathMsg = msg || 'SHOT DOWN!';
+  totalScore += score; saveTotalScore();
   score = 0;
   player.alive = false;
   playerState = 'dead';
@@ -640,7 +645,7 @@ function drawHud() {
 
   // --- Your score, top-right under the leaderboard area ---
   ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(W - 80, 6, 74, 16);
-  ctx.fillStyle = '#ffffff'; ctx.fillText('SCORE ' + score, W - 74, 17);
+  ctx.fillStyle = '#ffffff'; ctx.fillText('SCORE ' + (totalScore + score), W - 74, 17);
 
   // --- Altitude gauge on the right edge (top = ceiling, bottom = ground) ---
   const gx = W - 22, gy = 30, gh = 240;
@@ -678,7 +683,7 @@ function drawHud() {
 
 // The scoreboard on the right: who has the most kills (you + everyone online).
 function drawLeaderboard() {
-  const rows = [{ icon: '🧑', name: 'YOU', score: score, you: true }];
+  const rows = [{ icon: '🧑', name: 'YOU', score: totalScore + score, you: true }];
   for (const id in remotePlayers) {
     rows.push({ icon: isBotId(id) ? '🤖' : '🧑', name: remoteName(id), score: remotePlayers[id].score || 0 });
   }
