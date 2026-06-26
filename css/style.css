@@ -367,3 +367,14 @@ html, body {
   background: rgba(0, 0, 0, 0.5); border: 2px solid rgba(255, 255, 255, 0.5);
   border-radius: 8px; padding: 8px 10px; outline: none;
 }
+
+/* ---- Voice mic button (sits next to the chat button) ---- */
+#voiceBtn {
+  position: fixed; left: 84px; bottom: 16px; z-index: 25;
+  width: 56px; height: 56px; border-radius: 50%;
+  font-size: 24px; color: #fff; background: rgba(20, 40, 70, 0.92);
+  border: 2px solid #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+#voiceBtn:hover { background: rgba(40, 80, 120, 0.97); }
+#voiceBtn.on { background: rgba(200, 40, 40, 0.95); border-color: #ff6b6b; box-shadow: 0 0 12px rgba(255, 60, 60, 0.85); }

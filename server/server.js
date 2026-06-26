@@ -163,6 +163,26 @@ wss.on('connection', (ws) => {
         break;
       }
 
+      // ---- Voice chat (WebRTC) signaling: we just pass the tiny setup messages;
+      // the actual voice goes peer-to-peer between players. ----
+      case 'voicehello': {   // "my mic is on" -> tell everyone (or one player, m.to)
+        if (!ws.joined) break;
+        wss.clients.forEach((c) => {
+          if (c !== ws && c.readyState === 1 && (m.to == null || c.id === m.to)) send(c, { t: 'voicehello', from: ws.id });
+        });
+        break;
+      }
+      case 'voicebye': {     // "my mic is off"
+        if (!ws.joined) break;
+        wss.clients.forEach((c) => { if (c !== ws && c.readyState === 1) send(c, { t: 'voicebye', from: ws.id }); });
+        break;
+      }
+      case 'rtc': {          // a WebRTC offer/answer/ice -> deliver to ONE player
+        if (!ws.joined) break;
+        wss.clients.forEach((c) => { if (c.readyState === 1 && c.id === m.to) send(c, { t: 'rtc', from: ws.id, payload: m.payload }); });
+        break;
+      }
+
       // The shooter says one of their shots struck targetId. We trust it only
       // loosely: rate-limit, then either damage a bot here or forward the hit to
       // the human victim (whose own client applies the damage). FR-015.

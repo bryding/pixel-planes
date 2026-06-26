@@ -155,6 +155,11 @@ const Net = {
   // Chat: send a message to everyone.
   sendChat(text) { this.send({ t: 'chat', text: text }); },
 
+  // Voice chat (WebRTC) setup messages.
+  sendVoiceHello(to) { this.send({ t: 'voicehello', to: to }); },   // to undefined = everyone
+  sendVoiceBye() { this.send({ t: 'voicebye' }); },
+  sendRtc(to, payload) { this.send({ t: 'rtc', to: to, payload: payload }); },
+
   // Handle one message from the server. (Public so it can be unit-tested.)
   _handle(m) {
     switch (m.t) {
@@ -173,10 +178,14 @@ const Net = {
       case 'chat':   // a player sent a chat message
         if (typeof onNetChat === 'function') onNetChat(m.name, m.text);
         break;
+      case 'voicehello': if (typeof Voice !== 'undefined') Voice.onHello(m.from); break;
+      case 'voicebye':   if (typeof Voice !== 'undefined') Voice.onBye(m.from); break;
+      case 'rtc':        if (typeof Voice !== 'undefined') Voice.onSignal(m.from, m.payload); break;
       case 'snapshot':
         if (typeof this.onSnapshot === 'function') this.onSnapshot(m.planes || []);
         break;
       case 'player-left':
+        if (typeof Voice !== 'undefined') Voice.onBye(m.id);   // close their voice connection
         if (typeof this.onLeft === 'function') this.onLeft(m.id);
         break;
       case 'fire':

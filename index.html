@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pixel Planes</title>
-  <link rel="stylesheet" href="css/style.css?v=15" />
+  <link rel="stylesheet" href="css/style.css?v=30" />
 </head>
 <body>
   <!-- This is the box the whole game is drawn onto -->
@@ -13,6 +13,8 @@
   <!-- CHAT: a 💬 button in the corner. Click to open; type + Enter to send to all
        real players. A red dot shows when there's an unread message. -->
   <button id="chatBtn" onclick="toggleChat()" style="display:none">💬<span id="chatDot"></span></button>
+  <!-- VOICE: a 🎤 button next to chat. Click to talk; turns 🔴 while your mic is live. -->
+  <button id="voiceBtn" onclick="toggleVoice()" style="display:none" title="Voice chat — click to talk">🎤</button>
   <div id="chatPanel" style="display:none">
     <div id="chatMessages"></div>
     <input id="chatInput" type="text" maxlength="120" autocomplete="off"
@@ -136,17 +138,18 @@
   </div>
 
   <!-- The scripts run top to bottom, so order matters here -->
-  <script src="js/config.js?v=16"></script>
-  <script src="js/audio.js?v=15"></script>
-  <script src="js/net.js?v=15"></script>
-  <script src="js/input.js?v=16"></script>
-  <script src="js/physics.js?v=15"></script>
-  <script src="js/bullet.js?v=15"></script>
-  <script src="js/missile.js?v=16"></script>
-  <script src="js/explosion.js?v=15"></script>
-  <script src="js/sprites.js?v=15"></script>
-  <script src="js/scenery.js?v=15"></script>
-  <script src="js/plane.js?v=16"></script>
-  <script src="js/game.js?v=16"></script>
+  <script src="js/config.js?v=30"></script>
+  <script src="js/audio.js?v=30"></script>
+  <script src="js/net.js?v=30"></script>
+  <script src="js/voice.js?v=30"></script>
+  <script src="js/input.js?v=30"></script>
+  <script src="js/physics.js?v=30"></script>
+  <script src="js/bullet.js?v=30"></script>
+  <script src="js/missile.js?v=30"></script>
+  <script src="js/explosion.js?v=30"></script>
+  <script src="js/sprites.js?v=30"></script>
+  <script src="js/scenery.js?v=30"></script>
+  <script src="js/plane.js?v=30"></script>
+  <script src="js/game.js?v=30"></script>
 </body>
 </html>
