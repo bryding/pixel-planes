@@ -296,9 +296,12 @@ function resetDefaults() {
   set('missBtn', '∞ Missiles: OFF');
 }
 
-// Your points. They grow when you shoot bots down. They RESET if you die,
-// but you keep them if you eject and parachute safely to the barn.
+// Your points THIS life. They grow when you shoot bots down.
 let score = 0;
+// Your TOTAL score: when you die, this life's points get BANKED here instead of
+// lost, so it keeps growing over time. Saved between visits, too.
+let totalScore = (function () { try { return parseInt(localStorage.getItem('pp_totalscore'), 10) || 0; } catch (e) { return 0; } })();
+function saveTotalScore() { try { localStorage.setItem('pp_totalscore', totalScore); } catch (e) {} }
 
 // The player can be 'flying', 'chute' (parachuting after ejecting), or 'dead'.
 let playerState = 'flying';
@@ -989,9 +992,11 @@ function eject() {
   playerState = 'chute';
 }
 
-// You died (shot down, crashed, or parachuted into a field): points RESET.
+// You died: BANK this life's points into your total (so you never lose them),
+// then start the next life's counter fresh.
 function playerDies(x, y, msg) {
   deathMsg = msg || 'SHOT DOWN!';
+  totalScore += score; saveTotalScore();
   score = 0;
   player.alive = false;
   pilot = null;
@@ -1059,7 +1064,7 @@ function onPlanePopped(target, shooterTeam, shooterFaction) {
 
 // Draw the leaderboard panel on the right side: who has the most points.
 function drawLeaderboard() {
-  const rows = [{ name: '🛩️ YOU', score: score, you: true }];
+  const rows = [{ name: '🛩️ YOU', score: totalScore + score, you: true }];
   for (const e of enemies) rows.push({ name: e.name, score: e.score });
   rows.sort((a, b) => b.score - a.score);
   const top = rows.slice(0, 8);
@@ -2071,7 +2076,7 @@ function drawHud() {
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.fillRect(CONFIG.GAME_W - 80, 6, 74, 16);
     ctx.fillStyle = '#ffffff';
-    ctx.fillText('SCORE ' + score, CONFIG.GAME_W - 74, 17);
+    ctx.fillText('SCORE ' + (totalScore + score), CONFIG.GAME_W - 74, 17);
   }
 
   // Altitude gauge on the right edge. Top = the ceiling, bottom = the ground.
