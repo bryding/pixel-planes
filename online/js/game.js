@@ -29,7 +29,7 @@ resize();
 // The shared flight/drawing files (plane.js, scenery.js …) were written when the
 // game also had alternate "modes" and a 2-player split screen. The shared world
 // is always one plain free-for-all, so we pin these and those files behave normally.
-const mode = 'classic';
+let mode = 'classic';   // the world's mode; changeable via the @hidden Mode Menu
 const splitScreen = false;
 
 // ---- Your plane and the camera ----
@@ -140,17 +140,28 @@ function runCommand(text) {
   const cmd = (text || '').trim().toLowerCase();
   const out = document.getElementById('cmdMsg');
   const box = document.getElementById('cheatBox');
+  const modeBox = document.getElementById('modeBox');
   if (cmd === '@hidden' || cmd === '/hidden') {
     if (box) box.style.display = 'flex';
-    if (out) out.textContent = '🔓 Cheats unlocked! These change the world for EVERYONE.';
+    if (modeBox) modeBox.style.display = 'flex';
+    if (out) out.textContent = '🔓 Unlocked! Cheats + Mode Menu change the world for EVERYONE.';
   } else if (cmd === '@hide' || cmd === '/hide') {
     if (box) box.style.display = 'none';
-    if (out) out.textContent = '🔒 Cheats hidden.';
+    if (modeBox) modeBox.style.display = 'none';
+    if (out) out.textContent = '🔒 Hidden.';
   } else if (cmd) {
     if (out) out.textContent = 'Unknown command.';
   }
   const inp = document.getElementById('cmdInput'); if (inp) inp.value = '';
 }
+// Mode Menu: change the world's mode for EVERYONE (the server tells all clients).
+function setMode(m) {
+  mode = m;
+  if (typeof Net !== 'undefined' && Net.sendMode) Net.sendMode(m);
+  const out = document.getElementById('cmdMsg'); if (out) out.textContent = '🎮 Mode → ' + m + ' (for everyone!)';
+}
+// Called by net.js when the SERVER says the mode changed (don't re-broadcast).
+function onNetMode(m) { if (typeof m === 'string') mode = m; }
 // Send a cheat to YOUR server, which applies it to the whole shared world.
 function cheat(c, n) {
   if (typeof Net !== 'undefined' && Net.sendCheat) Net.sendCheat(c, n);

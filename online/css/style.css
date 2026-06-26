@@ -332,3 +332,5 @@ html, body {
 .cmdBar button { min-width: 0 !important; padding: 8px 14px; }
 .cmdMsg { font-family: monospace; font-size: 12px; color: #7fe0a0; min-height: 14px; margin: 2px 0; text-align: center; }
 #cheatBox { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+
+#modeBox { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }

@@ -149,6 +149,9 @@ const Net = {
   // "@hidden" cheat: ask the server to change the world for everyone (add/remove bots).
   sendCheat(cmd, n) { this.send({ t: 'cheat', cmd: cmd, n: n }); },
 
+  // "@hidden" Mode Menu: change the world's mode for everyone.
+  sendMode(mode) { this.send({ t: 'setmode', mode: mode }); },
+
   // Handle one message from the server. (Public so it can be unit-tested.)
   _handle(m) {
     switch (m.t) {
@@ -158,7 +161,11 @@ const Net = {
         this.tickHz = m.tickHz || 0;
         this.inWorld = true;
         this.lastError = '';
+        if (m.mode && typeof onNetMode === 'function') onNetMode(m.mode);  // sync to the world's current mode
         if (typeof this.onWelcome === 'function') this.onWelcome(m.id);
+        break;
+      case 'mode':   // someone changed the world's mode -> everyone follows
+        if (typeof onNetMode === 'function') onNetMode(m.mode);
         break;
       case 'snapshot':
         if (typeof this.onSnapshot === 'function') this.onSnapshot(m.planes || []);
