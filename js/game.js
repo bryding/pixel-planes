@@ -438,18 +438,19 @@ function refreshCheatMenus() {
   if (mg) mg.style.display = (cheatsUnlocked && mode !== 'nomod') ? 'flex' : 'none';
   if (mog) mog.style.display = cheatsUnlocked ? 'flex' : 'none';
 }
-// Type a command in the ESC-menu bar. "/hidden" reveals the cheat menus.
+// Type a command in the ESC-menu bar. "@hidden" reveals the cheat menus.
+// (We use @ instead of / because Firefox grabs "/" for its quick-search.)
 function runCommand(text) {
   const cmd = (text || '').trim().toLowerCase();
   const out = document.getElementById('cmdMsg');
-  if (cmd === '/hidden') {
+  if (cmd === '@hidden' || cmd === '/hidden') {
     cheatsUnlocked = true; refreshCheatMenus();
     if (out) out.textContent = '🔓 Unlocked! The ⚙ Modifier & 🎮 Mode menus are now up top.';
-  } else if (cmd === '/hide') {
+  } else if (cmd === '@hide' || cmd === '/hide') {
     cheatsUnlocked = false; refreshCheatMenus();
     if (out) out.textContent = '🔒 Cheat menus hidden again.';
   } else if (cmd) {
-    if (out) out.textContent = 'Unknown command. Try /hidden';
+    if (out) out.textContent = 'Unknown command. Try @hidden';
   }
   const inp = document.getElementById('cmdInput'); if (inp) inp.value = '';
 }

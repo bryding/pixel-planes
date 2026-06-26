@@ -514,3 +514,5 @@ html, body {
 }
 .cmdBar button { min-width: 0 !important; padding: 8px 14px; }
 .cmdMsg { font-family: monospace; font-size: 12px; color: #7fe0a0; min-height: 14px; margin: 2px 0 0; text-align: center; }
+
+.cmdLabel { font-family: monospace; font-size: 12px; color: rgba(255,255,255,0.75); margin: 4px 0 0; text-align: center; }
