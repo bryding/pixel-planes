@@ -516,3 +516,13 @@ html, body {
 .cmdMsg { font-family: monospace; font-size: 12px; color: #7fe0a0; min-height: 14px; margin: 2px 0 0; text-align: center; }
 
 .cmdLabel { font-family: monospace; font-size: 12px; color: rgba(255,255,255,0.75); margin: 4px 0 0; text-align: center; }
+
+/* Multiplayer Online as a real link (works in itch's sandbox), styled like a button */
+#pauseMenu .mpLink {
+  display: flex; align-items: center; justify-content: center;
+  font-family: monospace; font-size: 18px; font-weight: bold;
+  color: #ffffff; text-decoration: none;
+  background: rgba(30,120,70,0.92); border: 2px solid #4fe09a; border-radius: 8px;
+  padding: 10px 22px; min-width: 320px; box-sizing: border-box; cursor: pointer;
+}
+#pauseMenu .mpLink:hover { background: rgba(40,150,90,0.97); }
