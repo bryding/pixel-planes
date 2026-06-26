@@ -135,6 +135,8 @@ function cheat(cmd, n) {
   } else if (cmd === 'resetbots') {
     world.targetPopulation = CONFIG.TARGET_POPULATION;
     syncBotCount();
+  } else if (cmd === 'killbots') {
+    for (const id of [...world.bots.keys()]) damageBot(id, 99999);   // blow them all up (they respawn)
   }
 }
 

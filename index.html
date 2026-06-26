@@ -68,10 +68,16 @@
       <p id="cmdMsg" class="cmdMsg"></p>
       <!-- the cheats (hidden until @hidden). These change the world for EVERYONE. -->
       <div id="cheatBox" style="display:none">
+        <p class="cmdLabel">⚙ Modifiers — bots are for EVERYONE; ∞/shield are just YOU</p>
         <button onclick="cheat('addbots',5); this.blur();">🤖 + Add 5 Bots</button>
         <button onclick="cheat('addbots',20); this.blur();">🤖 + Add 20 Bots</button>
+        <button onclick="cheat('addbots',50); this.blur();">🤖 + Add 50 Bots</button>
         <button onclick="cheat('clearbots'); this.blur();">🧹 Remove ALL Bots</button>
+        <button onclick="cheat('killbots'); this.blur();">💥 Kill ALL Bots</button>
         <button onclick="cheat('resetbots'); this.blur();">↩️ Reset Bots</button>
+        <button onclick="giveShield(); this.blur();">🛡️ Give Me a Shield (10s)</button>
+        <button id="ihBtn" onclick="this.textContent='∞ Health: '+(toggleInfHealth()?'ON':'OFF'); this.blur();">∞ Health: OFF</button>
+        <button id="imBtn" onclick="this.textContent='∞ Missiles: '+(toggleInfMissiles()?'ON':'OFF'); this.blur();">∞ Missiles: OFF</button>
       </div>
       <!-- Mode Menu (hidden until @hidden). Changes the world's LOOK for EVERYONE. -->
       <div id="modeBox" style="display:none">

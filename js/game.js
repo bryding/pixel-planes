@@ -169,6 +169,13 @@ function cheat(c, n) {
   if (out) out.textContent = '✅ Sent to the world: ' + c + (n ? (' ' + n) : '');
 }
 
+// ---- SELF modifiers (just for you — these work because YOUR client controls
+// your own plane online). ----
+let infiniteHealth = false, infiniteMissiles = false;
+function toggleInfHealth() { infiniteHealth = !infiniteHealth; if (infiniteHealth) player.health = CONFIG.PLAYER_HEALTH; return infiniteHealth; }
+function toggleInfMissiles() { infiniteMissiles = !infiniteMissiles; return infiniteMissiles; }
+function giveShield() { player.invincibleTimer = 600; }   // ~10s of invincibility
+
 // ---- Chat (the 💬 button in the corner) ----
 let chatOpen = false, chatUnread = false;
 function toggleChat() {
@@ -377,6 +384,7 @@ Net.onFire = function (id, kind, x, y, heading) {
 // auto-respawn in place (never back to the name screen), score reset (FR-009).
 Net.onHit = function (byId, kind) {
   if (playerState !== 'flying' && playerState !== 'takeoff') return;
+  if (infiniteHealth) return;   // ∞ Health cheat: ignore all damage
   // takeHit() applies the damage + flash, but ignores it while spawn-protected
   // (invincibleTimer). It returns true only when this hit was fatal.
   const dmg = (kind === 'missile') ? CONFIG.MISSILE_DAMAGE : 1;
@@ -555,6 +563,7 @@ function update() {
       if (player.y <= CONFIG.GROUND_Y - 55) playerState = 'flying';
     } else if (playerState === 'flying') {
       player.update();
+      if (infiniteMissiles) player.missiles = CONFIG.MISSILE_MAX;   // ∞ Missiles cheat
       if (mode === 'blackhole') blackHoleStep();   // gravity pulls you toward the hole
       // Coming in too fast or too steep is a fatal crash; a gentle touch rolls.
       const hardLanding = player.hitGround &&
