@@ -88,10 +88,27 @@ const Voice = {
   },
 
   // Play an incoming voice stream (one hidden <audio> per other player).
+  // Phones/Safari often BLOCK auto-play, which causes "I can't hear them" one
+  // way -- so we set the right flags AND call play() explicitly.
   _play(id, stream) {
     let a = document.getElementById('va-' + id);
-    if (!a) { a = document.createElement('audio'); a.id = 'va-' + id; a.autoplay = true; document.body.appendChild(a); }
+    if (!a) {
+      a = document.createElement('audio');
+      a.id = 'va-' + id;
+      a.autoplay = true;
+      a.setAttribute('playsinline', '');   // iOS needs this to play inline
+      document.body.appendChild(a);
+    }
     a.srcObject = stream;
+    a.muted = false;
+    const p = a.play(); if (p && p.catch) p.catch(() => {});   // start it now (gesture already happened)
+  },
+
+  // If a browser blocked auto-play, the next tap/click re-tries every voice.
+  unlockAll() {
+    document.querySelectorAll('audio[id^="va-"]').forEach((a) => {
+      a.muted = false; const p = a.play(); if (p && p.catch) p.catch(() => {});
+    });
   },
 
   _close(id) {
@@ -100,3 +117,7 @@ const Voice = {
     const a = document.getElementById('va-' + id); if (a) a.remove();
   },
 };
+
+// Any tap/click re-tries playing incoming voices (in case auto-play was blocked).
+['pointerdown', 'touchend', 'click'].forEach((ev) =>
+  window.addEventListener(ev, () => Voice.unlockAll(), { passive: true }));
