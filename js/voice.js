@@ -14,7 +14,14 @@ const Voice = {
   on: false,
   localStream: null,
   peers: {},                 // id -> RTCPeerConnection
+  volume: 1,                 // how loud OTHER players' voices are (0..1)
   cfg: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] },
+
+  // Set how loudly you hear everyone else (applies to every voice, live + future).
+  setVolume(v) {
+    this.volume = Math.max(0, Math.min(1, v));
+    document.querySelectorAll('audio[id^="va-"]').forEach((a) => { a.volume = this.volume; });
+  },
 
   myId() { return (typeof Net !== 'undefined') ? Net.myId : null; },
 
@@ -101,6 +108,7 @@ const Voice = {
     }
     a.srcObject = stream;
     a.muted = false;
+    a.volume = this.volume;                                    // honor the voice-volume setting
     const p = a.play(); if (p && p.catch) p.catch(() => {});   // start it now (gesture already happened)
   },
 
@@ -121,3 +129,6 @@ const Voice = {
 // Any tap/click re-tries playing incoming voices (in case auto-play was blocked).
 ['pointerdown', 'touchend', 'click'].forEach((ev) =>
   window.addEventListener(ev, () => Voice.unlockAll(), { passive: true }));
+
+// Remember the voice-volume setting between visits.
+try { const v = parseInt(localStorage.getItem('pp_vcvol'), 10); if (!isNaN(v)) Voice.volume = v / 100; } catch (e) {}

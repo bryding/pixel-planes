@@ -103,6 +103,11 @@ function serverUrl() {
 function openSettings() {
   const g = document.getElementById('clickGate'); if (g) g.style.display = 'none';
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'flex';
+  // Voice chat volume slider (works even if game Sound isn't ready yet).
+  const vcPct = (typeof Voice !== 'undefined') ? Math.round(Voice.volume * 100) : 100;
+  const vsl = document.getElementById('vcSlider'), vlb = document.getElementById('vcLabel');
+  if (vsl) vsl.value = vcPct;
+  if (vlb) vlb.textContent = vcPct + '%';
   if (typeof Sound === 'undefined') return;
   const sl = document.getElementById('volSlider'), lb = document.getElementById('volLabel');
   if (sl) sl.value = Math.round(Sound.volume * 100);
@@ -114,6 +119,12 @@ function setVolumePct(pct) {
   Sound.setVolume(pct / 100);
   const lb = document.getElementById('volLabel'); if (lb) lb.textContent = Math.round(pct) + '%';
   Sound.gun();                  // a quick click so you HEAR the level you set
+}
+// Voice chat volume: how loudly you hear other players (separate from game sound).
+function setVoiceVolumePct(pct) {
+  if (typeof Voice !== 'undefined') Voice.setVolume(pct / 100);
+  const lb = document.getElementById('vcLabel'); if (lb) lb.textContent = Math.round(pct) + '%';
+  try { localStorage.setItem('pp_vcvol', pct); } catch (e) {}
 }
 function closeSettings() {
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';

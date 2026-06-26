@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pixel Planes</title>
-  <link rel="stylesheet" href="css/style.css?v=30" />
+  <link rel="stylesheet" href="css/style.css?v=33" />
 </head>
 <body>
   <!-- This is the box the whole game is drawn onto -->
@@ -44,10 +44,14 @@
   <div id="settingsScreen" style="display:none">
     <div class="startCenter">
       <div class="titleBanner small">SETTINGS</div>
-      <p class="startHint">🔊 Sound volume</p>
+      <p class="startHint">🔊 Game sound volume</p>
       <input type="range" id="volSlider" class="volSlider" min="0" max="100" value="50"
              oninput="setVolumePct(this.value)" />
       <p id="volLabel" class="startHint">50%</p>
+      <p class="startHint">🎙️ Voice chat volume</p>
+      <input type="range" id="vcSlider" class="volSlider" min="0" max="100" value="100"
+             oninput="setVoiceVolumePct(this.value)" />
+      <p id="vcLabel" class="startHint">100%</p>
       <button class="startBtn" onclick="toggleMobile(); this.blur();">📱 Mobile Controls On/Off</button>
       <button class="startBtn" onclick="closeSettings(); this.blur();">◀ Back</button>
     </div>
@@ -138,18 +142,18 @@
   </div>
 
   <!-- The scripts run top to bottom, so order matters here -->
-  <script src="js/config.js?v=30"></script>
-  <script src="js/audio.js?v=30"></script>
-  <script src="js/net.js?v=30"></script>
-  <script src="js/voice.js?v=30"></script>
-  <script src="js/input.js?v=30"></script>
-  <script src="js/physics.js?v=30"></script>
-  <script src="js/bullet.js?v=30"></script>
-  <script src="js/missile.js?v=30"></script>
-  <script src="js/explosion.js?v=30"></script>
-  <script src="js/sprites.js?v=30"></script>
-  <script src="js/scenery.js?v=30"></script>
-  <script src="js/plane.js?v=30"></script>
-  <script src="js/game.js?v=30"></script>
+  <script src="js/config.js?v=33"></script>
+  <script src="js/audio.js?v=33"></script>
+  <script src="js/net.js?v=33"></script>
+  <script src="js/voice.js?v=33"></script>
+  <script src="js/input.js?v=33"></script>
+  <script src="js/physics.js?v=33"></script>
+  <script src="js/bullet.js?v=33"></script>
+  <script src="js/missile.js?v=33"></script>
+  <script src="js/explosion.js?v=33"></script>
+  <script src="js/sprites.js?v=33"></script>
+  <script src="js/scenery.js?v=33"></script>
+  <script src="js/plane.js?v=33"></script>
+  <script src="js/game.js?v=33"></script>
 </body>
 </html>
