@@ -305,7 +305,7 @@ function saveTotalScore() { try { localStorage.setItem('pp_totalscore', totalSco
 
 // SECRET: the Modifier + Mode menus stay HIDDEN until you type "/hidden" in the
 // command bar at the bottom of the ESC menu.
-let cheatsUnlocked = false;
+let cheatsUnlocked = true;  // single-player: cheat menus always available (no command bar here)
 
 // The player can be 'flying', 'chute' (parachuting after ejecting), or 'dead'.
 let playerState = 'flying';
