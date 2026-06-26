@@ -22,7 +22,13 @@ class Missile {
     this.trail = []; // little puffs of smoke we leave behind
   }
 
-  update() {
+  update(planes) {
+    // HEAT-SEEKING: if we have no target (or it just got shot down), lock onto
+    // the nearest enemy and keep hunting. This is what makes it "heat-seeking".
+    if (!this.target || !this.target.alive) {
+      this.target = this._findTarget(planes);
+    }
+
     // --- Steer toward the target while we still have fuel ---
     if (this.fuel > 0 && this.target && this.target.alive) {
       const want = Math.atan2(this.target.y - this.y, wrapDX(this.target.x - this.x));
@@ -48,6 +54,19 @@ class Missile {
     this.life -= 1;
     if (this.life <= 0) this.dead = true;
     if (this.y > CONFIG.GROUND_Y) this.dead = true;
+  }
+
+  // Find the closest enemy plane (on another team) to lock onto.
+  _findTarget(planes) {
+    if (!planes) return null;
+    let best = null, bestDist = Infinity;
+    for (const p of planes) {
+      if (!p.alive || p.team === this.team) continue;
+      const dx = wrapDX(p.x - this.x), dy = p.y - this.y;
+      const d = dx * dx + dy * dy;
+      if (d < bestDist) { bestDist = d; best = p; }
+    }
+    return best;
   }
 
   draw(ctx) {

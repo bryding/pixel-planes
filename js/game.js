@@ -418,6 +418,17 @@ function resumeGame()  { paused = false; updatePauseMenu(); }
 function chooseNormal() { setSplitScreen(false); paused = false; updatePauseMenu(); }
 function chooseSplit()  { setSplitScreen(true);  paused = false; updatePauseMenu(); }
 
+// Load into Ben's ONLINE multiplayer game (a separate live world). You leave
+// single-player; the browser's Back button brings you back.
+function goMultiplayer() {
+  const url = CONFIG.MULTIPLAYER_URL;
+  const ok = window.confirm(
+    "Load Ben's ONLINE multiplayer? 🌍\n\n" +
+    "You'll leave your single-player game and join the live online world.\n" +
+    "Press your browser's BACK button any time to come back here.");
+  if (ok) window.location.href = url;
+}
+
 // ===========================================================================
 //  ONLINE SERVER LOBBY (Create Server / Server List / join+password).
 //  Talks to the server through Net (js/net.js).
@@ -1218,7 +1229,7 @@ function update() {
 
   // --- Missiles: move them, then check if they hit a plane ---
   for (const missile of missiles) {
-    missile.update();
+    missile.update(planes);   // pass planes so it can heat-seek a new target
 
     for (const target of planes) {
       if (!target.alive) continue;

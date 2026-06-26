@@ -14,6 +14,10 @@ const CONFIG = {
   // "ws://localhost:8080" in the lobby's server box instead.
   SERVER_URL: 'wss://pixel-planes-bryding.onrender.com',
 
+  // Ben's ONLINE multiplayer game (his deployed plane game). The "Multiplayer
+  // Online" button in the ESC menu loads this. It's a separate, live world.
+  MULTIPLAYER_URL: 'https://pixel-planes-bryding-production.up.railway.app',
+
   // ---- The size of the game picture (in pixels) ----
   // Small numbers make a chunky, retro pixel look. The picture is stretched
   // bigger to fill your screen, but it's really only drawn this small.
@@ -114,8 +118,8 @@ const CONFIG = {
   INF_MISSILE_RATE: 5,
   INF_MISSILE_CAP: 400,      // most missiles allowed flying at once (safety cap)
   MISSILE_SPEED: 11,         // a tiny bit faster than your top speed (MAX_SPEED)
-  MISSILE_TURN: 0.15,        // sharp turn: smallest turn circle ~3 biplanes wide
-  MISSILE_FUEL: 600,         // it chases for about 10 seconds, then flies straight
+  MISSILE_TURN: 0.17,        // how hard it can turn while hunting (heat-seeking)
+  MISSILE_FUEL: 720,         // seeks for its WHOLE flight = true heat-seeker
   MISSILE_LIFE: 720,         // frames before it fizzles out completely
   MISSILE_DAMAGE: 4,         // a missile takes off 4 health (so 3 missiles = dead)
 
