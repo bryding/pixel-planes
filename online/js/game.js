@@ -187,7 +187,21 @@ function toggleChat() {
   }
 }
 function updateChatDot() { const d = document.getElementById('chatDot'); if (d) d.style.display = chatUnread ? 'block' : 'none'; }
-function showChatButton(on) { const b = document.getElementById('chatBtn'); if (b) b.style.display = on ? 'flex' : 'none'; }
+function showChatButton(on) {
+  const b = document.getElementById('chatBtn'); if (b) b.style.display = on ? 'flex' : 'none';
+  const v = document.getElementById('voiceBtn'); if (v) v.style.display = on ? 'flex' : 'none';   // mic button too
+}
+// Voice chat: toggle your microphone on/off.
+function toggleVoice() {
+  if (typeof Voice === 'undefined') return;
+  const b = document.getElementById('voiceBtn');
+  if (Voice.on) {
+    Voice.disable();
+    if (b) { b.classList.remove('on'); b.textContent = '🎤'; }
+  } else {
+    Voice.enable().then((ok) => { if (ok && b) { b.classList.add('on'); b.textContent = '🔴'; } });
+  }
+}
 function sendChatMessage() {
   const i = document.getElementById('chatInput'); if (!i) return;
   const text = i.value.trim();
