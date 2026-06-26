@@ -455,6 +455,48 @@ function playerDies(msg) {
   playerRespawn = CONFIG.RESPAWN_DELAY;
 }
 
+// ---- BLACK HOLE mode (gravity that pulls every plane in) ----
+// In multiplayer each plane pulls ITSELF, so everyone gets sucked in and sees
+// everyone else getting sucked in too. The hole sits in the middle of the world.
+const BH_X = CONFIG.WORLD_WIDTH / 2;
+const BH_Y = (CONFIG.CEILING + CONFIG.GROUND_Y) / 2;
+function applyBlackHolePull(o) {
+  const dx = wrapDX(BH_X - o.x), dy = BH_Y - o.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  if (dist > CONFIG.BH_RANGE) return dist;
+  const t = 1 - dist / CONFIG.BH_RANGE;
+  const pull = CONFIG.BH_PULL * t * t;
+  const ux = dx / dist, uy = dy / dist;
+  o.vx += ux * pull;  o.vy += uy * pull;                                  // straight in
+  o.vx += -uy * pull * CONFIG.BH_SWIRL;  o.vy += ux * pull * CONFIG.BH_SWIRL; // + swirl
+  return dist;
+}
+function blackHoleStep() {
+  if (playerState !== 'flying') return;
+  const d = applyBlackHolePull(player);
+  if (d < CONFIG.BH_HORIZON && player.invincibleTimer <= 0) {   // crushed at the event horizon
+    explosions.push(new Explosion(player.x, player.y, '#b388ff', true));
+    explosions.push(new Explosion(player.x, player.y, '#7c4dff'));
+    pushKill('🕳️ crushed by the black hole', '#b388ff');
+    playerDies('CRUSHED!');
+    if (Net.inWorld) Net.sendState({ x: player.x, y: player.y, angle: player.angle, vx: 0, vy: 0, throttle: 0, health: 0, alive: false, score: 0 });
+  }
+}
+function drawBlackHole() {
+  const sx = worldToScreenX(BH_X), sy = BH_Y - camera.y;
+  const glow = ctx.createRadialGradient(sx, sy, CONFIG.BH_HORIZON * 0.4, sx, sy, CONFIG.BH_DISK_R);
+  glow.addColorStop(0, 'rgba(124,77,255,0)');
+  glow.addColorStop(0.45, 'rgba(150,90,255,0.28)');
+  glow.addColorStop(0.8, 'rgba(180,120,255,0.10)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(sx, sy, CONFIG.BH_DISK_R, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#05020a';                          // the dark core
+  ctx.beginPath(); ctx.arc(sx, sy, CONFIG.BH_HORIZON, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(200,160,255,0.7)'; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.arc(sx, sy, CONFIG.BH_HORIZON + 8, 0, Math.PI * 2); ctx.stroke();
+}
+
 // The "who shot down who" feed on the left side (newest first, fades out).
 const killFeed = [];
 function pushKill(text, color) { killFeed.unshift({ text: text, color: color, life: 360 }); if (killFeed.length > 7) killFeed.pop(); }
@@ -474,6 +516,7 @@ function update() {
       if (player.y <= CONFIG.GROUND_Y - 55) playerState = 'flying';
     } else if (playerState === 'flying') {
       player.update();
+      if (mode === 'blackhole') blackHoleStep();   // gravity pulls you toward the hole
       // Coming in too fast or too steep is a fatal crash; a gentle touch rolls.
       const hardLanding = player.hitGround &&
         (player.impactVy >= CONFIG.LAND_MAX_VY || Math.abs(angleDiff(player.angle, 0)) >= CONFIG.LAND_MAX_ANGLE);
@@ -574,6 +617,9 @@ function drawWorldContents() {
     ctx.fillRect(stripeX, groundScreenY + 14, 30, 3);
   }
   drawGroundScenery(ctx);
+
+  // --- Black Hole (drawn behind the planes so they vanish INTO it) ---
+  if (mode === 'blackhole') drawBlackHole();
 
   // --- Bullets, missiles, explosions ---
   for (const bullet of bullets) bullet.draw(ctx);
