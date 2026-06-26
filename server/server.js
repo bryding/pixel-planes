@@ -149,6 +149,19 @@ wss.on('connection', (ws) => {
         break;
       }
 
+      // Chat: a real player typed a message -> show it to EVERY real player.
+      case 'chat': {
+        if (!ws.joined || !ws.player) break;
+        const text = ('' + (m.text || '')).replace(/[\r\n\t]/g, ' ').slice(0, 120).trim();
+        if (!text) break;
+        // simple anti-spam: at most ~3 messages/sec per player
+        const now = Date.now();
+        if (now - (ws.chatWindow || 0) >= 1000) { ws.chatWindow = now; ws.chatCount = 0; }
+        if (++ws.chatCount > 3) break;
+        broadcast({ t: 'chat', name: ws.player.name, text: text });
+        break;
+      }
+
       // The shooter says one of their shots struck targetId. We trust it only
       // loosely: rate-limit, then either damage a bot here or forward the hit to
       // the human victim (whose own client applies the damage). FR-015.
