@@ -418,15 +418,10 @@ function resumeGame()  { paused = false; updatePauseMenu(); }
 function chooseNormal() { setSplitScreen(false); paused = false; updatePauseMenu(); }
 function chooseSplit()  { setSplitScreen(true);  paused = false; updatePauseMenu(); }
 
-// Load into Ben's ONLINE multiplayer game (a separate live world). You leave
-// single-player; the browser's Back button brings you back.
+// Open Ben's ONLINE multiplayer game in a NEW TAB, so your single-player game
+// stays open in this tab — just switch back to it whenever you want.
 function goMultiplayer() {
-  const url = CONFIG.MULTIPLAYER_URL;
-  const ok = window.confirm(
-    "Load Ben's ONLINE multiplayer? 🌍\n\n" +
-    "You'll leave your single-player game and join the live online world.\n" +
-    "Press your browser's BACK button any time to come back here.");
-  if (ok) window.location.href = url;
+  window.open(CONFIG.MULTIPLAYER_URL, '_blank', 'noopener');
 }
 
 // ===========================================================================
