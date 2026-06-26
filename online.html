@@ -45,10 +45,23 @@
   <!-- Pause menu (press ESC, or the ⏸ button on touch) -->
   <div id="pauseMenu" style="display:none">
     <div class="pauseInner" id="pauseMain">
-      <h1>PAUSED</h1>
-      <button onclick="resumeGame(); this.blur();">▶ Resume</button>
+      <h1>MENU</h1>
+      <p class="roomHint">The world keeps flying — this doesn't pause the game.</p>
+      <button onclick="resumeGame(); this.blur();">▶ Back to Flying</button>
+      <button onclick="showSettingsPanel(); this.blur();">🔊 Sound</button>
       <button onclick="showColorPanel(); this.blur();">🎨 Plane Color</button>
       <button onclick="leaveWorld(); this.blur();">🚪 Leave Game</button>
+    </div>
+
+    <!-- Sound / volume, reachable mid-game from the ESC menu -->
+    <div class="pauseInner" id="settingsPanel" style="display:none">
+      <h1>SOUND</h1>
+      <p class="roomHint">🔊 Volume</p>
+      <input type="range" id="volSliderPause" class="volSlider" min="0" max="100" value="50"
+             oninput="setVolumePct(this.value)" />
+      <p id="volLabelPause" class="startHint">50%</p>
+      <button onclick="toggleMobile(); this.blur();">📱 Mobile Controls On/Off</button>
+      <button onclick="backToPause(); this.blur();">◀ Back</button>
     </div>
 
     <!-- pick your plane color: presets + a color wheel -->
@@ -107,6 +120,6 @@
   <script src="js/sprites.js?v=17"></script>
   <script src="js/scenery.js?v=15"></script>
   <script src="js/plane.js?v=16"></script>
-  <script src="js/game.js?v=17"></script>
+  <script src="js/game.js?v=19"></script>
 </body>
 </html>

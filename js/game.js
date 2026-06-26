@@ -60,7 +60,10 @@ let score = 0;              // your kills THIS life (resets when you're shot dow
 let playerState = 'flying'; // 'takeoff' | 'flying' | 'dead'
 let playerRespawn = 0;      // counts down while dead, then you fly back in
 let frameCount = 0;
-let paused = false;
+// The ESC menu just shows an overlay — it does NOT freeze the game, because the
+// multiplayer world is shared and keeps running for everyone. So you keep flying
+// (and stay vulnerable) while the menu is open; it's a menu, not a pause.
+let menuOpen = false;
 let gameStarted = false;    // false = still on the name screen
 let deathMsg = 'SHOT DOWN!';
 
@@ -108,7 +111,9 @@ function setVolumePct(pct) {
   if (typeof Sound === 'undefined') return;
   Sound.init();
   Sound.setVolume(pct / 100);
-  const lb = document.getElementById('volLabel'); if (lb) lb.textContent = Math.round(pct) + '%';
+  const txt = Math.round(pct) + '%';
+  // Update whichever volume label is on screen (name screen OR the ESC menu).
+  ['volLabel', 'volLabelPause'].forEach((id) => { const lb = document.getElementById(id); if (lb) lb.textContent = txt; });
   Sound.gun();                  // a quick click so you HEAR the level you set
 }
 function closeSettings() {
@@ -116,24 +121,32 @@ function closeSettings() {
   const g = document.getElementById('clickGate'); if (g) g.style.display = 'flex';
 }
 
-// ---- Pause menu ----
-function pauseToggle() { if (!gameStarted) return; paused = !paused; updatePauseMenu(); }
+// ---- ESC menu (Resume / Sound / Plane Color / Leave) ----
+function pauseToggle() { if (!gameStarted) return; menuOpen = !menuOpen; updatePauseMenu(); }
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !e.repeat) pauseToggle(); });
 function updatePauseMenu() {
-  const m = document.getElementById('pauseMenu'); if (m) m.style.display = paused ? 'flex' : 'none';
-  if (paused) backToPause();
+  const m = document.getElementById('pauseMenu'); if (m) m.style.display = menuOpen ? 'flex' : 'none';
+  if (menuOpen) backToPause();
 }
 function showPausePanel(id) {
-  ['pauseMain', 'colorPanel'].forEach((p) => { const el = document.getElementById(p); if (el) el.style.display = (p === id) ? 'flex' : 'none'; });
+  ['pauseMain', 'colorPanel', 'settingsPanel'].forEach((p) => { const el = document.getElementById(p); if (el) el.style.display = (p === id) ? 'flex' : 'none'; });
 }
 function backToPause() { showPausePanel('pauseMain'); }
-function resumeGame() { paused = false; updatePauseMenu(); }
+function resumeGame() { menuOpen = false; updatePauseMenu(); }
 function showColorPanel() { showPausePanel('colorPanel'); const w = document.getElementById('colorWheel'); const s = getPlayerColor(); if (w && s) w.value = s; }
+// Sound/volume panel inside the ESC menu, so you can adjust it mid-game.
+function showSettingsPanel() {
+  showPausePanel('settingsPanel');
+  if (typeof Sound === 'undefined') return;
+  const v = Math.round(Sound.volume * 100);
+  const sl = document.getElementById('volSliderPause'); if (sl) sl.value = v;
+  const lb = document.getElementById('volLabelPause'); if (lb) lb.textContent = v + '%';
+}
 
 // Leave the world and go back to the name screen.
 function leaveWorld() {
   Net.disconnect();
-  paused = false; updatePauseMenu();
+  menuOpen = false; updatePauseMenu();
   gameStarted = false; player.alive = false; playerState = 'flying';
   for (const k in remotePlayers) delete remotePlayers[k];
   const gate = document.getElementById('clickGate'); if (gate) gate.style.display = 'flex';
@@ -710,8 +723,8 @@ function drawOffscreenIndicators() {
   }
 }
 
-// A dark dim while paused. The PAUSED title + buttons live in the #pauseMenu
-// HTML overlay (so they're clickable), drawn on top of the canvas.
+// A dark dim behind the ESC menu (the world keeps moving underneath). The menu
+// title + buttons live in the #pauseMenu HTML overlay so they're clickable.
 function drawPauseOverlay() {
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
@@ -721,9 +734,9 @@ function drawPauseOverlay() {
 //  THE MAIN LOOP
 // ===========================================================================
 function loop() {
-  if (!paused) { frameCount += 1; update(); }
+  frameCount += 1; update();          // the shared world never stops
   draw();
-  if (paused) drawPauseOverlay();
+  if (menuOpen) drawPauseOverlay();   // just dims behind the ESC menu
   requestAnimationFrame(loop);
 }
 loop(); // start!

@@ -6,6 +6,10 @@ const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = require('path').join(__dirname, '..');
 
 const noop = () => {};
+// A stand-in Web Audio "param" (frequency/gain/etc.) with every scheduling
+// method, so any sound code runs without throwing once Sound is initialized.
+const aParam = () => ({ value: 0, setValueAtTime: noop, linearRampToValueAtTime: noop,
+  exponentialRampToValueAtTime: noop, setTargetAtTime: noop, cancelScheduledValues: noop });
 const gradient = { addColorStop: noop };
 const ctx = new Proxy({}, { get: (t, p) => {
   if (p === 'canvas') return { width: 960, height: 540 };
@@ -30,7 +34,18 @@ const sandbox = {
   navigator:{ userAgent:'node', maxTouchPoints:0 },
   WebSocket: class { constructor(){ this.readyState=0; } send(){} close(){} addEventListener(){} },
   Image: class { set src(v){} },
-  AudioContext: class { createOscillator(){return {connect:noop,start:noop,stop:noop,frequency:{value:0,setValueAtTime:noop}};} createGain(){return {connect:noop,gain:{value:0,setValueAtTime:noop,linearRampToValueAtTime:noop,exponentialRampToValueAtTime:noop}};} get destination(){return {};} get currentTime(){return 0;} resume(){} },
+  AudioContext: class {
+    constructor(){ this.sampleRate=44100; }
+    createOscillator(){return {connect:noop,start:noop,stop:noop,type:'',frequency:aParam(),detune:aParam()};}
+    createGain(){return {connect:noop,gain:aParam()};}
+    createBiquadFilter(){return {connect:noop,type:'',frequency:aParam(),Q:aParam(),gain:aParam()};}
+    createBufferSource(){return {connect:noop,start:noop,stop:noop,buffer:null,loop:false,playbackRate:aParam()};}
+    createBuffer(){return {getChannelData:()=>new Float32Array(1)};}
+    createStereoPanner(){return {connect:noop,pan:aParam()};}
+    createDynamicsCompressor(){return {connect:noop,threshold:aParam(),knee:aParam(),ratio:aParam(),attack:aParam(),release:aParam()};}
+    decodeAudioData(){return Promise.resolve({getChannelData:()=>new Float32Array(1)});}
+    get destination(){return {};} get currentTime(){return 0;} resume(){} suspend(){}
+  },
   addEventListener:noop, removeEventListener:noop, matchMedia:()=>({matches:false,addEventListener:noop,addListener:noop}),
   getComputedStyle:()=>({}), alert:noop, prompt:()=>null, confirm:()=>false,
   fetch:()=>Promise.resolve({json:()=>Promise.resolve({}),text:()=>Promise.resolve('')}),
@@ -53,6 +68,12 @@ const DRIVER = `
   Net.myId=1; Net.username="Tester";
   Net.onWelcome();
   log("V1 welcomed -> playerState="+playerState+" gameStarted="+gameStarted+" mode="+mode);
+  // ESC menu must NOT freeze the world, and Sound is reachable mid-game.
+  pauseToggle(); showSettingsPanel(); setVolumePct(30); update();
+  if (!menuOpen) throw new Error("ESC menu should be open");
+  resumeGame();
+  if (menuOpen) throw new Error("menu should close on resume");
+  log("ESC menu opens (no freeze) + Sound panel + volume + resume OK");
   Net.onSnapshot([
     {id:2,name:"Foe",x:player.x+30,y:player.y,angle:Math.PI,vx:0,vy:0,health:10,alive:true,score:5},
     {id:1000001,name:"Sam",x:player.x+60,y:player.y,angle:0,vx:0,vy:0,health:10,alive:true,score:2}
