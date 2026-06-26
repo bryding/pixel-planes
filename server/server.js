@@ -141,7 +141,7 @@ wss.on('connection', (ws) => {
       // "@hidden" Mode Menu: change the world's mode for EVERYONE.
       case 'setmode': {
         if (!ws.joined) break;
-        const ALLOWED = ['classic', 'unicorn', 'badweather', 'ww2', 'night', 'nomod'];
+        const ALLOWED = ['classic', 'unicorn', 'badweather', 'ww2', 'night', 'nomod', 'blackhole'];
         if (ALLOWED.indexOf(m.mode) >= 0) {
           World.world.mode = m.mode;
           broadcast({ t: 'mode', mode: m.mode });
