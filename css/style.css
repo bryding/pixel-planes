@@ -324,3 +324,11 @@ html, body {
 /* the smaller "Settings" button under JOIN */
 .gateExtras { display: flex; gap: 12px; }
 .startBtn.small { font-size: 16px; padding: 9px 18px; min-width: 0; }
+
+/* @hidden cheat opener in the online ESC menu */
+.cmdLabel { font-family: monospace; font-size: 12px; color: rgba(255,255,255,0.75); margin: 6px 0 0; text-align: center; }
+.cmdBar { display: flex; gap: 6px; width: 320px; margin-top: 6px; }
+.cmdInput { flex: 1; min-width: 0; font-family: monospace; font-size: 13px; color: #fff; background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.5); border-radius: 8px; padding: 8px 10px; outline: none; }
+.cmdBar button { min-width: 0 !important; padding: 8px 14px; }
+.cmdMsg { font-family: monospace; font-size: 12px; color: #7fe0a0; min-height: 14px; margin: 2px 0; text-align: center; }
+#cheatBox { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }

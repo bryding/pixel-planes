@@ -134,6 +134,30 @@ function backToPause() { showPausePanel('pauseMain'); }
 function resumeGame() { paused = false; updatePauseMenu(); }
 function showColorPanel() { showPausePanel('colorPanel'); const w = document.getElementById('colorWheel'); const s = getPlayerColor(); if (w && s) w.value = s; }
 
+// "@hidden" cheat opener (command bar at the bottom of the ESC menu). We use @
+// because Firefox grabs "/" for quick-find.
+function runCommand(text) {
+  const cmd = (text || '').trim().toLowerCase();
+  const out = document.getElementById('cmdMsg');
+  const box = document.getElementById('cheatBox');
+  if (cmd === '@hidden' || cmd === '/hidden') {
+    if (box) box.style.display = 'flex';
+    if (out) out.textContent = '🔓 Cheats unlocked! These change the world for EVERYONE.';
+  } else if (cmd === '@hide' || cmd === '/hide') {
+    if (box) box.style.display = 'none';
+    if (out) out.textContent = '🔒 Cheats hidden.';
+  } else if (cmd) {
+    if (out) out.textContent = 'Unknown command. Try @hidden';
+  }
+  const inp = document.getElementById('cmdInput'); if (inp) inp.value = '';
+}
+// Send a cheat to YOUR server, which applies it to the whole shared world.
+function cheat(c, n) {
+  if (typeof Net !== 'undefined' && Net.sendCheat) Net.sendCheat(c, n);
+  const out = document.getElementById('cmdMsg');
+  if (out) out.textContent = '✅ Sent to the world: ' + c + (n ? (' ' + n) : '');
+}
+
 // Leave the world and go back to the name screen.
 function leaveWorld() {
   Net.disconnect();

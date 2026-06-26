@@ -146,6 +146,9 @@ const Net = {
   // Tell the server our shot struck `targetId` (the server decides the damage).
   sendHit(targetId, kind) { this.send({ t: 'hit', targetId: targetId, kind: kind }); },
 
+  // "@hidden" cheat: ask the server to change the world for everyone (add/remove bots).
+  sendCheat(cmd, n) { this.send({ t: 'cheat', cmd: cmd, n: n }); },
+
   // Handle one message from the server. (Public so it can be unit-tested.)
   _handle(m) {
     switch (m.t) {

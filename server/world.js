@@ -121,6 +121,22 @@ function removePlayer(id) {
   syncBotCount();
 }
 
+// CHEATS (the "@hidden" menu). Anyone may use them — this is your sandbox world,
+// so they change the world for EVERYONE by adjusting the bot target + re-syncing.
+function cheat(cmd, n) {
+  if (cmd === 'addbots') {
+    const add = Math.max(1, Math.min(50, n || 5));
+    world.targetPopulation = Math.min(100, world.targetPopulation + add);  // cap so the free server stays happy
+    syncBotCount();
+  } else if (cmd === 'clearbots') {
+    world.targetPopulation = 0;
+    syncBotCount();
+  } else if (cmd === 'resetbots') {
+    world.targetPopulation = CONFIG.TARGET_POPULATION;
+    syncBotCount();
+  }
+}
+
 // A bot pulls the trigger: spawn its bullet and tell everyone to draw the shot.
 function botShoot(bot) {
   const nx = bot.x + Math.cos(bot.angle) * 17, ny = bot.y + Math.sin(bot.angle) * 17;
@@ -256,6 +272,7 @@ module.exports = {
   addPlayer,
   removePlayer,
   syncBotCount,
+  cheat,
   damageBot,
   tick,
   startSnapshotLoop,

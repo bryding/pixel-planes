@@ -130,6 +130,14 @@ wss.on('connection', (ws) => {
         break;
       }
 
+      // "@hidden" cheat commands. Anyone joined may use them; they change the
+      // shared world for everybody (add/remove bots).
+      case 'cheat': {
+        if (!ws.joined) break;
+        if (typeof m.cmd === 'string') World.cheat(m.cmd, m.n);
+        break;
+      }
+
       // The shooter says one of their shots struck targetId. We trust it only
       // loosely: rate-limit, then either damage a bot here or forward the hit to
       // the human victim (whose own client applies the damage). FR-015.
