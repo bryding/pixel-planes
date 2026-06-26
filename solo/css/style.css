@@ -1,0 +1,518 @@
+/* Make the page a dark background and center the game */
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #10131a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: monospace;
+}
+
+/* The game canvas.
+   image-rendering: pixelated keeps the pixels sharp and chunky
+   instead of blurry when we scale the picture up bigger. */
+#game {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #87ceeb; /* sky blue, shows before the first frame draws */
+  /* The size on screen is set by JavaScript so it always fits the window. */
+}
+
+/* The modifier/cheat menu, floating at the very top-middle. */
+#topBar {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+}
+.menuGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+#modMenu {
+  display: flex;
+  flex-flow: column wrap;   /* fill a column, then start a new one */
+  max-height: 290px;        /* about 7 buttons tall before it wraps */
+  gap: 5px;
+  align-content: center;
+}
+#modeMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+#topBar button {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: bold;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid #ffffff;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#topBar button:hover {
+  background: rgba(40, 80, 120, 0.9);
+}
+#modBtn {
+  background: rgba(20, 40, 70, 0.85);
+}
+
+/* ---- Pause menu overlay (ESC) ---- */
+#pauseMenu {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* The container itself is click-through so the on-screen ESC button (which
+     sits behind it) stays tappable to CLOSE the menu. Only the panel catches taps. */
+  pointer-events: none;
+}
+#pauseMenu .pauseInner {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  padding: 28px 40px;
+}
+#pauseMenu h1 {
+  font-family: monospace;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+  letter-spacing: 4px;
+}
+#pauseMenu button {
+  font-family: monospace;
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffffff;
+  background: rgba(20, 40, 70, 0.9);
+  border: 2px solid #ffffff;
+  border-radius: 8px;
+  padding: 10px 22px;
+  cursor: pointer;
+  min-width: 320px;
+}
+#pauseMenu button:hover {
+  background: rgba(40, 80, 120, 0.95);
+}
+#pauseMenu .pauseHint {
+  font-family: monospace;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 8px 0 0 0;
+  text-align: center;
+}
+
+/* ---- Mobile touch controls (toggle with the 📱 Mobile button) ---- */
+#mobileControls {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;          /* empty space lets touches pass through */
+}
+#mobileControls .mcTurn,
+#mobileControls .mcActions,
+#mobileControls .mcThrottleWrap,
+#mobileControls #mcUfoPad,
+#mobileControls .mcEjectBtn,
+#mobileControls .mcEscBtn { pointer-events: auto; }
+
+/* red EJECT button, in the gap between the turn arrows and the throttle
+   (the arrows sit at left:18px and are ~170px wide, so we start just past them). */
+.mcEjectBtn {
+  position: fixed;
+  left: 200px;
+  bottom: 18px;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: bold;
+  line-height: 1.15;
+  color: #ffffff;
+  background: rgba(200, 40, 40, 0.6);     /* red */
+  border-color: #ff8a8a;
+}
+.mcEjectBtn:active { background: rgba(255, 80, 80, 0.55); }
+
+/* top-right pause/ESC button (only visible while mobile controls are on) */
+.mcEscBtn {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  width: 96px;
+  height: 46px;
+  font-size: 17px;
+  border-radius: 10px;
+}
+
+/* UFO 4-way pad (Alien Invasion, when you're the UFO) -- a + cross, bottom-left:
+   UP on top, LEFT/RIGHT in the middle row, DOWN on the bottom. */
+#mcUfoPad {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, 68px);
+  grid-template-rows: repeat(3, 68px);
+  gap: 6px;
+}
+#mcUp     { grid-area: 1 / 2; }   /* top-center  */
+#mcLeftU  { grid-area: 2 / 1; }   /* middle-left */
+#mcRightU { grid-area: 2 / 3; }   /* middle-right */
+#mcDown   { grid-area: 3 / 2; }   /* bottom-center */
+.mcDpad { width: 68px; height: 68px; font-size: 26px; border-radius: 12px; }
+
+.mcBtn {
+  font-family: monospace;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.40);
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.mcBtn:active { background: rgba(255, 255, 255, 0.30); }
+
+/* bottom-left turn pad */
+.mcTurn {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  display: flex;
+  gap: 14px;
+}
+.mcTurnBtn { width: 78px; height: 78px; font-size: 32px; border-radius: 14px; }
+
+/* bottom-right action buttons */
+.mcActions {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+.mcCircle { width: 100px; height: 100px; font-size: 30px; border-radius: 50%; }
+.mcSquare { width: 72px;  height: 72px;  font-size: 26px; border-radius: 12px; }
+
+/* bottom-middle throttle slider */
+.mcThrottleWrap {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  width: 36%;
+  min-width: 220px;
+  text-align: center;
+  touch-action: none;
+}
+.mcSlider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 26px;
+  border-radius: 13px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  touch-action: none;
+  outline: none;
+}
+.mcSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f1c40f;
+  border: 2px solid #ffffff;
+  cursor: pointer;
+}
+.mcSlider::-moz-range-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f1c40f;
+  border: 2px solid #ffffff;
+  cursor: pointer;
+}
+.mcThrottleLbl {
+  font-family: monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 4px;
+}
+
+/* ---- Room (Create / Join) panels in the pause menu ---- */
+.roomHint {
+  font-family: monospace;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 4px 0;
+  max-width: 360px;
+  text-align: center;
+}
+.roomInput {
+  font-family: monospace;
+  font-size: 26px;
+  font-weight: bold;
+  letter-spacing: 6px;
+  text-align: center;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid #ffffff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  width: 300px;
+  outline: none;
+}
+.roomInput::placeholder { color: rgba(255, 255, 255, 0.35); letter-spacing: 2px; }
+.roomMsg {
+  font-family: monospace;
+  font-size: 14px;
+  min-height: 18px;
+  margin: 2px 0;
+  text-align: center;
+}
+
+/* name box in the room panels (normal text, unlike the code box) */
+.nameInput {
+  font-family: monospace;
+  font-size: 20px;
+  text-align: center;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid #ffffff;
+  border-radius: 8px;
+  padding: 9px 14px;
+  width: 300px;
+  outline: none;
+}
+.nameInput::placeholder { color: rgba(255, 255, 255, 0.35); }
+
+/* ---- Online server list ---- */
+.serverList {
+  width: 360px;
+  max-height: 230px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0;
+}
+.serverRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: monospace;
+  color: #fff;
+}
+.serverRow .srvName { font-weight: bold; font-size: 16px; letter-spacing: 2px; }
+.serverRow .srvMeta { font-size: 12px; color: rgba(255,255,255,0.7); }
+.serverRow button {
+  font-family: monospace; font-weight: bold; font-size: 13px; color: #fff;
+  background: rgba(20, 70, 40, 0.9); border: 2px solid #fff; border-radius: 6px;
+  padding: 6px 12px; cursor: pointer;
+}
+.serverEmpty { font-family: monospace; color: rgba(255,255,255,0.5); font-size: 13px; }
+.rowButtons { display: flex; gap: 12px; }
+.passRow { display: flex; gap: 6px; margin-top: 4px; }
+.passRow input { width: 150px; }
+
+/* server-address row in the Create / List panels */
+.connRow { display: flex; gap: 8px; align-items: center; }
+.urlInput {
+  font-family: monospace; font-size: 13px; color: #fff;
+  background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.6);
+  border-radius: 6px; padding: 7px 10px; width: 230px; outline: none;
+}
+.connRow button {
+  font-family: monospace; font-weight: bold; font-size: 13px; color: #fff;
+  background: rgba(20,40,70,0.9); border: 2px solid #fff; border-radius: 6px;
+  padding: 7px 12px; cursor: pointer; min-width: 0;
+}
+
+/* ---- Title / Start screen ---- */
+#startScreen, #settingsScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 30;                 /* above everything else */
+  overflow: hidden;
+}
+/* Start screen: the banner + plane are drawn on the CANVAS, so this overlay is
+   transparent and just holds the buttons near the bottom. */
+#startScreen {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 12%;
+  background: transparent;
+}
+/* Settings keeps a dim backdrop. */
+#settingsScreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+.startCenter, .startButtons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  z-index: 32;
+}
+.titleBanner {
+  background: #e02a2a;
+  color: #ffffff;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 64px;
+  letter-spacing: 8px;
+  padding: 16px 46px;
+  border: 5px solid #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.35);
+  transform: rotate(-2deg);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+}
+.titleBanner.small { font-size: 34px; letter-spacing: 5px; padding: 10px 28px; transform: none; }
+.startHint { font-family: monospace; color: rgba(255,255,255,0.85); margin: 0; }
+.startBtn {
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 24px;
+  color: #ffffff;
+  background: rgba(20, 40, 70, 0.92);
+  border: 3px solid #ffffff;
+  border-radius: 10px;
+  padding: 14px 50px;
+  cursor: pointer;
+  min-width: 300px;
+}
+.startBtn:hover { background: rgba(40, 80, 120, 0.97); }
+.settingsModes { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 520px; }
+.settingsModes button {
+  font-family: monospace; font-weight: bold; font-size: 15px; color: #fff;
+  background: rgba(20,40,70,0.9); border: 2px solid #fff; border-radius: 8px;
+  padding: 9px 14px; cursor: pointer;
+}
+/* the plane that flies across the title */
+.planeFlyby {
+  position: fixed;
+  top: 34%;
+  left: -12%;
+  font-size: 64px;
+  z-index: 31;
+  pointer-events: none;
+  transform: scaleX(-1);          /* face the direction of travel */
+  animation: flyAcross 7s linear infinite;
+}
+@keyframes flyAcross {
+  0%   { left: -12%; top: 36%; }
+  25%  { top: 30%; }
+  50%  { top: 38%; }
+  75%  { top: 31%; }
+  100% { left: 112%; top: 36%; }
+}
+
+/* ---- Plane color customizer ---- */
+.colorPresets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  max-width: 420px;
+}
+.colorPresets button {
+  width: 54px;
+  height: 54px;
+  border: 3px solid #ffffff;
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 0;
+}
+.colorPresets button:hover { transform: scale(1.08); }
+#colorWheel {
+  width: 220px;
+  height: 70px;
+  border: 3px solid #ffffff;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+}
+
+/* volume slider on the Settings screen */
+.volSlider {
+  -webkit-appearance: none; appearance: none;
+  width: 300px; height: 24px; border-radius: 12px;
+  background: rgba(0,0,0,0.5); border: 2px solid #fff; outline: none; cursor: pointer;
+}
+.volSlider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 34px; height: 34px; border-radius: 50%; background: #f1c40f; border: 2px solid #fff; cursor: pointer;
+}
+.volSlider::-moz-range-thumb { width: 34px; height: 34px; border-radius: 50%; background: #f1c40f; border: 2px solid #fff; cursor: pointer; }
+
+/* ---- Name gate (shown first; type a name and JOIN the shared world) ---- */
+#clickGate {
+  position: fixed;
+  inset: 0;
+  z-index: 40;                 /* above the title screen */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 16, 32, 0.72);  /* see the live dogfights behind */
+}
+.gateInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+/* the "type your name" box on the gate */
+.nameInput {
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 24px;
+  text-align: center;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.45);
+  border: 3px solid #ffffff;
+  border-radius: 10px;
+  padding: 12px 18px;
+  width: 300px;
+  outline: none;
+}
+.nameInput::placeholder { color: rgba(255, 255, 255, 0.5); }
+/* the smaller "Play offline / Settings" buttons under JOIN */
+.gateExtras { display: flex; gap: 12px; }
+.startBtn.small { font-size: 16px; padding: 9px 18px; min-width: 0; }

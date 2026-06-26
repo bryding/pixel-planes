@@ -39,7 +39,21 @@ A browser-based 2D pixel-art airplane combat game, inspired by **BitPlanes**
 
 ## File layout
 
-- `index.html` — the page; loads the scripts.
+The game now has TWO separate playable apps behind one menu, so single-player
+and multiplayer can't break each other:
+
+- `index.html` — the **chooser**: pick 🤖 Single Player or 🌍 Multiplayer.
+- `online.html` + root `js/`, `css/` — the **multiplayer** shared-world client
+  (runs against `server/`, deployed on Railway). Keep this untouched when working
+  on single-player.
+- `solo/` — a **self-contained copy** of the single-player game (its own
+  `index.html`, `css/`, and `js/`, including `enemy.js`, `powerup.js`, `pilot.js`).
+  This is the classic offline game with all the modes (Classic/Unicorn/WW2/Alien/
+  Night/Black Hole/Bad Weather), the Modifier/Cheat menu, power-ups, eject +
+  parachute, and 2-player split-screen. Edit single-player here.
+
+Inside each app the key files are the same idea:
+
 - `css/style.css` — page styling, makes pixels crisp.
 - `js/config.js` — all the tweakable numbers (speed, gravity, colors). Start here.
 - `js/input.js` — reads the keyboard.

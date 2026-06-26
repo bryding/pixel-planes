@@ -4,8 +4,11 @@
 
 👉 **https://pixel-planes-bryding-production.up.railway.app**
 
-Type a name, press **JOIN GAME**, and you're in the one shared world with
-everyone else. Share that link with anyone, on any network.
+When it opens you pick **🤖 Single Player** (offline, with all the game modes,
+cheats, power-ups, eject and split-screen — lives in the `solo/` folder) or
+**🌍 Multiplayer Online**. For multiplayer, type a name, press **JOIN GAME**, and
+you're in the one shared world with everyone else. Share that link with anyone,
+on any network.
 
 ---
 

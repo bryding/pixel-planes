@@ -4,108 +4,34 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pixel Planes</title>
-  <link rel="stylesheet" href="css/style.css?v=15" />
+  <!-- Reuse the game's pixel-art styling (titleBanner, startBtn, etc.) -->
+  <link rel="stylesheet" href="css/style.css?v=18" />
+  <style>
+    /* The chooser has no game canvas behind it, so paint a simple sky here. */
+    body { background: linear-gradient(#5fb6e6 0%, #8fd0f0 55%, #cfeeff 100%); }
+    #chooser {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 28px;
+    }
+    /* Two clear, big choices stacked on top of each other. */
+    .modeButtons { display: flex; flex-direction: column; gap: 18px; align-items: center; }
+    .startBtn.mode { min-width: 340px; padding: 22px 50px; font-size: 26px; text-decoration: none; text-align: center; }
+  </style>
 </head>
 <body>
-  <!-- This is the box the whole game is drawn onto -->
-  <canvas id="game"></canvas>
-
-  <!-- NAME GATE: the first thing you see. Type a name and JOIN to fly into the
-       one shared world with everyone else. (Clicking also turns on sound, which
-       browsers block until your first click/tap.) -->
-  <div id="clickGate">
-    <div class="gateInner">
-      <div class="titleBanner">PIXEL&nbsp;PLANES</div>
-      <p class="startHint">Pick a name and join the live sky! ✈️</p>
-      <input id="nameInput" class="nameInput" maxlength="14" placeholder="Your name"
-             autocomplete="off" spellcheck="false"
-             onkeydown="if (event.key === 'Enter') { joinWorld(); this.blur(); }" />
-      <button class="startBtn" onclick="joinWorld(); this.blur();">▶ JOIN GAME</button>
-      <p id="joinStatus" class="startHint">click to turn on sound 🔊</p>
-      <div class="gateExtras">
-        <button class="startBtn small" onclick="openSettings(); this.blur();">⚙ Settings</button>
-      </div>
+  <!-- The very first screen: pick how you want to play. -->
+  <div id="chooser">
+    <div class="titleBanner">PIXEL&nbsp;PLANES</div>
+    <p class="startHint">How do you want to play? ✈️</p>
+    <div class="modeButtons">
+      <!-- Single Player = the full offline game with all the modes & options -->
+      <a class="startBtn mode" href="solo/index.html">🤖 Single Player</a>
+      <!-- Multiplayer = the live shared world with other people online -->
+      <a class="startBtn mode" href="online.html">🌍 Multiplayer Online</a>
     </div>
+    <p class="startHint">Single Player has all the game modes &amp; options 🎮</p>
   </div>
-
-  <!-- SETTINGS (reached from the name screen) -->
-  <div id="settingsScreen" style="display:none">
-    <div class="startCenter">
-      <div class="titleBanner small">SETTINGS</div>
-      <p class="startHint">🔊 Sound volume</p>
-      <input type="range" id="volSlider" class="volSlider" min="0" max="100" value="50"
-             oninput="setVolumePct(this.value)" />
-      <p id="volLabel" class="startHint">50%</p>
-      <button class="startBtn" onclick="toggleMobile(); this.blur();">📱 Mobile Controls On/Off</button>
-      <button class="startBtn" onclick="closeSettings(); this.blur();">◀ Back</button>
-    </div>
-  </div>
-
-  <!-- Pause menu (press ESC, or the ⏸ button on touch) -->
-  <div id="pauseMenu" style="display:none">
-    <div class="pauseInner" id="pauseMain">
-      <h1>PAUSED</h1>
-      <button onclick="resumeGame(); this.blur();">▶ Resume</button>
-      <button onclick="showColorPanel(); this.blur();">🎨 Plane Color</button>
-      <button onclick="leaveWorld(); this.blur();">🚪 Leave Game</button>
-    </div>
-
-    <!-- pick your plane color: presets + a color wheel -->
-    <div class="pauseInner" id="colorPanel" style="display:none">
-      <h1>PLANE COLOR</h1>
-      <p class="roomHint">Tap a preset, or use the color wheel:</p>
-      <div class="colorPresets">
-        <button style="background:#3d8fd6" onclick="setPlayerColor('#3d8fd6'); this.blur();"></button>
-        <button style="background:#e0524a" onclick="setPlayerColor('#e0524a'); this.blur();"></button>
-        <button style="background:#3fae54" onclick="setPlayerColor('#3fae54'); this.blur();"></button>
-        <button style="background:#f1c40f" onclick="setPlayerColor('#f1c40f'); this.blur();"></button>
-        <button style="background:#e67e22" onclick="setPlayerColor('#e67e22'); this.blur();"></button>
-        <button style="background:#9b59b6" onclick="setPlayerColor('#9b59b6'); this.blur();"></button>
-        <button style="background:#e84393" onclick="setPlayerColor('#e84393'); this.blur();"></button>
-        <button style="background:#1abc9c" onclick="setPlayerColor('#1abc9c'); this.blur();"></button>
-        <button style="background:#ecf0f1" onclick="setPlayerColor('#ecf0f1'); this.blur();"></button>
-        <button style="background:#2c3e50" onclick="setPlayerColor('#2c3e50'); this.blur();"></button>
-      </div>
-      <input type="color" id="colorWheel" value="#3d8fd6"
-             oninput="setPlayerColor(this.value)" />
-      <p class="startHint">🎡 Color wheel — drag to mix any color</p>
-      <button onclick="backToPause(); this.blur();">◀ Back</button>
-    </div>
-  </div>
-
-  <!-- On-screen touch controls for phones/tablets (toggle with 📱 in Settings) -->
-  <div id="mobileControls" style="display:none">
-    <!-- top-RIGHT: open the pause menu (phones have no ESC key) -->
-    <button id="mcEsc" class="mcBtn mcEscBtn" onclick="pauseToggle(); this.blur();">⏸ ESC</button>
-    <!-- bottom-LEFT: turn buttons (like ← / →) -->
-    <div class="mcTurn" id="mcTurn">
-      <button id="mcLeft"  class="mcBtn mcTurnBtn">◀</button>
-      <button id="mcRight" class="mcBtn mcTurnBtn">▶</button>
-    </div>
-    <!-- bottom-MIDDLE: throttle slider (right = faster, left = slower) -->
-    <div class="mcThrottleWrap" id="mcThrottleWrap">
-      <input id="mcThrottle" class="mcSlider" type="range" min="0" max="100" value="100" />
-      <div class="mcThrottleLbl">THROTTLE  ◀ slower · faster ▶</div>
-    </div>
-    <!-- bottom-RIGHT: square = missile, big circle = guns -->
-    <div class="mcActions" id="mcActions">
-      <button id="mcMissile" class="mcBtn mcSquare">▣</button>
-      <button id="mcGun"     class="mcBtn mcCircle">●</button>
-    </div>
-  </div>
-
-  <!-- The scripts run top to bottom, so order matters here -->
-  <script src="js/config.js?v=17"></script>
-  <script src="js/audio.js?v=15"></script>
-  <script src="js/net.js?v=15"></script>
-  <script src="js/input.js?v=16"></script>
-  <script src="js/physics.js?v=15"></script>
-  <script src="js/bullet.js?v=15"></script>
-  <script src="js/missile.js?v=16"></script>
-  <script src="js/explosion.js?v=15"></script>
-  <script src="js/sprites.js?v=17"></script>
-  <script src="js/scenery.js?v=15"></script>
-  <script src="js/plane.js?v=16"></script>
-  <script src="js/game.js?v=17"></script>
 </body>
 </html>

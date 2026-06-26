@@ -40,7 +40,8 @@ sandbox.webkitAudioContext = sandbox.AudioContext;
 sandbox.document = { getElementById:()=>el(), createElement:()=>el(), querySelector:()=>el(), querySelectorAll:()=>[],
   addEventListener:noop, removeEventListener:noop, body:el(), documentElement:el(), getElementsByClassName:()=>[], getElementsByTagName:()=>[] };
 
-const html = fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
+// index.html is the Single/Multiplayer chooser now; the multiplayer client lives in online.html.
+const html = fs.readFileSync(path.join(ROOT,'online.html'),'utf8');
 const files = [...html.matchAll(/<script src="([^"?]+)/g)].map(m=>m[1]);
 console.log('Loading', files.length, 'scripts in page order...');
 const code = files.map(f => '\n// ===== '+f+' =====\n' + fs.readFileSync(path.join(ROOT,f),'utf8')).join('\n');

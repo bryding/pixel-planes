@@ -10,9 +10,16 @@ for learning how to build games!
 
 👉 **https://pixel-planes-bryding-production.up.railway.app**
 
-Type a name, press **JOIN GAME**, and you're flying with everyone else. Bots fill
-the empty spots so the sky is never lonely. Share the link and friends join the
-same world.
+When the game opens you pick how to play:
+
+- **🤖 Single Player** — fly against bots offline, with all the extra game modes
+  and options (Classic, Unicorn, WW2, Alien Invasion, Night, Black Hole, Bad
+  Weather), the Modifier/Cheat menu, power-ups, eject + parachute, and even
+  2-player split-screen. This part is self-contained in the `solo/` folder, so it
+  works even with no internet.
+- **🌍 Multiplayer Online** — type a name, press **JOIN GAME**, and fly with
+  everyone else in the one shared world. Bots fill the empty spots so the sky is
+  never lonely. Share the link and friends join the same world.
 
 (Want to run it yourself for development or same-WiFi play? See
 [Online play](#-online-play--one-shared-world) below.)

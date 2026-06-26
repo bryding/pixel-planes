@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Pixel Planes</title>
+  <link rel="stylesheet" href="css/style.css?v=14" />
+</head>
+<body>
+  <!-- This is the box the whole game is drawn onto -->
+  <canvas id="game"></canvas>
+
+  <!-- CLICK-TO-PLAY GATE: the first thing you see in Single Player. Clicking
+       turns on sound (browsers block it until your first click/tap) and reveals
+       the title screen, where live AI dogfights play behind the banner. -->
+  <div id="clickGate">
+    <div class="gateInner">
+      <div class="titleBanner">PIXEL&nbsp;PLANES</div>
+      <p class="startHint">Single Player 🛩️</p>
+      <button class="startBtn" onclick="enterTitle(); this.blur();">▶ Click to Play</button>
+      <p id="joinStatus" class="startHint">click to turn on sound 🔊</p>
+      <div class="gateExtras">
+        <button class="startBtn small" onclick="openSettings(); this.blur();">⚙ Settings</button>
+        <a class="startBtn small" href="../index.html">◀ Back to menu</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- TITLE / START SCREEN (shown on load & refresh; the canvas behind it shows
+       live AI dogfights). Pressing START begins play. Dying does NOT return here. -->
+  <div id="startScreen">
+    <!-- The PIXEL PLANES banner + the plane that tows it are drawn on the CANVAS. -->
+    <div class="startButtons">
+      <button class="startBtn" onclick="startGame(); this.blur();">▶ START</button>
+      <button class="startBtn" onclick="openSettings(); this.blur();">⚙ SETTINGS</button>
+    </div>
+  </div>
+
+  <!-- SETTINGS (from the start screen) -->
+  <div id="settingsScreen" style="display:none">
+    <div class="startCenter">
+      <div class="titleBanner small">SETTINGS</div>
+      <p class="startHint">🔊 Sound volume</p>
+      <input type="range" id="volSlider" class="volSlider" min="0" max="100" value="50"
+             oninput="setVolumePct(this.value)" />
+      <p id="volLabel" class="startHint">50%</p>
+      <button class="startBtn" onclick="toggleMobile(); this.blur();">📱 Mobile Controls On/Off</button>
+      <button class="startBtn" onclick="closeSettings(); this.blur();">◀ Back</button>
+    </div>
+  </div>
+
+  <!-- Pause menu (shown when you press ESC) -->
+  <div id="pauseMenu" style="display:none">
+    <!-- main pause screen -->
+    <div class="pauseInner" id="pauseMain">
+      <h1>PAUSED</h1>
+      <button onclick="resumeGame(); this.blur();">▶ Resume</button>
+      <button onclick="returnToMainMenu(); this.blur();">🏠 Title Screen</button>
+      <button onclick="chooseNormal(); this.blur();">🎮 1 Player (Normal)</button>
+      <button onclick="chooseSplit(); this.blur();">👥 2 Player — Split Screen</button>
+      <button onclick="showColorPanel(); this.blur();">🎨 Plane Color</button>
+      <button onclick="location.href='../index.html';">🚪 Single / Multiplayer Menu</button>
+      <p class="pauseHint">Split: LEFT = WASD Q E F &nbsp;•&nbsp; RIGHT = Arrows B N M</p>
+    </div>
+
+    <!-- pick your plane color: presets + a color wheel -->
+    <div class="pauseInner" id="colorPanel" style="display:none">
+      <h1>PLANE COLOR</h1>
+      <p class="roomHint">Tap a preset, or use the color wheel:</p>
+      <div class="colorPresets">
+        <button style="background:#3d8fd6" onclick="setPlayerColor('#3d8fd6'); this.blur();"></button>
+        <button style="background:#e0524a" onclick="setPlayerColor('#e0524a'); this.blur();"></button>
+        <button style="background:#3fae54" onclick="setPlayerColor('#3fae54'); this.blur();"></button>
+        <button style="background:#f1c40f" onclick="setPlayerColor('#f1c40f'); this.blur();"></button>
+        <button style="background:#e67e22" onclick="setPlayerColor('#e67e22'); this.blur();"></button>
+        <button style="background:#9b59b6" onclick="setPlayerColor('#9b59b6'); this.blur();"></button>
+        <button style="background:#e84393" onclick="setPlayerColor('#e84393'); this.blur();"></button>
+        <button style="background:#1abc9c" onclick="setPlayerColor('#1abc9c'); this.blur();"></button>
+        <button style="background:#ecf0f1" onclick="setPlayerColor('#ecf0f1'); this.blur();"></button>
+        <button style="background:#2c3e50" onclick="setPlayerColor('#2c3e50'); this.blur();"></button>
+      </div>
+      <input type="color" id="colorWheel" value="#3d8fd6"
+             oninput="setPlayerColor(this.value)" />
+      <p class="startHint">🎡 Color wheel — drag to mix any color</p>
+      <button onclick="backToPause(); this.blur();">◀ Back</button>
+    </div>
+  </div>
+
+  <!-- Top-middle modifier / cheat menu -->
+  <div id="topBar">
+   <div class="menuGroup" id="modGroup">
+    <button id="modBtn" onclick="toggleModMenu(); this.blur();">⚙ Modifier Menu</button>
+    <div id="modMenu" style="display:none">
+      <button onclick="addBot(); this.blur();">+ Add Plane</button>
+      <button onclick="removeBot(); this.blur();">- Remove Plane</button>
+      <button onclick="addManyBots(50); this.blur();">+ Add 50 Planes</button>
+      <button onclick="removeAllBots(); this.blur();">Remove ALL Planes</button>
+      <button id="halfBtn" onclick="setHalfSpeed(this); this.blur();">0.5x Speed</button>
+      <button id="dblBtn" onclick="setDoubleSpeed(this); this.blur();">2x Speed</button>
+      <button onclick="spawnShieldBubble(); this.blur();">Spawn Shield Bubble</button>
+      <button onclick="spawnBulletBubble(); this.blur();">Spawn Bullet Bubble</button>
+      <button onclick="spawnFreezeBubble(); this.blur();">Spawn Freeze Bubble</button>
+      <button onclick="giveShield(); this.blur();">Give Me Shield</button>
+      <button onclick="giveBullet(); this.blur();">Give Me Bullet Power</button>
+      <button onclick="giveFreeze(); this.blur();">Give Me Freeze</button>
+      <button onclick="giveAllBots('shield'); this.blur();">Give Bots Shield</button>
+      <button onclick="giveAllBots('turret'); this.blur();">Give Bots Bullet</button>
+      <button onclick="giveAllBots('freeze'); this.blur();">Give Bots Freeze</button>
+      <button onclick="giveAllBotsPower(); this.blur();">Give Bots All Powers</button>
+      <button id="hpBtn" onclick="this.textContent='∞ Health: '+(toggleInfHealth()?'ON':'OFF'); this.blur();">∞ Health: OFF</button>
+      <button id="missBtn" onclick="this.textContent='∞ Missiles: '+(toggleInfMissiles()?'ON':'OFF'); this.blur();">∞ Missiles: OFF</button>
+      <button onclick="resetDefaults(); this.blur();">Reset All Defaults</button>
+    </div>
+   </div>
+   <div class="menuGroup" id="modeGroup">
+    <button id="modeBtn" onclick="toggleModeMenu(); this.blur();">🎮 Mode Menu</button>
+    <div id="modeMenu" style="display:none">
+      <button onclick="setMode('classic'); this.blur();">Classic Mode</button>
+      <button onclick="setMode('unicorn'); this.blur();">🦄 Unicorn Mode</button>
+      <button onclick="setMode('badweather'); this.blur();">🌧️ Bad Weather Mode</button>
+      <button onclick="setMode('ww2'); this.blur();">🪖 WW2 Mode</button>
+      <button onclick="setMode('alien'); this.blur();">👽 Alien Invasion</button>
+      <button onclick="setMode('night'); this.blur();">🌙 Night Mode</button>
+      <button onclick="setMode('blackhole'); this.blur();">🕳️ Black Hole</button>
+      <button onclick="setMode('nomod'); this.blur();">No Mod Mode</button>
+    </div>
+   </div>
+   <div class="menuGroup">
+    <button id="mobileBtn" onclick="toggleMobile(); this.blur();">📱 Mobile: OFF</button>
+    <button id="escBtn" onclick="pauseToggle(); this.blur();">ESC</button>
+   </div>
+  </div>
+
+  <!-- On-screen touch controls for phones/tablets (toggle with 📱 Mobile) -->
+  <div id="mobileControls" style="display:none">
+    <!-- top-RIGHT: pause / open the menu (phones have no ESC key) -->
+    <button id="mcEsc" class="mcBtn mcEscBtn" onclick="pauseToggle(); this.blur();">⏸ ESC</button>
+    <!-- bottom-LEFT: turn buttons (like A / D) -->
+    <div class="mcTurn" id="mcTurn">
+      <button id="mcLeft"  class="mcBtn mcTurnBtn">◀</button>
+      <button id="mcRight" class="mcBtn mcTurnBtn">▶</button>
+    </div>
+    <!-- left of the throttle: red EJECT button (also toggles the parachute) -->
+    <button id="mcEject" class="mcBtn mcEjectBtn">EJECT<br>🪂</button>
+    <!-- bottom-MIDDLE: throttle slider (right = faster, left = slower) -->
+    <div class="mcThrottleWrap" id="mcThrottleWrap">
+      <input id="mcThrottle" class="mcSlider" type="range" min="0" max="100" value="100" />
+      <div class="mcThrottleLbl">THROTTLE  ◀ slower · faster ▶</div>
+    </div>
+    <!-- bottom-RIGHT: square = missile, big circle = guns -->
+    <div class="mcActions" id="mcActions">
+      <button id="mcMissile" class="mcBtn mcSquare">▣</button>
+      <button id="mcGun"     class="mcBtn mcCircle">●</button>
+    </div>
+    <!-- bottom-LEFT: UFO 4-way pad. Shown ONLY in Alien Invasion when YOU are
+         the UFO (it replaces the turn/throttle/action buttons). A + cross:
+         UP on top, LEFT/RIGHT in the middle, DOWN on the bottom. -->
+    <div id="mcUfoPad" style="display:none">
+      <button id="mcUp"     class="mcBtn mcDpad">▲</button>
+      <button id="mcLeftU"  class="mcBtn mcDpad">◀</button>
+      <button id="mcRightU" class="mcBtn mcDpad">▶</button>
+      <button id="mcDown"   class="mcBtn mcDpad">▼</button>
+    </div>
+  </div>
+
+  <!-- The scripts run top to bottom, so order matters here -->
+  <script src="js/config.js?v=14"></script>
+  <script src="js/audio.js?v=14"></script>
+  <script src="js/net.js?v=14"></script>
+  <script src="js/input.js?v=14"></script>
+  <script src="js/physics.js?v=14"></script>
+  <script src="js/bullet.js?v=14"></script>
+  <script src="js/missile.js?v=14"></script>
+  <script src="js/explosion.js?v=14"></script>
+  <script src="js/powerup.js?v=14"></script>
+  <script src="js/sprites.js?v=14"></script>
+  <script src="js/scenery.js?v=14"></script>
+  <script src="js/plane.js?v=14"></script>
+  <script src="js/bot-ai.js?v=14"></script>
+  <script src="js/enemy.js?v=14"></script>
+  <script src="js/pilot.js?v=14"></script>
+  <script src="js/game.js?v=14"></script>
+</body>
+</html>
