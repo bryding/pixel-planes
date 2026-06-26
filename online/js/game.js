@@ -184,7 +184,10 @@ function showChatButton(on) { const b = document.getElementById('chatBtn'); if (
 function sendChatMessage() {
   const i = document.getElementById('chatInput'); if (!i) return;
   const text = i.value.trim();
-  if (text && typeof Net !== 'undefined' && Net.sendChat) Net.sendChat(text);
+  if (text && typeof Net !== 'undefined' && Net.sendChat) {
+    Net.sendChat(text);
+    addChatLine(getUsername() || 'You', text);   // show MY OWN message right away
+  }
   i.value = '';
 }
 function addChatLine(name, text) {
@@ -193,7 +196,7 @@ function addChatLine(name, text) {
   const who = document.createElement('b'); who.textContent = (name || 'player') + ': ';
   line.appendChild(who); line.appendChild(document.createTextNode(text || ''));  // textContent = safe (no HTML)
   box.appendChild(line);
-  while (box.children.length > 50) box.removeChild(box.firstChild);
+  while (box.children.length > 100) box.removeChild(box.firstChild);
   box.scrollTop = box.scrollHeight;
 }
 // net.js calls this when a chat message arrives.
