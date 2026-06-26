@@ -86,6 +86,11 @@ const CONFIG = {
 
   MAX_SPEED: 10,       // The fastest the plane is allowed to go.
 
+  // How BIG every plane is drawn. This also makes them bigger TARGETS (the
+  // "can I hit it?" circle grows with the plane), so a higher number means
+  // easier dogfights. 1 = original size, 1.2 = 20% bigger.
+  PLANE_SCALE: 1.2,
+
   // ---- The camera (the view that follows the plane) ----
   CAM_SMOOTH: 0.08,    // How smoothly the camera catches up. Smaller = lazier.
   CAM_LOOKAHEAD: 60,   // How far ahead it peeks in the direction you're flying.

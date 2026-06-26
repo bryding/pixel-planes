@@ -247,7 +247,7 @@ function remoteName(id) { const r = remotePlayers[id]; return (r && r.name) || '
 // Did one of MY shots reach a remote plane? If so, tell the server.
 function onlineHitCheck(proj, kind) {
   if (proj.dead) return;
-  const radius = (kind === 'missile') ? 16 : 14;
+  const radius = ((kind === 'missile') ? 16 : 14) * CONFIG.PLANE_SCALE;
   for (const id in remotePlayers) {
     const r = remotePlayers[id];
     if (!r || r.alive === false || r.x === undefined) continue;
