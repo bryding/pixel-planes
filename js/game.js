@@ -146,7 +146,7 @@ function setMode(m) {
   if (typeof Net !== 'undefined' && Net.inServer && Net.isHost) Net.setMode(m);
   // "No Mod Mode" hides the whole Modifier Menu and turns the cheats off.
   const modGroup = document.getElementById('modGroup');
-  if (modGroup) modGroup.style.display = (m === 'nomod') ? 'none' : 'flex';
+  if (modGroup) modGroup.style.display = (cheatsUnlocked && m !== 'nomod') ? 'flex' : 'none';
   if (m === 'nomod') {
     timeScale = 1;
     infiniteHealth = false;
@@ -303,6 +303,10 @@ let score = 0;
 let totalScore = (function () { try { return parseInt(localStorage.getItem('pp_totalscore'), 10) || 0; } catch (e) { return 0; } })();
 function saveTotalScore() { try { localStorage.setItem('pp_totalscore', totalScore); } catch (e) {} }
 
+// SECRET: the Modifier + Mode menus stay HIDDEN until you type "/hidden" in the
+// command bar at the bottom of the ESC menu.
+let cheatsUnlocked = false;
+
 // The player can be 'flying', 'chute' (parachuting after ejecting), or 'dead'.
 let playerState = 'flying';
 let pilot = null;        // the parachuting pilot, when ejected
@@ -427,6 +431,30 @@ function chooseSplit()  { setSplitScreen(true);  paused = false; updatePauseMenu
 function goMultiplayer() {
   window.open('online/', '_blank', 'noopener');
 }
+
+// ---- Secret cheat-menu unlock (the command bar at the bottom of the ESC menu) ----
+function refreshCheatMenus() {
+  const mg = document.getElementById('modGroup'), mog = document.getElementById('modeGroup');
+  if (mg) mg.style.display = (cheatsUnlocked && mode !== 'nomod') ? 'flex' : 'none';
+  if (mog) mog.style.display = cheatsUnlocked ? 'flex' : 'none';
+}
+// Type a command in the ESC-menu bar. "/hidden" reveals the cheat menus.
+function runCommand(text) {
+  const cmd = (text || '').trim().toLowerCase();
+  const out = document.getElementById('cmdMsg');
+  if (cmd === '/hidden') {
+    cheatsUnlocked = true; refreshCheatMenus();
+    if (out) out.textContent = '🔓 Unlocked! The ⚙ Modifier & 🎮 Mode menus are now up top.';
+  } else if (cmd === '/hide') {
+    cheatsUnlocked = false; refreshCheatMenus();
+    if (out) out.textContent = '🔒 Cheat menus hidden again.';
+  } else if (cmd) {
+    if (out) out.textContent = 'Unknown command. Try /hidden';
+  }
+  const inp = document.getElementById('cmdInput'); if (inp) inp.value = '';
+}
+// Start with the cheat menus HIDDEN.
+refreshCheatMenus();
 
 // ===========================================================================
 //  ONLINE SERVER LOBBY (Create Server / Server List / join+password).
@@ -631,7 +659,7 @@ function escapeHtml(s) { return ('' + s).replace(/[&<>"]/g, c => ({ '&': '&amp;'
 
 // In an online server, ONLY the host gets the Mode & Modifier menus.
 function applyHostPermissions() {
-  const lockedAway = Net.inServer && !Net.isHost;   // a guest in someone's server
+  const lockedAway = (Net.inServer && !Net.isHost) || !cheatsUnlocked;  // also locked until /hidden
   const modGroup = document.getElementById('modGroup');
   const modeGroup = document.getElementById('modeGroup');
   if (modGroup && mode !== 'nomod') modGroup.style.display = lockedAway ? 'none' : 'flex';

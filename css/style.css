@@ -503,3 +503,14 @@ html, body {
 /* "Multiplayer Online" button in the pause menu (Ben's live online game) */
 #pauseMenu .mpBtn { background: rgba(30, 120, 70, 0.92); border-color: #4fe09a; }
 #pauseMenu .mpBtn:hover { background: rgba(40, 150, 90, 0.97); }
+
+/* Secret command bar at the bottom of the ESC menu (type /hidden) */
+.cmdBar { display: flex; gap: 6px; width: 320px; margin-top: 6px; }
+.cmdInput {
+  flex: 1; min-width: 0;
+  font-family: monospace; font-size: 13px; color: #fff;
+  background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.5);
+  border-radius: 8px; padding: 8px 10px; outline: none;
+}
+.cmdBar button { min-width: 0 !important; padding: 8px 14px; }
+.cmdMsg { font-family: monospace; font-size: 12px; color: #7fe0a0; min-height: 14px; margin: 2px 0 0; text-align: center; }
