@@ -48,10 +48,10 @@
       <button onclick="resumeGame(); this.blur();">▶ Resume</button>
       <button onclick="showColorPanel(); this.blur();">🎨 Plane Color</button>
       <button onclick="leaveWorld(); this.blur();">🚪 Leave Game</button>
-      <!-- Secret cheat opener: type @hidden to reveal the cheat buttons -->
-      <p class="cmdLabel">⌨️ Cheat opener — type a command:</p>
+      <!-- Secret cheat opener (the code is NOT shown anywhere on screen) -->
+      <p class="cmdLabel">⌨️ Command bar</p>
       <div class="cmdBar">
-        <input id="cmdInput" class="cmdInput" type="text" placeholder="type @hidden"
+        <input id="cmdInput" class="cmdInput" type="text" placeholder="type a command…"
                onkeydown="if(event.key==='Enter'){ runCommand(this.value); }" />
         <button onclick="runCommand(document.getElementById('cmdInput').value); this.blur();">▶</button>
       </div>
