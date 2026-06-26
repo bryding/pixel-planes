@@ -147,7 +147,7 @@ function runCommand(text) {
     if (box) box.style.display = 'none';
     if (out) out.textContent = '🔒 Cheats hidden.';
   } else if (cmd) {
-    if (out) out.textContent = 'Unknown command. Try @hidden';
+    if (out) out.textContent = 'Unknown command.';
   }
   const inp = document.getElementById('cmdInput'); if (inp) inp.value = '';
 }

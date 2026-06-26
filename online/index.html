@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pixel Planes</title>
-  <link rel="stylesheet" href="css/style.css?v=22" />
+  <link rel="stylesheet" href="css/style.css?v=23" />
 </head>
 <body>
   <!-- This is the box the whole game is drawn onto -->
@@ -48,10 +48,10 @@
       <button onclick="resumeGame(); this.blur();">▶ Resume</button>
       <button onclick="showColorPanel(); this.blur();">🎨 Plane Color</button>
       <button onclick="leaveWorld(); this.blur();">🚪 Leave Game</button>
-      <!-- Secret cheat opener: type @hidden to reveal the cheat buttons -->
-      <p class="cmdLabel">⌨️ Cheat opener — type a command:</p>
+      <!-- Secret cheat opener (the code is NOT shown anywhere on screen) -->
+      <p class="cmdLabel">⌨️ Command bar</p>
       <div class="cmdBar">
-        <input id="cmdInput" class="cmdInput" type="text" placeholder="type @hidden"
+        <input id="cmdInput" class="cmdInput" type="text" placeholder="type a command…"
                onkeydown="if(event.key==='Enter'){ runCommand(this.value); }" />
         <button onclick="runCommand(document.getElementById('cmdInput').value); this.blur();">▶</button>
       </div>
@@ -110,17 +110,17 @@
   </div>
 
   <!-- The scripts run top to bottom, so order matters here -->
-  <script src="js/config.js?v=22"></script>
-  <script src="js/audio.js?v=22"></script>
-  <script src="js/net.js?v=22"></script>
-  <script src="js/input.js?v=22"></script>
-  <script src="js/physics.js?v=22"></script>
-  <script src="js/bullet.js?v=22"></script>
-  <script src="js/missile.js?v=22"></script>
-  <script src="js/explosion.js?v=22"></script>
-  <script src="js/sprites.js?v=22"></script>
-  <script src="js/scenery.js?v=22"></script>
-  <script src="js/plane.js?v=22"></script>
-  <script src="js/game.js?v=22"></script>
+  <script src="js/config.js?v=23"></script>
+  <script src="js/audio.js?v=23"></script>
+  <script src="js/net.js?v=23"></script>
+  <script src="js/input.js?v=23"></script>
+  <script src="js/physics.js?v=23"></script>
+  <script src="js/bullet.js?v=23"></script>
+  <script src="js/missile.js?v=23"></script>
+  <script src="js/explosion.js?v=23"></script>
+  <script src="js/sprites.js?v=23"></script>
+  <script src="js/scenery.js?v=23"></script>
+  <script src="js/plane.js?v=23"></script>
+  <script src="js/game.js?v=23"></script>
 </body>
 </html>
