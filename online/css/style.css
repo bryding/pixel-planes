@@ -43,6 +43,14 @@ html, body {
   border: 2px solid rgba(255, 255, 255, 0.7);
   border-radius: 12px;
   padding: 28px 40px;
+  /* Never taller/wider than the screen, and SCROLL (mouse wheel or finger drag)
+     if the menu has more options than fit -- so you can always reach the ones
+     at the bottom. */
+  max-height: calc(100vh - 16px);
+  max-width: 94vw;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
 }
 #pauseMenu h1 {
   font-family: monospace;
@@ -331,6 +339,10 @@ html, body {
 .cmdInput { flex: 1; min-width: 0; font-family: monospace; font-size: 13px; color: #fff; background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.5); border-radius: 8px; padding: 8px 10px; outline: none; }
 .cmdBar button { min-width: 0 !important; padding: 8px 14px; }
 .cmdMsg { font-family: monospace; font-size: 12px; color: #7fe0a0; min-height: 14px; margin: 2px 0; text-align: center; }
+/* Both secret menus: one clean vertical stack of full-width buttons (never
+   side-by-side). align-self: stretch makes each box span the whole panel. */
+#cheatBox, #modeBox { align-self: stretch; width: 100%; }
+#cheatBox button, #modeBox button { width: 100%; min-width: 0; }
 #cheatBox { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 
 #modeBox { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
