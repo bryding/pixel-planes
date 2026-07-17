@@ -19,6 +19,15 @@ A browser-based 2D pixel-art airplane combat game, inspired by **BitPlanes**
 - **Use git and commit often.** Make a commit after each working change/stage so
   there's always a safe point to go back to. Keep commit messages short and clear
   (this also teaches the nephew good habits).
+- **Delegate mechanical work to the cheap `grunt` agent** (defined in
+  `.claude/agents/grunt.md`, runs on Haiku). Anything that doesn't need the main
+  model's judgment — verification grep sweeps, find-and-replace checks, file
+  copies, cache-version bumps, drafting docs from a detailed outline — should go
+  to `grunt` via the Agent tool (give it a precise brief, then review its work).
+  Keep design decisions, tricky game code, and anything touching git history
+  with the main model.
+- **Read `doc/` first.** The `doc/` folder documents the codebase, hosting, and
+  past decisions — reading it saves re-deriving everything from the code.
 
 ## What the game is
 
