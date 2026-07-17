@@ -7,8 +7,8 @@
 // ===========================================================================
 
 const assert = require('assert');
-const CONFIG = require('../js/config.js');
-const BotAI = require('../js/bot-ai.js');
+const CONFIG = require('../online/js/config.js');
+const BotAI = require('../online/js/bot-ai.js');
 const { desiredBots, cleanPlayerName, plausibleMove } = require('./rules.js');
 
 let count = 0;

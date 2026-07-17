@@ -142,9 +142,11 @@ let greenScore = 0, blackScore = 0; // WW2 team scores
 function setMode(m) {
   const prev = mode;
   mode = m;
+  // Online: if I'm the HOST, switch everyone in my server to this mode too.
+  if (typeof Net !== 'undefined' && Net.inServer && Net.isHost) Net.setMode(m);
   // "No Mod Mode" hides the whole Modifier Menu and turns the cheats off.
   const modGroup = document.getElementById('modGroup');
-  if (modGroup) modGroup.style.display = (m === 'nomod') ? 'none' : 'flex';
+  if (modGroup) modGroup.style.display = (cheatsUnlocked && m !== 'nomod') ? 'flex' : 'none';
   if (m === 'nomod') {
     timeScale = 1;
     infiniteHealth = false;
@@ -167,6 +169,8 @@ function setMode(m) {
   if (m === 'blackhole') startBlackHole();
   // Leaving a space mini-game -> put a normal flying plane back.
   if ((prev === 'alien' || prev === 'blackhole') && m !== 'alien' && m !== 'blackhole') spawnPlane(100);
+  // In an online server, a guest must not regain the Mode/Modifier menus.
+  if (typeof applyHostPermissions === 'function') applyHostPermissions();
 }
 
 // Put the player on GREEN and split the bots: the first few are BLACK,
@@ -292,9 +296,16 @@ function resetDefaults() {
   set('missBtn', '∞ Missiles: OFF');
 }
 
-// Your points. They grow when you shoot bots down. They RESET if you die,
-// but you keep them if you eject and parachute safely to the barn.
+// Your points THIS life. They grow when you shoot bots down.
 let score = 0;
+// Your TOTAL score: when you die, this life's points get BANKED here instead of
+// lost, so it keeps growing over time. Saved between visits, too.
+let totalScore = (function () { try { return parseInt(localStorage.getItem('pp_totalscore'), 10) || 0; } catch (e) { return 0; } })();
+function saveTotalScore() { try { localStorage.setItem('pp_totalscore', totalScore); } catch (e) {} }
+
+// SECRET: the Modifier + Mode menus stay HIDDEN until you type "/hidden" in the
+// command bar at the bottom of the ESC menu.
+let cheatsUnlocked = true;  // single-player: cheat menus always available (no command bar here)
 
 // The player can be 'flying', 'chute' (parachuting after ejecting), or 'dead'.
 let playerState = 'flying';
@@ -333,6 +344,17 @@ function returnToMainMenu() {
   if (typeof Sound !== 'undefined') { Sound.startTheme(); Sound.startEngine(); }  // title music + engine
 }
 
+// The "Click to Play" gate: nothing shows until you click. Clicking hides the
+// gate, turns on sound, and starts the title (music, engine, banner fly-in).
+function enterTitle() {
+  const gate = document.getElementById('clickGate'); if (gate) gate.style.display = 'none';
+  if (typeof Sound !== 'undefined') {
+    Sound.init();
+    if (!gameStarted) { Sound.startTheme(); Sound.startEngine(); }
+  }
+  frameCount = 0;   // start the banner fly-in now, in sync with the sound
+}
+
 // Browsers block sound until you interact. On the FIRST click/key/tap, start the
 // title music + plane engine (and replay the fly-in so it's in sync with sound).
 function armTitleAudio() {
@@ -346,11 +368,7 @@ function armTitleAudio() {
 }
 ['pointerdown', 'keydown', 'touchstart'].forEach((ev) =>
   window.addEventListener(ev, armTitleAudio, { passive: true }));
-// True while the Settings screen is open, so the title banner/plane don't draw
-// on the canvas behind it (which looked cluttered on top of "SETTINGS").
-let settingsOpen = false;
 function openSettings() {
-  settingsOpen = true;
   const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'none';
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'flex';
   // Show the current volume on the slider.
@@ -367,7 +385,6 @@ function setVolumePct(pct) {
   Sound.gun();                  // quick click so you HEAR the level as you set it
 }
 function closeSettings() {
-  settingsOpen = false;
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';
   const ss = document.getElementById('startScreen'); if (ss) ss.style.display = 'flex';
 }
@@ -408,14 +425,333 @@ function resumeGame()  { paused = false; updatePauseMenu(); }
 function chooseNormal() { setSplitScreen(false); paused = false; updatePauseMenu(); }
 function chooseSplit()  { setSplitScreen(true);  paused = false; updatePauseMenu(); }
 
-// Switch which pause-menu panel is showing (the main one, or the color picker).
+// Open the ONLINE multiplayer game in a NEW TAB. This is YOUR labeled version
+// (bot/human nametags + auto-lock missiles) that connects to the SAME shared
+// server — so you're in the same world as your friends, just with the labels.
+function goMultiplayer() {
+  window.open('../online/', '_blank', 'noopener');
+}
+
+// ---- Secret cheat-menu unlock (the command bar at the bottom of the ESC menu) ----
+function refreshCheatMenus() {
+  const mg = document.getElementById('modGroup'), mog = document.getElementById('modeGroup');
+  if (mg) mg.style.display = (cheatsUnlocked && mode !== 'nomod') ? 'flex' : 'none';
+  if (mog) mog.style.display = cheatsUnlocked ? 'flex' : 'none';
+}
+// Type a command in the ESC-menu bar. "@hidden" reveals the cheat menus.
+// (We use @ instead of / because Firefox grabs "/" for its quick-search.)
+function runCommand(text) {
+  const cmd = (text || '').trim().toLowerCase();
+  const out = document.getElementById('cmdMsg');
+  if (cmd === '@hidden' || cmd === '/hidden') {
+    cheatsUnlocked = true; refreshCheatMenus();
+    if (out) out.textContent = '🔓 Unlocked! The ⚙ Modifier & 🎮 Mode menus are now up top.';
+  } else if (cmd === '@hide' || cmd === '/hide') {
+    cheatsUnlocked = false; refreshCheatMenus();
+    if (out) out.textContent = '🔒 Cheat menus hidden again.';
+  } else if (cmd) {
+    if (out) out.textContent = 'Unknown command. Try @hidden';
+  }
+  const inp = document.getElementById('cmdInput'); if (inp) inp.value = '';
+}
+// Start with the cheat menus HIDDEN.
+refreshCheatMenus();
+
+// ===========================================================================
+//  ONLINE SERVER LOBBY (Create Server / Server List / join+password).
+//  Talks to the server through Net (js/net.js).
+// ===========================================================================
+
+// Your display name (so other players know who you are). Saved between visits.
+function getUsername() {
+  try { return localStorage.getItem('pp_username') || ''; } catch (e) { return ''; }
+}
+function saveUsername(name) {
+  try { localStorage.setItem('pp_username', name); } catch (e) {}
+}
+
+// The server address to use:
+//  1. an address you typed in the lobby (saved) always wins, else
+//  2. if the game is being served by our own server (i.e. you opened it over
+//     http, not the public https link), talk to that SAME computer/port -- so
+//     local + same-WiFi play "just works" with nothing to type, else
+//  3. the public deployed server in config.js (the Railway address).
+function serverUrl() {
+  // LOCAL play: if the game was opened from our own server (any http address
+  // like http://localhost:8080 or http://192.168.x.x:8080), ALWAYS talk to that
+  // same computer. This is always correct and ignores any stale typed-in
+  // address, so same-WiFi play can't get pointed at the wrong place.
+  if (typeof location !== 'undefined' && location.host && location.protocol !== 'https:') {
+    return 'ws://' + location.host;
+  }
+  // PUBLIC https link: a saved address (typed in the lobby) wins, else the
+  // configured deployed server.
+  try { const saved = localStorage.getItem('pp_serverurl'); if (saved) return saved; } catch (e) {}
+  return CONFIG.SERVER_URL;
+}
+// Type a new address and connect to it (so connection issues can be fixed
+// without editing files). Accepts "host:port" and adds ws:// for you.
+function applyServerUrl(inputId) {
+  const el = document.getElementById(inputId);
+  let url = ((el && el.value) || '').trim();
+  if (url && !/^wss?:\/\//i.test(url)) url = 'ws://' + url;
+  try { if (url) localStorage.setItem('pp_serverurl', url); } catch (e) {}
+  Net.disconnect();
+  Net.connect(serverUrl());
+  refreshLobbyUI();
+}
+
+// Make sure we're connected to the online server (lazy: only when you open a
+// server panel, so single-player never waits on the network).
+function ensureConnected() { Net.connect(serverUrl()); }
+
+// Switch which pause panel is showing.
 function showPausePanel(id) {
-  ['pauseMain', 'colorPanel'].forEach(p => {
+  ['pauseMain', 'createServer', 'serverList', 'inServer', 'colorPanel'].forEach(p => {
     const el = document.getElementById(p);
     if (el) el.style.display = (p === id) ? 'flex' : 'none';
   });
 }
-function backToPause() { showPausePanel('pauseMain'); }
+function backToPause() { showPausePanel(Net.inServer ? 'inServer' : 'pauseMain'); }
+
+function showCreateServer() {
+  ensureConnected();
+  showPausePanel('createServer');
+  const n = document.getElementById('csName'); if (n) n.value = getUsername();
+  const s = document.getElementById('csServer'); if (s) s.value = '';
+  const p = document.getElementById('csPass'); if (p) p.value = '';
+  const m = document.getElementById('csMsg'); if (m) m.textContent = '';
+  refreshLobbyUI();
+  if (n && !n.value) n.focus(); else if (s) s.focus();
+}
+function showServerList() {
+  ensureConnected();
+  Net.refreshList();
+  showPausePanel('serverList');
+  const n = document.getElementById('slName'); if (n) n.value = getUsername();
+  const m = document.getElementById('slMsg'); if (m) m.textContent = '';
+  refreshLobbyUI();
+}
+
+// Create a server: name = letters+numbers only; password optional. The creator
+// becomes the HOST (the only one who gets the Mode/Modifier menus).
+function doCreateServer() {
+  const msg = document.getElementById('csMsg');
+  const name = (document.getElementById('csName').value || '').trim();
+  const server = (document.getElementById('csServer').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const pass = (document.getElementById('csPass').value || '');
+  if (!name) { setMsg(msg, '#ffd24a', 'Please type your name first.'); return; }
+  if (!server) { setMsg(msg, '#ffd24a', 'Please type a server name (letters & numbers).'); return; }
+  if (Net.status !== 'online') { setMsg(msg, '#ff6b6b', 'Not connected to the server yet…'); return; }
+  saveUsername(name);
+  Net.setName(name);
+  Net.createServer(server, pass);
+  setMsg(msg, '#9be7ff', 'Creating "' + server + '"…');
+}
+
+// Join a server by name (used by the Join buttons in the list). Asks for a
+// password first if the server is locked.
+function joinServerByName(name, hasPassword) {
+  const who = (document.getElementById('slName').value || '').trim();
+  const msg = document.getElementById('slMsg');
+  if (!who) { setMsg(msg, '#ffd24a', 'Please type your name first.'); return; }
+  if (Net.status !== 'online') { setMsg(msg, '#ff6b6b', 'Not connected to the server yet…'); return; }
+  saveUsername(who);
+  Net.setName(who);
+  let pass = '';
+  if (hasPassword) {
+    pass = window.prompt('Password for "' + name + '":', '');
+    if (pass === null) return;            // cancelled
+  }
+  Net.joinServer(name, pass);
+  setMsg(msg, '#9be7ff', 'Joining "' + name + '"…');
+}
+
+function doLeaveServer() {
+  Net.leaveServer();
+  applyHostPermissions();
+  showPausePanel('pauseMain');
+}
+
+function setMsg(el, color, text) { if (el) { el.style.color = color; el.textContent = text; } }
+
+// Redraw the live lobby (status text + the server list rows). Called by Net
+// whenever anything changes (connection, list update, joined, denied…).
+function refreshLobbyUI() {
+  const statusTxt = Net.status === 'online' ? '🟢 Connected' :
+                    Net.status === 'connecting' ? '🟡 Connecting…' :
+                    ('🔴 Offline' + (Net.lastError ? ' — ' + Net.lastError : ''));
+  const sc = document.getElementById('netStatusCreate'); if (sc) sc.textContent = statusTxt;
+  const sl = document.getElementById('netStatusList');
+  if (sl) sl.textContent = (Net.status === 'online') ? ('🟢 Connected — ' + Net.servers.length + ' server(s)') : statusTxt;
+
+  // Pre-fill the server-address boxes with the current address.
+  const cu = document.getElementById('csUrl'); if (cu && !cu.value) cu.value = serverUrl();
+  const lu = document.getElementById('slUrl'); if (lu && !lu.value) lu.value = serverUrl();
+
+  // The list of joinable servers.
+  const box = document.getElementById('serverListItems');
+  if (box) {
+    box.innerHTML = '';
+    if (!Net.servers.length) {
+      const e = document.createElement('div');
+      e.className = 'serverEmpty';
+      e.textContent = (Net.status === 'online') ? 'No servers yet — create one!' : 'Connecting…';
+      box.appendChild(e);
+    }
+    Net.servers.forEach(s => {
+      const row = document.createElement('div');
+      row.className = 'serverRow';
+      const info = document.createElement('div');
+      info.innerHTML = '<div class="srvName">' + (s.hasPassword ? '🔒 ' : '') + escapeHtml(s.name) +
+                       '</div><div class="srvMeta">' + s.players + ' player' + (s.players === 1 ? '' : 's') + '</div>';
+      const btn = document.createElement('button');
+      btn.textContent = 'Join';
+      btn.onclick = () => { joinServerByName(s.name, s.hasPassword); };
+      row.appendChild(info); row.appendChild(btn);
+      box.appendChild(row);
+    });
+  }
+
+  // Error/denied messages (wrong password, taken name, etc.).
+  if (Net.lastError) {
+    setMsg(document.getElementById('csMsg'), '#ff6b6b', '❌ ' + Net.lastError);
+    setMsg(document.getElementById('slMsg'), '#ff6b6b', '❌ ' + Net.lastError);
+  }
+
+  // If we just joined a server, jump to the in-server panel.
+  if (Net.inServer && paused) {
+    const t = document.getElementById('inServerTitle');
+    if (t) t.textContent = '🌐 ' + Net.serverName;
+    const i = document.getElementById('inServerInfo');
+    if (i) i.textContent = (Net.isHost ? 'You are the HOST — you control the Mode & Modifier menus.'
+                                       : 'You joined as ' + (Net.username || 'a player') + '. The host controls the menus.');
+    updateInvite();
+    const showing = document.getElementById('createServer').style.display !== 'none' ||
+                    document.getElementById('serverList').style.display !== 'none';
+    if (showing) showPausePanel('inServer');
+  }
+  applyHostPermissions();
+}
+
+// Show how friends on the same WiFi can join: the address + a scannable QR.
+let _inviteUrl = null;
+function updateInvite() {
+  const info = document.getElementById('inServerInvite');
+  const qr = document.getElementById('inviteQR');
+  if (!info) return;
+  const show = (url) => {
+    info.innerHTML = 'Friends on your WiFi: open <b>' + url + '</b>&nbsp; or scan ⤵';
+    if (qr) {
+      qr.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
+      qr.style.display = 'inline-block';
+    }
+  };
+  if (_inviteUrl) { show(_inviteUrl); return; }
+  // Ask our own server for its WiFi address (only works during local play).
+  try {
+    fetch('/ip').then((r) => r.json()).then((d) => {
+      if (d && d.ip) { _inviteUrl = 'http://' + d.ip + ':' + d.port; show(_inviteUrl); }
+      else { info.textContent = ''; if (qr) qr.style.display = 'none'; }
+    }).catch(() => { info.textContent = ''; if (qr) qr.style.display = 'none'; });
+  } catch (e) {}
+}
+function escapeHtml(s) { return ('' + s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+// In an online server, ONLY the host gets the Mode & Modifier menus.
+function applyHostPermissions() {
+  const lockedAway = (Net.inServer && !Net.isHost) || !cheatsUnlocked;  // also locked until /hidden
+  const modGroup = document.getElementById('modGroup');
+  const modeGroup = document.getElementById('modeGroup');
+  if (modGroup && mode !== 'nomod') modGroup.style.display = lockedAway ? 'none' : 'flex';
+  if (modeGroup) modeGroup.style.display = lockedAway ? 'none' : 'flex';
+}
+
+// The host changed the mode -> everyone in the server follows.
+function onNetMode(m) {
+  if (typeof m === 'string' && m !== mode) setMode(m);
+}
+
+// ---- Quick Play: RETIRED. Single-player no longer auto-joins a room — the
+// online game (one shared world + chat + voice) lives in the online/ folder
+// now; use the "Multiplayer Online" button. Kept as a no-op so callers work.
+let quickJoinSent = false;
+function autoQuickPlay() {
+  return;
+}
+function maybeQuickJoin() {
+  if (!Net._quickRoom || Net.inServer || quickJoinSent) return;
+  if (Net.status === 'online') { quickJoinSent = true; Net.quickJoin(Net._quickRoom); }
+}
+
+// Hook Net's updates to the UI (+ auto quick-join when connected).
+Net.onChange = function () {
+  if (Net.status !== 'online') quickJoinSent = false;  // re-join after a reconnect
+  refreshLobbyUI();
+  maybeQuickJoin();
+};
+// autoQuickPlay();   // ONLINE PAUSED: not auto-connecting for now (refine later)
+
+// ===========================================================================
+//  ONLINE LIVE SYNC — see the other players fly on their own devices.
+//  Each client sends its plane a few times a second; everyone draws the others.
+// ===========================================================================
+const remotePlayers = {};       // id -> {x,y,tx,ty,angle,throttle,health,isUfo,name,last}
+let netStateTimer = 0;
+const REMOTE_COLORS = ['#e0524a', '#3fae54', '#e0a93a', '#9b59b6', '#e84393', '#1abc9c', '#ff7f50'];
+const _remoteSprites = {};
+function remoteSprite(id) {
+  const c = REMOTE_COLORS[((id % REMOTE_COLORS.length) + REMOTE_COLORS.length) % REMOTE_COLORS.length];
+  if (!_remoteSprites[c]) _remoteSprites[c] = makePlaneSetFromColor(c);
+  return _remoteSprites[c];
+}
+// Just joined an online server: drop bots (online = just the humans) and clear
+// any leftover remote players.
+function onNetJoined() {
+  removeAllBots();
+  for (const k in remotePlayers) delete remotePlayers[k];
+  if (playerState === 'dead' || playerState === 'chute') spawnPlane(camera.x + CONFIG.GAME_W / 2);
+}
+// Got another player's plane from the server.
+function onNetState(id, name, s) {
+  if (!s) return;
+  let r = remotePlayers[id];
+  if (!r) r = remotePlayers[id] = { x: s.x, y: s.y, angle: s.angle || 0 };
+  r.name = name; r.tx = s.x; r.ty = s.y; r.angle = s.angle || 0;
+  r.throttle = s.throttle; r.health = s.health; r.isUfo = s.isUfo; r.dead = s.dead;
+  r.last = frameCount;
+}
+function onNetLeft(id) { delete remotePlayers[id]; }
+
+// Run online each frame: send my plane, smooth the others, forget silent ones.
+function netSyncStep() {
+  netStateTimer += 1;
+  if (netStateTimer >= 2 && (playerState === 'flying' || playerState === 'takeoff')) {
+    netStateTimer = 0;
+    Net.sendState({ x: player.x, y: player.y, angle: player.angle, throttle: player.throttle,
+                    health: player.health, isUfo: player.isUfo });
+  }
+  for (const id in remotePlayers) {
+    const r = remotePlayers[id];
+    if (r.tx !== undefined) { r.x = wrapX(r.x + wrapDX(r.tx - r.x) * 0.35); r.y += (r.ty - r.y) * 0.35; }
+    if (frameCount - (r.last || 0) > 300) delete remotePlayers[id]; // stopped sending -> gone
+  }
+}
+
+// Draw the other online players (with name tags). Called from drawWorldContents.
+function drawRemotePlayers() {
+  for (const id in remotePlayers) {
+    const r = remotePlayers[id];
+    if (r.x === undefined) continue;
+    const sx = worldToScreenX(r.x), sy = r.y - camera.y;
+    if (mode === 'alien' && r.isUfo) drawUfoCraft(ctx, sx, sy, frameCount, false);
+    else drawPlaneSprite(ctx, remoteSprite(parseInt(id, 10)), sx, sy, r.angle || 0, frameCount, false);
+    ctx.font = '11px monospace'; ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillText(r.name || 'player', sx + 1, sy - 21);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(r.name || 'player', sx, sy - 22);
+    ctx.textAlign = 'left';
+  }
+}
 
 // ---- Mobile touch controls ----
 // On-screen buttons drive the SAME Input flags the keyboard does, so all the
@@ -494,6 +830,18 @@ function updateMobileLayout() {
 if (typeof navigator !== 'undefined' && (navigator.maxTouchPoints > 0 || 'ontouchstart' in window)) {
   toggleMobile();
 }
+
+// ---- Mouse mode (a Settings option): fly by pointing the mouse ----
+// The nose chases the pointer, left button = guns, right button = missile,
+// and the wheel is the throttle. The mouse reading lives in js/input.js.
+function toggleMouseMode() {
+  mouseMode = !mouseMode;
+  try { localStorage.setItem('pp_mousemode', mouseMode ? '1' : '0'); } catch (e) {}
+  const btn = document.getElementById('mouseBtn');
+  if (btn) btn.textContent = '🖱️ Mouse Mode: ' + (mouseMode ? 'ON' : 'OFF');
+}
+// Remember the choice between visits.
+try { if (localStorage.getItem('pp_mousemode') === '1') toggleMouseMode(); } catch (e) {}
 
 // Turn split-screen 2-player ON or OFF.
 function setSplitScreen(on) {
@@ -680,9 +1028,11 @@ function eject() {
   playerState = 'chute';
 }
 
-// You died (shot down, crashed, or parachuted into a field): points RESET.
+// You died: BANK this life's points into your total (so you never lose them),
+// then start the next life's counter fresh.
 function playerDies(x, y, msg) {
   deathMsg = msg || 'SHOT DOWN!';
+  totalScore += score; saveTotalScore();
   score = 0;
   player.alive = false;
   pilot = null;
@@ -750,7 +1100,7 @@ function onPlanePopped(target, shooterTeam, shooterFaction) {
 
 // Draw the leaderboard panel on the right side: who has the most points.
 function drawLeaderboard() {
-  const rows = [{ name: '🛩️ YOU', score: score, you: true }];
+  const rows = [{ name: '🛩️ YOU', score: totalScore + score, you: true }];
   for (const e of enemies) rows.push({ name: e.name, score: e.score });
   rows.sort((a, b) => b.score - a.score);
   const top = rows.slice(0, 8);
@@ -832,9 +1182,7 @@ function update() {
     } else if (player.frozenTimer <= 0 && mode !== 'alien') {
       // Flying (or safely rolling on the ground): normal controls.
       // WW2 mode has NO missiles and NO ejecting.
-      if (Input.fire) {
-        player.tryShoot(bullets);
-      }
+      if (Input.fire) player.tryShoot(bullets);
       if (mode !== 'ww2') {
         if (infiniteMissiles && Input.missile) {
           // ∞ Missiles cheat: HOLD X to rapid-fire a swarm (~300/sec)!
@@ -879,6 +1227,9 @@ function update() {
   }
   if (infiniteMissiles) { player.missiles = CONFIG.MISSILE_MAX; player.missileTimer = 0; }
 
+  // Online: send my plane to the others and smooth their planes.
+  if (Net.inServer) netSyncStep();
+
   // Alien Invasion: spread the UFO bots across different runners first.
   if (mode === 'alien') assignUfoTargets();
 
@@ -915,7 +1266,7 @@ function update() {
 
   // --- Missiles: move them, then check if they hit a plane ---
   for (const missile of missiles) {
-    missile.update();
+    missile.update(planes);   // pass planes so it can heat-seek a new target
 
     for (const target of planes) {
       if (!target.alive) continue;
@@ -1042,10 +1393,6 @@ function drawTitleScreen() {
   // Dim the live dogfights behind so the title reads clearly.
   ctx.fillStyle = 'rgba(8,12,26,0.5)';
   ctx.fillRect(0, 0, W, H);
-
-  // While Settings is open, don't draw the banner/plane — the Settings panel
-  // has its own title, and the canvas banner behind it looked messy.
-  if (settingsOpen) { if (typeof Sound !== 'undefined') Sound.setEngine(0, 100); return; }
 
   const bannerY = H * 0.30;
   const centerX = W / 2;
@@ -1247,6 +1594,9 @@ function drawWorldContents() {
   for (const boom of explosions) {
     boom.draw(ctx);
   }
+
+  // --- Other online players ---
+  if (Net.inServer) drawRemotePlayers();
 
   // --- The player plane(s) --- (skipped on the title screen / attract mode)
   if (!gameStarted) {
@@ -1762,7 +2112,7 @@ function drawHud() {
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.fillRect(CONFIG.GAME_W - 80, 6, 74, 16);
     ctx.fillStyle = '#ffffff';
-    ctx.fillText('SCORE ' + score, CONFIG.GAME_W - 74, 17);
+    ctx.fillText('SCORE ' + (totalScore + score), CONFIG.GAME_W - 74, 17);
   }
 
   // Altitude gauge on the right edge. Top = the ceiling, bottom = the ground.

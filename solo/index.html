@@ -4,21 +4,29 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pixel Planes</title>
-  <link rel="stylesheet" href="css/style.css?v=18" />
+  <link rel="stylesheet" href="css/style.css?v=27" />
 </head>
 <body>
   <!-- This is the box the whole game is drawn onto -->
   <canvas id="game"></canvas>
 
-  <!-- TITLE / START SCREEN: the one and only menu you see first in Single Player.
-       The big PIXEL PLANES banner + the plane that tows it are drawn on the
-       CANVAS behind these buttons, with live AI dogfights flying around. Press
-       START to play. (Sound turns on the moment you click/tap anything.) -->
+  <!-- CLICK GATE: nothing loads until you click (this also turns on sound, which
+       browsers block until the first click/tap). Clicking starts the title. -->
+  <div id="clickGate" onclick="enterTitle()">
+    <div class="gateInner">
+      <div class="titleBanner">PIXEL&nbsp;PLANES</div>
+      <button class="startBtn" onclick="enterTitle()">▶ CLICK TO PLAY</button>
+      <p class="startHint">click to turn on sound 🔊</p>
+    </div>
+  </div>
+
+  <!-- TITLE / START SCREEN (shown on load & refresh; the canvas behind it shows
+       live AI dogfights). Pressing START begins play. Dying does NOT return here. -->
   <div id="startScreen">
+    <!-- The PIXEL PLANES banner + the plane that tows it are drawn on the CANVAS. -->
     <div class="startButtons">
       <button class="startBtn" onclick="startGame(); this.blur();">▶ START</button>
       <button class="startBtn" onclick="openSettings(); this.blur();">⚙ SETTINGS</button>
-      <a class="startBtn" href="../index.html">◀ Back to menu</a>
     </div>
   </div>
 
@@ -31,6 +39,7 @@
              oninput="setVolumePct(this.value)" />
       <p id="volLabel" class="startHint">50%</p>
       <button class="startBtn" onclick="toggleMobile(); this.blur();">📱 Mobile Controls On/Off</button>
+      <button class="startBtn" id="mouseBtn" onclick="toggleMouseMode(); this.blur();">🖱️ Mouse Mode: OFF</button>
       <button class="startBtn" onclick="closeSettings(); this.blur();">◀ Back</button>
     </div>
   </div>
@@ -41,12 +50,60 @@
     <div class="pauseInner" id="pauseMain">
       <h1>PAUSED</h1>
       <button onclick="resumeGame(); this.blur();">▶ Resume</button>
-      <button onclick="returnToMainMenu(); this.blur();">🏠 Title Screen</button>
-      <button onclick="chooseNormal(); this.blur();">🎮 1 Player (Normal)</button>
+      <button onclick="returnToMainMenu(); this.blur();">🏠 Main Menu</button>
+      <button onclick="chooseNormal(); this.blur();">🤖 Single Player (vs Bots)</button>
       <button onclick="chooseSplit(); this.blur();">👥 2 Player — Split Screen</button>
       <button onclick="showColorPanel(); this.blur();">🎨 Plane Color</button>
-      <button onclick="location.href='../index.html';">🚪 Single / Multiplayer Menu</button>
-      <p class="pauseHint">Split: LEFT = WASD Q E F &nbsp;•&nbsp; RIGHT = Arrows B N M</p>
+      <!-- A REAL LINK to the online game (the online/ folder next to solo/).
+           Relative, so it works on Railway AND when run locally. -->
+      <a class="mpLink" href="../online/" target="_blank" rel="noopener">🌍 Multiplayer Online</a>
+      <p class="pauseHint">Single Player = you + bots &nbsp;•&nbsp; Multiplayer = your online world</p>
+    </div>
+
+    <!-- create an online server: name (letters+numbers) + optional password -->
+    <div class="pauseInner" id="createServer" style="display:none">
+      <h1>CREATE SERVER</h1>
+      <p id="netStatusCreate" class="roomHint"></p>
+      <div class="connRow">
+        <input id="csUrl" class="urlInput" placeholder="ws://localhost:8080" />
+        <button onclick="applyServerUrl('csUrl'); this.blur();">Connect</button>
+      </div>
+      <input id="csName" class="nameInput" maxlength="14" placeholder="YOUR NAME"
+             oninput="this.value=this.value.replace(/[^A-Za-z0-9 _-]/g,'')" />
+      <input id="csServer" class="roomInput" maxlength="16" placeholder="SERVER NAME"
+             oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" />
+      <input id="csPass" class="nameInput" maxlength="16" placeholder="PASSWORD (optional)" />
+      <button onclick="doCreateServer(); this.blur();">Create ▶</button>
+      <p id="csMsg" class="roomMsg"></p>
+      <button onclick="backToPause(); this.blur();">◀ Back</button>
+    </div>
+
+    <!-- browse all servers and join one (locked ones ask for a password) -->
+    <div class="pauseInner" id="serverList" style="display:none">
+      <h1>SERVER LIST</h1>
+      <input id="slName" class="nameInput" maxlength="14" placeholder="YOUR NAME"
+             oninput="this.value=this.value.replace(/[^A-Za-z0-9 _-]/g,'')" />
+      <p id="netStatusList" class="roomHint"></p>
+      <div class="connRow">
+        <input id="slUrl" class="urlInput" placeholder="ws://localhost:8080" />
+        <button onclick="applyServerUrl('slUrl'); this.blur();">Connect</button>
+      </div>
+      <div id="serverListItems" class="serverList"></div>
+      <p id="slMsg" class="roomMsg"></p>
+      <div class="rowButtons">
+        <button onclick="Net.refreshList(); this.blur();">↻ Refresh</button>
+        <button onclick="backToPause(); this.blur();">◀ Back</button>
+      </div>
+    </div>
+
+    <!-- shown while you ARE in a server -->
+    <div class="pauseInner" id="inServer" style="display:none">
+      <h1 id="inServerTitle">SERVER</h1>
+      <p id="inServerInfo" class="roomHint"></p>
+      <p id="inServerInvite" class="roomHint"></p>
+      <img id="inviteQR" alt="invite QR" style="display:none;width:170px;height:170px;border:5px solid #fff;border-radius:8px;background:#fff" />
+      <button onclick="resumeGame(); this.blur();">▶ Back to Game</button>
+      <button onclick="doLeaveServer(); this.blur();">🚪 Leave Server</button>
     </div>
 
     <!-- pick your plane color: presets + a color wheel -->
@@ -149,25 +206,22 @@
     </div>
   </div>
 
-  <!-- The scripts run top to bottom, so order matters here.
-       SHARED engine files (../js/) are the SAME ones the online game uses, so any
-       flight/physics/art tweak helps both. SOLO-only files (js/) are the parts
-       that are different in single player: the game loop, two-player input, the
-       AI enemies, power-ups and the bail-out pilot. -->
-  <script src="../js/config.js?v=18"></script>
-  <script src="../js/audio.js?v=18"></script>
-  <script src="js/input.js?v=18"></script>
-  <script src="../js/physics.js?v=18"></script>
-  <script src="../js/bullet.js?v=18"></script>
-  <script src="js/missile.js?v=18"></script>
-  <script src="../js/explosion.js?v=18"></script>
-  <script src="js/powerup.js?v=18"></script>
-  <script src="../js/sprites.js?v=18"></script>
-  <script src="../js/scenery.js?v=18"></script>
-  <script src="../js/plane.js?v=18"></script>
-  <script src="../js/bot-ai.js?v=18"></script>
-  <script src="js/enemy.js?v=18"></script>
-  <script src="js/pilot.js?v=18"></script>
-  <script src="js/game.js?v=18"></script>
+  <!-- The scripts run top to bottom, so order matters here -->
+  <script src="js/config.js?v=26"></script>
+  <script src="js/audio.js?v=26"></script>
+  <script src="js/net.js?v=26"></script>
+  <script src="js/uiscroll.js?v=27"></script>
+  <script src="js/input.js?v=36"></script>
+  <script src="js/physics.js?v=26"></script>
+  <script src="js/bullet.js?v=26"></script>
+  <script src="js/missile.js?v=26"></script>
+  <script src="js/explosion.js?v=26"></script>
+  <script src="js/powerup.js?v=26"></script>
+  <script src="js/sprites.js?v=26"></script>
+  <script src="js/scenery.js?v=26"></script>
+  <script src="js/plane.js?v=36"></script>
+  <script src="js/enemy.js?v=26"></script>
+  <script src="js/pilot.js?v=26"></script>
+  <script src="js/game.js?v=36"></script>
 </body>
 </html>

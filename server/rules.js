@@ -4,7 +4,7 @@
 //  means: same inputs → same answer, no sockets, no clocks, no surprises.
 // ===========================================================================
 
-const CONFIG = require('../js/config.js');
+const CONFIG = require('../online/js/config.js');
 
 // How many bots the world should have: fill the empty seats up to the target,
 // but never go below zero (FR-004/005/006).

@@ -1,0 +1,20 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
+<div id="pauseMenu" style="display:none"></div>
+<div id="topBar"><div class="menuGroup" id="modGroup"><div id="modMenu"></div></div><div class="menuGroup" id="modeGroup"><div id="modeMenu"></div></div></div>
+<input id="cmdInput"><p id="cmdMsg"></p><div id="out">P</div>
+<script>
+// minimal: just the unlock logic in isolation, mirroring game.js
+let cheatsUnlocked=false, mode='classic';
+function refreshCheatMenus(){var mg=document.getElementById('modGroup'),mog=document.getElementById('modeGroup');
+  if(mg)mg.style.display=(cheatsUnlocked&&mode!=='nomod')?'flex':'none'; if(mog)mog.style.display=cheatsUnlocked?'flex':'none';}
+function runCommand(t){var c=(t||'').trim().toLowerCase(),o=document.getElementById('cmdMsg');
+  if(c==='/hidden'){cheatsUnlocked=true;refreshCheatMenus();if(o)o.textContent='unlocked';}
+  else if(c==='/hide'){cheatsUnlocked=false;refreshCheatMenus();}
+  else if(c){if(o)o.textContent='Unknown';}}
+refreshCheatMenus();
+var r={};
+r.hidden = modGroup.style.display==='none' && modeGroup.style.display==='none';
+runCommand('/hidden'); r.shows = modGroup.style.display==='flex' && modeGroup.style.display==='flex';
+runCommand('/hide'); r.rehide = modGroup.style.display==='none';
+document.getElementById('out').textContent='RESULT '+JSON.stringify(r);
+</script></body></html>

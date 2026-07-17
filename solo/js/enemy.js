@@ -22,12 +22,42 @@ const BOT_NAMES = [
   '👻 Boo Crew', '🐝 Buzzy', '🦅 Eagle Eye',
 ];
 
-// The bot "brain" (target-finding, aiming, when to shoot) now lives in the
-// shared, page-free js/bot-ai.js so the online server can run the SAME brain.
-// These two helpers just point at it. makeBotStyle(i) builds bot i's flying
-// personality; botRand gives each bot its steady random sprinkle.
-function botRand(i, salt) { return BotAI.rand(i, salt); }
-function makeBotStyle(i) { return BotAI.makeStyle(i, CONFIG); }
+// Steady "random-looking" number 0..1 from a bot's index (so a bot's style is
+// always the same, not jittering every time).
+function botRand(i, salt) {
+  const v = Math.sin((i + 1) * 12.9898 + salt * 78.233) * 43758.5453;
+  return v - Math.floor(v);
+}
+
+// Build a unique flying style for bot number i, by starting from an archetype
+// and nudging the numbers a bit so no two bots fly exactly alike.
+function makeBotStyle(i) {
+  const archetypes = [
+    { name: 'ace',     turn: 1.05, thrust: 1.1,  aim: 0.7, fireCd: 1.0, missile: 1.1, evade: 0.5, lead: 1.0,  wobble: 0.0 },
+    { name: 'rookie',  turn: 0.8,  thrust: 0.9,  aim: 1.6, fireCd: 1.6, missile: 1.8, evade: 0.3, lead: 0.4,  wobble: 0.03 },
+    { name: 'acrobat', turn: 1.2,  thrust: 1.0,  aim: 1.1, fireCd: 1.2, missile: 1.4, evade: 0.6, lead: 0.7,  wobble: 0.12 },
+    { name: 'bomber',  turn: 0.75, thrust: 0.95, aim: 1.2, fireCd: 1.4, missile: 0.7, evade: 0.2, lead: 0.8,  wobble: 0.0 },
+    { name: 'sniper',  turn: 0.85, thrust: 1.0,  aim: 0.5, fireCd: 1.2, missile: 1.2, evade: 0.4, lead: 1.1,  wobble: 0.0 },
+    { name: 'kamikaze',turn: 1.15, thrust: 1.15, aim: 1.3, fireCd: 1.1, missile: 1.4, evade: 0.0, lead: 0.6,  wobble: 0.05 },
+    { name: 'coward',  turn: 1.0,  thrust: 1.0,  aim: 1.1, fireCd: 1.3, missile: 1.2, evade: 0.9, lead: 0.7,  wobble: 0.05 },
+  ];
+  const a = archetypes[i % archetypes.length];
+  const j = (salt) => 0.92 + botRand(i, salt) * 0.16; // a gentle 0.92..1.08 nudge
+
+  return {
+    name: a.name,
+    turn:    CONFIG.ENEMY_TURN * a.turn * j(1),
+    thrust:  CONFIG.ENEMY_THRUST * a.thrust * j(2),
+    fireRange: CONFIG.ENEMY_FIRE_RANGE * j(3),
+    aim:     CONFIG.ENEMY_AIM * a.aim * j(4),
+    fireCd:  Math.round(CONFIG.ENEMY_FIRE_COOLDOWN * a.fireCd * j(5)),
+    missileCd: Math.round(CONFIG.ENEMY_MISSILE_COOLDOWN * a.missile * j(6)),
+    evade:   a.evade,
+    lead:    a.lead,
+    wobble:  a.wobble,
+    preferredAlt: 120 + botRand(i, 7) * 180, // each likes a different height
+  };
+}
 
 class Enemy {
   constructor(x, y, team, color, style, name) {
@@ -106,10 +136,25 @@ class Enemy {
     }
 
     const S = this.style;
-    // Ask the shared brain who to chase, which way to point, and whether to fire.
-    const brain = BotAI.think(this, planes, CONFIG, mode === 'ww2');
-    const target = brain.target;
-    let wantAngle = target ? brain.wantAngle : this.angle;
+    const target = this.findTarget(planes);
+
+    let wantAngle = this.angle;
+    if (target) {
+      // Smart aim: shoot where the target WILL be, not where it is now.
+      const dx = wrapDX(target.x - this.x), dy = target.y - this.y;
+      const dist = Math.hypot(dx, dy);
+      const lead = (dist / CONFIG.BULLET_SPEED) * S.lead;
+      const aimX = target.x + target.vx * lead;
+      const aimY = target.y + target.vy * lead;
+      wantAngle = Math.atan2(aimY - this.y, wrapDX(aimX - this.x));
+
+      // Hurt + cautious bots run away instead of charging in.
+      const flee = this.health <= 1 && dist < 280 && S.evade > 0.45;
+      if (flee) wantAngle = Math.atan2(-dy, -dx);
+
+      // Acrobats wiggle as they fly.
+      wantAngle += Math.sin(this.propSpin * 0.1) * S.wobble;
+    }
 
     // Go grab a good power-up bubble if one is close (and skip the bad ones).
     const bub = this.findBubble(powerups);
@@ -143,14 +188,23 @@ class Enemy {
     }
     if (this.y < CONFIG.CEILING) { this.y = CONFIG.CEILING; this.vy = 0; }
 
-    // Fire / launch a missile when the brain says we're lined up and ready.
-    if (brain.shoot) this.shoot(bullets);
-    if (brain.missile && target) {
-      missiles.push(new Missile(
-        this.x + Math.cos(this.angle) * 17,
-        this.y + Math.sin(this.angle) * 17,
-        this.angle, this.team, target));
-      this.missileCooldown = S.missileCd;
+    // Shoot if we have a target, it's close, and we're aimed at it.
+    if (target) {
+      const aimErr = Math.abs(angleDiff(
+        Math.atan2(target.y - this.y, wrapDX(target.x - this.x)), this.angle));
+      const dist = Math.hypot(wrapDX(target.x - this.x), target.y - this.y);
+
+      if (this.fireCooldown <= 0 && dist < S.fireRange && aimErr < S.aim) {
+        this.shoot(bullets);
+      }
+      // Launch a homing missile now and then (no missiles in WW2 mode).
+      if (mode !== 'ww2' && this.missileCooldown <= 0 && dist < S.fireRange * 2.2 && aimErr < S.aim * 1.5) {
+        missiles.push(new Missile(
+          this.x + Math.cos(this.angle) * 17,
+          this.y + Math.sin(this.angle) * 17,
+          this.angle, this.team, target));
+        this.missileCooldown = S.missileCd;
+      }
     }
   }
 
@@ -169,10 +223,19 @@ class Enemy {
     return best;
   }
 
-  // Find the closest ALIVE plane we're allowed to attack (delegates to the
-  // shared brain so the eject check and the server agree on "nearest enemy").
+  // Find the closest ALIVE plane we're allowed to attack. In WW2 mode that's
+  // anyone on the OTHER faction; otherwise it's anyone not on our team.
   findTarget(planes) {
-    return BotAI.findTarget(this, planes, CONFIG, typeof mode !== 'undefined' && mode === 'ww2');
+    const ww2 = (typeof mode !== 'undefined' && mode === 'ww2');
+    let best = null, bestDist = Infinity;
+    for (const p of planes) {
+      if (p === this || !p.alive) continue;
+      if (ww2 ? (p.faction === this.faction) : (p.team === this.team)) continue;
+      const dx = wrapDX(p.x - this.x), dy = p.y - this.y;
+      const d = dx * dx + dy * dy;
+      if (d < bestDist) { bestDist = d; best = p; }
+    }
+    return best;
   }
 
   shoot(bullets) {

@@ -4,11 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pixel Planes</title>
-  <link rel="stylesheet" href="css/style.css?v=15" />
+  <link rel="stylesheet" href="css/style.css?v=35" />
 </head>
 <body>
   <!-- This is the box the whole game is drawn onto -->
   <canvas id="game"></canvas>
+
+  <!-- CHAT: a 💬 button in the corner. Click to open; type + Enter to send to all
+       real players. A red dot shows when there's an unread message. -->
+  <button id="chatBtn" onclick="toggleChat()" style="display:none">💬<span id="chatDot"></span></button>
+  <!-- VOICE: a 🎤 button next to chat. Click to talk; turns 🔴 while your mic is live. -->
+  <button id="voiceBtn" onclick="toggleVoice()" style="display:none" title="Voice chat — click to talk">🎤</button>
+  <div id="chatPanel" style="display:none">
+    <div id="chatMessages"></div>
+    <input id="chatInput" type="text" maxlength="120" autocomplete="off"
+           placeholder="message…  (Enter to send)"
+           onkeydown="if(event.key==='Enter'){ sendChatMessage(); }" />
+  </div>
 
   <!-- NAME GATE: the first thing you see. Type a name and JOIN to fly into the
        one shared world with everyone else. (Clicking also turns on sound, which
@@ -24,7 +36,6 @@
       <p id="joinStatus" class="startHint">click to turn on sound 🔊</p>
       <div class="gateExtras">
         <button class="startBtn small" onclick="openSettings(); this.blur();">⚙ Settings</button>
-        <a class="startBtn small" href="index.html">◀ Back to menu</a>
       </div>
     </div>
   </div>
@@ -33,10 +44,14 @@
   <div id="settingsScreen" style="display:none">
     <div class="startCenter">
       <div class="titleBanner small">SETTINGS</div>
-      <p class="startHint">🔊 Sound volume</p>
+      <p class="startHint">🔊 Game sound volume</p>
       <input type="range" id="volSlider" class="volSlider" min="0" max="100" value="50"
              oninput="setVolumePct(this.value)" />
       <p id="volLabel" class="startHint">50%</p>
+      <p class="startHint">🎙️ Voice chat volume</p>
+      <input type="range" id="vcSlider" class="volSlider" min="0" max="100" value="100"
+             oninput="setVoiceVolumePct(this.value)" />
+      <p id="vcLabel" class="startHint">100%</p>
       <button class="startBtn" onclick="toggleMobile(); this.blur();">📱 Mobile Controls On/Off</button>
       <button class="startBtn" onclick="closeSettings(); this.blur();">◀ Back</button>
     </div>
@@ -45,23 +60,41 @@
   <!-- Pause menu (press ESC, or the ⏸ button on touch) -->
   <div id="pauseMenu" style="display:none">
     <div class="pauseInner" id="pauseMain">
-      <h1>MENU</h1>
-      <p class="roomHint">The world keeps flying — this doesn't pause the game.</p>
-      <button onclick="resumeGame(); this.blur();">▶ Back to Flying</button>
-      <button onclick="showSettingsPanel(); this.blur();">🔊 Sound</button>
+      <h1>PAUSED</h1>
+      <button onclick="resumeGame(); this.blur();">▶ Resume</button>
       <button onclick="showColorPanel(); this.blur();">🎨 Plane Color</button>
       <button onclick="leaveWorld(); this.blur();">🚪 Leave Game</button>
-    </div>
-
-    <!-- Sound / volume, reachable mid-game from the ESC menu -->
-    <div class="pauseInner" id="settingsPanel" style="display:none">
-      <h1>SOUND</h1>
-      <p class="roomHint">🔊 Volume</p>
-      <input type="range" id="volSliderPause" class="volSlider" min="0" max="100" value="50"
-             oninput="setVolumePct(this.value)" />
-      <p id="volLabelPause" class="startHint">50%</p>
-      <button onclick="toggleMobile(); this.blur();">📱 Mobile Controls On/Off</button>
-      <button onclick="backToPause(); this.blur();">◀ Back</button>
+      <!-- Secret cheat opener (the code is NOT shown anywhere on screen) -->
+      <p class="cmdLabel">⌨️ Command bar</p>
+      <div class="cmdBar">
+        <input id="cmdInput" class="cmdInput" type="text" placeholder="type a command…"
+               onkeydown="if(event.key==='Enter'){ runCommand(this.value); }" />
+        <button onclick="runCommand(document.getElementById('cmdInput').value); this.blur();">▶</button>
+      </div>
+      <p id="cmdMsg" class="cmdMsg"></p>
+      <!-- the cheats (hidden until @hidden). These change the world for EVERYONE. -->
+      <div id="cheatBox" style="display:none">
+        <p class="cmdLabel">⚙ Modifiers — bots are for EVERYONE; ∞/shield are just YOU</p>
+        <button onclick="cheat('addbots',5); this.blur();">🤖 + Add 5 Bots</button>
+        <button onclick="cheat('addbots',20); this.blur();">🤖 + Add 20 Bots</button>
+        <button onclick="cheat('addbots',50); this.blur();">🤖 + Add 50 Bots</button>
+        <button onclick="cheat('clearbots'); this.blur();">🧹 Remove ALL Bots</button>
+        <button onclick="cheat('killbots'); this.blur();">💥 Kill ALL Bots</button>
+        <button onclick="cheat('resetbots'); this.blur();">↩️ Reset Bots</button>
+        <button onclick="giveShield(); this.blur();">🛡️ Give Me a Shield (10s)</button>
+        <button id="ihBtn" onclick="this.textContent='∞ Health: '+(toggleInfHealth()?'ON':'OFF'); this.blur();">∞ Health: OFF</button>
+        <button id="imBtn" onclick="this.textContent='∞ Missiles: '+(toggleInfMissiles()?'ON':'OFF'); this.blur();">∞ Missiles: OFF</button>
+      </div>
+      <!-- Mode Menu (hidden until @hidden). Changes the world's LOOK for EVERYONE. -->
+      <div id="modeBox" style="display:none">
+        <p class="cmdLabel">🎮 Mode Menu (changes for everyone)</p>
+        <button onclick="setMode('classic'); this.blur();">Classic</button>
+        <button onclick="setMode('unicorn'); this.blur();">🦄 Unicorn</button>
+        <button onclick="setMode('badweather'); this.blur();">🌧️ Bad Weather</button>
+        <button onclick="setMode('ww2'); this.blur();">🪖 WW2</button>
+        <button onclick="setMode('night'); this.blur();">🌙 Night</button>
+        <button onclick="setMode('blackhole'); this.blur();">🕳️ Black Hole</button>
+      </div>
     </div>
 
     <!-- pick your plane color: presets + a color wheel -->
@@ -109,17 +142,19 @@
   </div>
 
   <!-- The scripts run top to bottom, so order matters here -->
-  <script src="js/config.js?v=17"></script>
-  <script src="js/audio.js?v=15"></script>
-  <script src="js/net.js?v=15"></script>
-  <script src="js/input.js?v=16"></script>
-  <script src="js/physics.js?v=15"></script>
-  <script src="js/bullet.js?v=15"></script>
-  <script src="js/missile.js?v=16"></script>
-  <script src="js/explosion.js?v=15"></script>
-  <script src="js/sprites.js?v=17"></script>
-  <script src="js/scenery.js?v=15"></script>
-  <script src="js/plane.js?v=16"></script>
-  <script src="js/game.js?v=19"></script>
+  <script src="js/config.js?v=36"></script>
+  <script src="js/audio.js?v=35"></script>
+  <script src="js/net.js?v=35"></script>
+  <script src="js/uiscroll.js?v=35"></script>
+  <script src="js/voice.js?v=35"></script>
+  <script src="js/input.js?v=35"></script>
+  <script src="js/physics.js?v=35"></script>
+  <script src="js/bullet.js?v=35"></script>
+  <script src="js/missile.js?v=35"></script>
+  <script src="js/explosion.js?v=35"></script>
+  <script src="js/sprites.js?v=35"></script>
+  <script src="js/scenery.js?v=35"></script>
+  <script src="js/plane.js?v=35"></script>
+  <script src="js/game.js?v=35"></script>
 </body>
 </html>

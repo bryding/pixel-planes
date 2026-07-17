@@ -29,7 +29,7 @@ resize();
 // The shared flight/drawing files (plane.js, scenery.js …) were written when the
 // game also had alternate "modes" and a 2-player split screen. The shared world
 // is always one plain free-for-all, so we pin these and those files behave normally.
-const mode = 'classic';
+let mode = 'classic';   // the world's mode; changeable via the @hidden Mode Menu
 const splitScreen = false;
 
 // ---- Your plane and the camera ----
@@ -56,14 +56,15 @@ let missileWasDown = false;          // so one key press = one missile
 const planes = [player];
 
 // ---- Game state ----
-let score = 0;              // your kills THIS life (resets when you're shot down)
+let score = 0;              // your kills THIS life
+// Your TOTAL score: dying BANKS this life's points here instead of losing them,
+// so it keeps growing over time. Saved between visits, too.
+let totalScore = (function () { try { return parseInt(localStorage.getItem('pp_totalscore'), 10) || 0; } catch (e) { return 0; } })();
+function saveTotalScore() { try { localStorage.setItem('pp_totalscore', totalScore); } catch (e) {} }
 let playerState = 'flying'; // 'takeoff' | 'flying' | 'dead'
 let playerRespawn = 0;      // counts down while dead, then you fly back in
 let frameCount = 0;
-// The ESC menu just shows an overlay — it does NOT freeze the game, because the
-// multiplayer world is shared and keeps running for everyone. So you keep flying
-// (and stay vulnerable) while the menu is open; it's a menu, not a pause.
-let menuOpen = false;
+let paused = false;
 let gameStarted = false;    // false = still on the name screen
 let deathMsg = 'SHOT DOWN!';
 
@@ -102,6 +103,11 @@ function serverUrl() {
 function openSettings() {
   const g = document.getElementById('clickGate'); if (g) g.style.display = 'none';
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'flex';
+  // Voice chat volume slider (works even if game Sound isn't ready yet).
+  const vcPct = (typeof Voice !== 'undefined') ? Math.round(Voice.volume * 100) : 100;
+  const vsl = document.getElementById('vcSlider'), vlb = document.getElementById('vcLabel');
+  if (vsl) vsl.value = vcPct;
+  if (vlb) vlb.textContent = vcPct + '%';
   if (typeof Sound === 'undefined') return;
   const sl = document.getElementById('volSlider'), lb = document.getElementById('volLabel');
   if (sl) sl.value = Math.round(Sound.volume * 100);
@@ -111,45 +117,135 @@ function setVolumePct(pct) {
   if (typeof Sound === 'undefined') return;
   Sound.init();
   Sound.setVolume(pct / 100);
-  const txt = Math.round(pct) + '%';
-  // Update whichever volume label is on screen (name screen OR the ESC menu).
-  ['volLabel', 'volLabelPause'].forEach((id) => { const lb = document.getElementById(id); if (lb) lb.textContent = txt; });
+  const lb = document.getElementById('volLabel'); if (lb) lb.textContent = Math.round(pct) + '%';
   Sound.gun();                  // a quick click so you HEAR the level you set
+}
+// Voice chat volume: how loudly you hear other players (separate from game sound).
+function setVoiceVolumePct(pct) {
+  if (typeof Voice !== 'undefined') Voice.setVolume(pct / 100);
+  const lb = document.getElementById('vcLabel'); if (lb) lb.textContent = Math.round(pct) + '%';
+  try { localStorage.setItem('pp_vcvol', pct); } catch (e) {}
 }
 function closeSettings() {
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';
   const g = document.getElementById('clickGate'); if (g) g.style.display = 'flex';
 }
 
-// ---- ESC menu (Resume / Sound / Plane Color / Leave) ----
-function pauseToggle() { if (!gameStarted) return; menuOpen = !menuOpen; updatePauseMenu(); }
+// ---- Pause menu ----
+function pauseToggle() { if (!gameStarted) return; paused = !paused; updatePauseMenu(); }
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !e.repeat) pauseToggle(); });
 function updatePauseMenu() {
-  const m = document.getElementById('pauseMenu'); if (m) m.style.display = menuOpen ? 'flex' : 'none';
-  if (menuOpen) backToPause();
+  const m = document.getElementById('pauseMenu'); if (m) m.style.display = paused ? 'flex' : 'none';
+  if (paused) backToPause();
 }
 function showPausePanel(id) {
-  ['pauseMain', 'colorPanel', 'settingsPanel'].forEach((p) => { const el = document.getElementById(p); if (el) el.style.display = (p === id) ? 'flex' : 'none'; });
+  ['pauseMain', 'colorPanel'].forEach((p) => { const el = document.getElementById(p); if (el) el.style.display = (p === id) ? 'flex' : 'none'; });
 }
 function backToPause() { showPausePanel('pauseMain'); }
-function resumeGame() { menuOpen = false; updatePauseMenu(); }
+function resumeGame() { paused = false; updatePauseMenu(); }
 function showColorPanel() { showPausePanel('colorPanel'); const w = document.getElementById('colorWheel'); const s = getPlayerColor(); if (w && s) w.value = s; }
-// Sound/volume panel inside the ESC menu, so you can adjust it mid-game.
-function showSettingsPanel() {
-  showPausePanel('settingsPanel');
-  if (typeof Sound === 'undefined') return;
-  const v = Math.round(Sound.volume * 100);
-  const sl = document.getElementById('volSliderPause'); if (sl) sl.value = v;
-  const lb = document.getElementById('volLabelPause'); if (lb) lb.textContent = v + '%';
+
+// "@hidden" cheat opener (command bar at the bottom of the ESC menu). We use @
+// because Firefox grabs "/" for quick-find.
+function runCommand(text) {
+  const cmd = (text || '').trim().toLowerCase();
+  const out = document.getElementById('cmdMsg');
+  const box = document.getElementById('cheatBox');
+  const modeBox = document.getElementById('modeBox');
+  if (cmd === '@hidden' || cmd === '/hidden') {
+    if (box) box.style.display = 'flex';
+    if (modeBox) modeBox.style.display = 'flex';
+    if (out) out.textContent = '🔓 Unlocked! Cheats + Mode Menu change the world for EVERYONE.';
+  } else if (cmd === '@hide' || cmd === '/hide') {
+    if (box) box.style.display = 'none';
+    if (modeBox) modeBox.style.display = 'none';
+    if (out) out.textContent = '🔒 Hidden.';
+  } else if (cmd) {
+    if (out) out.textContent = 'Unknown command.';
+  }
+  const inp = document.getElementById('cmdInput'); if (inp) inp.value = '';
+}
+// Mode Menu: change the world's mode for EVERYONE (the server tells all clients).
+function setMode(m) {
+  mode = m;
+  if (typeof Net !== 'undefined' && Net.sendMode) Net.sendMode(m);
+  const out = document.getElementById('cmdMsg'); if (out) out.textContent = '🎮 Mode → ' + m + ' (for everyone!)';
+}
+// Called by net.js when the SERVER says the mode changed (don't re-broadcast).
+function onNetMode(m) { if (typeof m === 'string') mode = m; }
+// Send a cheat to YOUR server, which applies it to the whole shared world.
+function cheat(c, n) {
+  if (typeof Net !== 'undefined' && Net.sendCheat) Net.sendCheat(c, n);
+  const out = document.getElementById('cmdMsg');
+  if (out) out.textContent = '✅ Sent to the world: ' + c + (n ? (' ' + n) : '');
+}
+
+// ---- SELF modifiers (just for you — these work because YOUR client controls
+// your own plane online). ----
+let infiniteHealth = false, infiniteMissiles = false;
+function toggleInfHealth() { infiniteHealth = !infiniteHealth; if (infiniteHealth) player.health = CONFIG.PLAYER_HEALTH; return infiniteHealth; }
+function toggleInfMissiles() { infiniteMissiles = !infiniteMissiles; return infiniteMissiles; }
+function giveShield() { player.invincibleTimer = 600; }   // ~10s of invincibility
+
+// ---- Chat (the 💬 button in the corner) ----
+let chatOpen = false, chatUnread = false;
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const p = document.getElementById('chatPanel'); if (p) p.style.display = chatOpen ? 'flex' : 'none';
+  if (chatOpen) {
+    chatUnread = false; updateChatDot();
+    const i = document.getElementById('chatInput'); if (i) i.focus();
+  }
+}
+function updateChatDot() { const d = document.getElementById('chatDot'); if (d) d.style.display = chatUnread ? 'block' : 'none'; }
+function showChatButton(on) {
+  const b = document.getElementById('chatBtn'); if (b) b.style.display = on ? 'flex' : 'none';
+  const v = document.getElementById('voiceBtn'); if (v) v.style.display = on ? 'flex' : 'none';   // mic button too
+}
+// Voice chat: toggle your microphone on/off.
+function toggleVoice() {
+  if (typeof Voice === 'undefined') return;
+  const b = document.getElementById('voiceBtn');
+  if (Voice.on) {
+    Voice.disable();
+    if (b) { b.classList.remove('on'); b.textContent = '🎤'; }
+  } else {
+    Voice.enable().then((ok) => { if (ok && b) { b.classList.add('on'); b.textContent = '🔴'; } });
+  }
+}
+function sendChatMessage() {
+  const i = document.getElementById('chatInput'); if (!i) return;
+  const text = i.value.trim();
+  if (text && typeof Net !== 'undefined' && Net.sendChat) {
+    Net.sendChat(text);
+    addChatLine(getUsername() || 'You', text);   // show MY OWN message right away
+  }
+  i.value = '';
+}
+function addChatLine(name, text) {
+  const box = document.getElementById('chatMessages'); if (!box) return;
+  const line = document.createElement('div'); line.className = 'chatLine';
+  const who = document.createElement('b'); who.textContent = (name || 'player') + ': ';
+  line.appendChild(who); line.appendChild(document.createTextNode(text || ''));  // textContent = safe (no HTML)
+  box.appendChild(line);
+  while (box.children.length > 100) box.removeChild(box.firstChild);
+  box.scrollTop = box.scrollHeight;
+}
+// net.js calls this when a chat message arrives.
+function onNetChat(name, text) {
+  addChatLine(name, text);
+  if (!chatOpen) { chatUnread = true; updateChatDot(); }   // red dot until you open it
 }
 
 // Leave the world and go back to the name screen.
 function leaveWorld() {
   Net.disconnect();
-  menuOpen = false; updatePauseMenu();
+  paused = false; updatePauseMenu();
   gameStarted = false; player.alive = false; playerState = 'flying';
   for (const k in remotePlayers) delete remotePlayers[k];
   const gate = document.getElementById('clickGate'); if (gate) gate.style.display = 'flex';
+  showChatButton(false);                                   // hide chat off the name screen
+  chatOpen = false; const cp = document.getElementById('chatPanel'); if (cp) cp.style.display = 'none';
 }
 
 // Net tells us when its status changes; keep the name screen's status fresh.
@@ -242,6 +338,7 @@ function enterWorld() {
   const gate = document.getElementById('clickGate'); if (gate) gate.style.display = 'none';
   const se = document.getElementById('settingsScreen'); if (se) se.style.display = 'none';
   gameStarted = true;
+  showChatButton(true);   // chat is available once you're in the world
   spawnPlane(camera.x + CONFIG.GAME_W / 2);
 }
 // Start the name box with your last-used name filled in.
@@ -255,12 +352,30 @@ function enterWorld() {
 // ===========================================================================
 const REMOTE_TEAM = -1;   // marks bullets/missiles that came from OTHER players
 
-function remoteName(id) { const r = remotePlayers[id]; return (r && r.name) || 'a plane'; }
+// Bots (server ids >= 1,000,000) all show as "Bot"; humans keep their chosen name.
+function isBotId(id) { return parseInt(id, 10) >= 1000000; }
+function remoteName(id) {
+  if (isBotId(id)) return 'Bot';
+  const r = remotePlayers[id]; return (r && r.name) || 'a plane';
+}
+
+// The nearest OTHER plane (real player or bot) to you — used to auto-lock missiles.
+function nearestRemotePlane() {
+  let best = null, bestDist = Infinity;
+  for (const id in remotePlayers) {
+    const r = remotePlayers[id];
+    if (!r || r.alive === false || r.x === undefined) continue;
+    const dx = wrapDX(r.x - player.x), dy = r.y - player.y;
+    const d = dx * dx + dy * dy;
+    if (d < bestDist) { bestDist = d; best = r; }
+  }
+  return best;
+}
 
 // Did one of MY shots reach a remote plane? If so, tell the server.
 function onlineHitCheck(proj, kind) {
   if (proj.dead) return;
-  const radius = ((kind === 'missile') ? 16 : 14) * CONFIG.PLANE_SCALE;
+  const radius = (kind === 'missile') ? 16 : 14;
   for (const id in remotePlayers) {
     const r = remotePlayers[id];
     if (!r || r.alive === false || r.x === undefined) continue;
@@ -294,6 +409,7 @@ Net.onFire = function (id, kind, x, y, heading) {
 // auto-respawn in place (never back to the name screen), score reset (FR-009).
 Net.onHit = function (byId, kind) {
   if (playerState !== 'flying' && playerState !== 'takeoff') return;
+  if (infiniteHealth) return;   // ∞ Health cheat: ignore all damage
   // takeHit() applies the damage + flash, but ignores it while spawn-protected
   // (invincibleTimer). It returns true only when this hit was fatal.
   const dmg = (kind === 'missile') ? CONFIG.MISSILE_DAMAGE : 1;
@@ -401,13 +517,56 @@ function bigExplosion(x, y) {
   explosions.push(new Explosion(x, y - 8, '#888888'));
 }
 
-// You died: points reset to 0, then auto-respawn after a short delay (FR-009).
+// You died: BANK this life's points into your total (never lost), then respawn.
 function playerDies(msg) {
   deathMsg = msg || 'SHOT DOWN!';
+  totalScore += score; saveTotalScore();
   score = 0;
   player.alive = false;
   playerState = 'dead';
   playerRespawn = CONFIG.RESPAWN_DELAY;
+}
+
+// ---- BLACK HOLE mode (gravity that pulls every plane in) ----
+// In multiplayer each plane pulls ITSELF, so everyone gets sucked in and sees
+// everyone else getting sucked in too. The hole sits in the middle of the world.
+const BH_X = CONFIG.WORLD_WIDTH / 2;
+const BH_Y = (CONFIG.CEILING + CONFIG.GROUND_Y) / 2;
+function applyBlackHolePull(o) {
+  const dx = wrapDX(BH_X - o.x), dy = BH_Y - o.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  if (dist > CONFIG.BH_RANGE) return dist;
+  const t = 1 - dist / CONFIG.BH_RANGE;
+  const pull = CONFIG.BH_PULL * t * t;
+  const ux = dx / dist, uy = dy / dist;
+  o.vx += ux * pull;  o.vy += uy * pull;                                  // straight in
+  o.vx += -uy * pull * CONFIG.BH_SWIRL;  o.vy += ux * pull * CONFIG.BH_SWIRL; // + swirl
+  return dist;
+}
+function blackHoleStep() {
+  if (playerState !== 'flying') return;
+  const d = applyBlackHolePull(player);
+  if (d < CONFIG.BH_HORIZON && player.invincibleTimer <= 0) {   // crushed at the event horizon
+    explosions.push(new Explosion(player.x, player.y, '#b388ff', true));
+    explosions.push(new Explosion(player.x, player.y, '#7c4dff'));
+    pushKill('🕳️ crushed by the black hole', '#b388ff');
+    playerDies('CRUSHED!');
+    if (Net.inWorld) Net.sendState({ x: player.x, y: player.y, angle: player.angle, vx: 0, vy: 0, throttle: 0, health: 0, alive: false, score: 0 });
+  }
+}
+function drawBlackHole() {
+  const sx = worldToScreenX(BH_X), sy = BH_Y - camera.y;
+  const glow = ctx.createRadialGradient(sx, sy, CONFIG.BH_HORIZON * 0.4, sx, sy, CONFIG.BH_DISK_R);
+  glow.addColorStop(0, 'rgba(124,77,255,0)');
+  glow.addColorStop(0.45, 'rgba(150,90,255,0.28)');
+  glow.addColorStop(0.8, 'rgba(180,120,255,0.10)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(sx, sy, CONFIG.BH_DISK_R, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#05020a';                          // the dark core
+  ctx.beginPath(); ctx.arc(sx, sy, CONFIG.BH_HORIZON, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(200,160,255,0.7)'; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.arc(sx, sy, CONFIG.BH_HORIZON + 8, 0, Math.PI * 2); ctx.stroke();
 }
 
 // The "who shot down who" feed on the left side (newest first, fades out).
@@ -429,6 +588,8 @@ function update() {
       if (player.y <= CONFIG.GROUND_Y - 55) playerState = 'flying';
     } else if (playerState === 'flying') {
       player.update();
+      if (infiniteMissiles) player.missiles = CONFIG.MISSILE_MAX;   // ∞ Missiles cheat
+      if (mode === 'blackhole') blackHoleStep();   // gravity pulls you toward the hole
       // Coming in too fast or too steep is a fatal crash; a gentle touch rolls.
       const hardLanding = player.hitGround &&
         (player.impactVy >= CONFIG.LAND_MAX_VY || Math.abs(angleDiff(player.angle, 0)) >= CONFIG.LAND_MAX_ANGLE);
@@ -448,8 +609,13 @@ function update() {
         // Missiles: one per press, ammo-limited.
         const mBefore = missiles.length;
         if (missilePressed) player.fireMissile(missiles, planes);
-        if (Net.inWorld && missiles.length > mBefore)
-          Net.sendFire('missile', player.x + Math.cos(player.angle) * 17, player.y + Math.sin(player.angle) * 17, player.angle);
+        if (missiles.length > mBefore) {
+          // AUTO-LOCK: aim the new missile at the nearest plane (player or bot).
+          const m = missiles[missiles.length - 1];
+          if (m && !m.visual) m.target = nearestRemotePlane();
+          if (Net.inWorld)
+            Net.sendFire('missile', player.x + Math.cos(player.angle) * 17, player.y + Math.sin(player.angle) * 17, player.angle);
+        }
       }
     } else { // 'dead' -> auto-respawn after the delay
       playerRespawn -= 1;
@@ -465,8 +631,10 @@ function update() {
     bullet.update();
     if (Net.inWorld && !bullet.visual) onlineHitCheck(bullet, 'gun');
   }
-  // Missiles: same idea.
+  // Missiles: same idea, but keep them auto-locked onto the nearest plane.
   for (const missile of missiles) {
+    if (!missile.visual && (!missile.target || missile.target.alive === false))
+      missile.target = nearestRemotePlane();
     missile.update();
     if (Net.inWorld && !missile.visual) onlineHitCheck(missile, 'missile');
   }
@@ -523,6 +691,9 @@ function drawWorldContents() {
   }
   drawGroundScenery(ctx);
 
+  // --- Black Hole (drawn behind the planes so they vanish INTO it) ---
+  if (mode === 'blackhole') drawBlackHole();
+
   // --- Bullets, missiles, explosions ---
   for (const bullet of bullets) bullet.draw(ctx);
   for (const missile of missiles) missile.draw(ctx);
@@ -532,7 +703,14 @@ function drawWorldContents() {
   if (Net.inWorld) drawRemotePlayers();
 
   // --- Your plane (only once you're flying) ---
-  if (gameStarted && (playerState === 'flying' || playerState === 'takeoff')) player.draw(ctx);
+  if (gameStarted && (playerState === 'flying' || playerState === 'takeoff')) {
+    player.draw(ctx);
+    // mark yourself as a real human player 🧑
+    const psx = worldToScreenX(player.x), psy = player.y - camera.y;
+    ctx.textAlign = 'center'; ctx.font = '20px sans-serif';
+    ctx.fillText('🧑', psx, psy - 34);
+    ctx.textAlign = 'left';
+  }
 
   // --- Arrows at the screen edge pointing at planes you can't see ---
   if (gameStarted) drawOffscreenIndicators();
@@ -553,9 +731,15 @@ function drawRemotePlayers() {
     if (r.x === undefined || r.alive === false) continue;
     const sx = worldToScreenX(r.x), sy = r.y - camera.y;
     drawPlaneSprite(ctx, remoteSprite(parseInt(id, 10)), sx, sy, r.angle || 0, frameCount, false);
-    ctx.font = '11px monospace'; ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillText(r.name || 'player', sx + 1, sy - 21);
-    ctx.fillStyle = '#ffffff'; ctx.fillText(r.name || 'player', sx, sy - 22);
+    ctx.textAlign = 'center';
+    // name tag: bots all say "Bot", humans show their chosen name
+    const label = remoteName(id);
+    ctx.font = '11px monospace';
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillText(label, sx + 1, sy - 21);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(label, sx, sy - 22);
+    // who is it? Server bots get ids >= 1,000,000; real players are small ids.
+    ctx.font = '20px sans-serif';
+    ctx.fillText(isBotId(id) ? '🤖' : '🧑', sx, sy - 34);
     ctx.textAlign = 'left';
   }
 }
@@ -615,7 +799,7 @@ function drawHud() {
 
   // --- Your score, top-right under the leaderboard area ---
   ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(W - 80, 6, 74, 16);
-  ctx.fillStyle = '#ffffff'; ctx.fillText('SCORE ' + score, W - 74, 17);
+  ctx.fillStyle = '#ffffff'; ctx.fillText('SCORE ' + (totalScore + score), W - 74, 17);
 
   // --- Altitude gauge on the right edge (top = ceiling, bottom = ground) ---
   const gx = W - 22, gy = 30, gh = 240;
@@ -653,8 +837,10 @@ function drawHud() {
 
 // The scoreboard on the right: who has the most kills (you + everyone online).
 function drawLeaderboard() {
-  const rows = [{ name: '🛩️ YOU', score: score, you: true }];
-  for (const id in remotePlayers) rows.push({ name: remotePlayers[id].name || 'player', score: remotePlayers[id].score || 0 });
+  const rows = [{ icon: '🧑', name: 'YOU', score: totalScore + score, you: true }];
+  for (const id in remotePlayers) {
+    rows.push({ icon: isBotId(id) ? '🤖' : '🧑', name: remoteName(id), score: remotePlayers[id].score || 0 });
+  }
   rows.sort((a, b) => b.score - a.score);
   const top = rows.slice(0, 8);
 
@@ -665,7 +851,7 @@ function drawLeaderboard() {
   top.forEach((e, i) => {
     const ty = y + 31 + i * rh;
     ctx.fillStyle = e.you ? '#7fbdef' : '#ffffff';
-    ctx.textAlign = 'left'; ctx.fillText((i + 1) + '. ' + e.name, x + 8, ty);
+    ctx.textAlign = 'left'; ctx.fillText((i + 1) + '. ' + e.icon + ' ' + e.name, x + 8, ty);
     ctx.textAlign = 'right'; ctx.fillText('' + e.score, x + w - 8, ty);
   });
   ctx.textAlign = 'left';
@@ -723,8 +909,8 @@ function drawOffscreenIndicators() {
   }
 }
 
-// A dark dim behind the ESC menu (the world keeps moving underneath). The menu
-// title + buttons live in the #pauseMenu HTML overlay so they're clickable.
+// A dark dim while paused. The PAUSED title + buttons live in the #pauseMenu
+// HTML overlay (so they're clickable), drawn on top of the canvas.
 function drawPauseOverlay() {
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.fillRect(0, 0, CONFIG.GAME_W, CONFIG.GAME_H);
@@ -734,9 +920,9 @@ function drawPauseOverlay() {
 //  THE MAIN LOOP
 // ===========================================================================
 function loop() {
-  frameCount += 1; update();          // the shared world never stops
+  if (!paused) { frameCount += 1; update(); }
   draw();
-  if (menuOpen) drawPauseOverlay();   // just dims behind the ESC menu
+  if (paused) drawPauseOverlay();
   requestAnimationFrame(loop);
 }
 loop(); // start!

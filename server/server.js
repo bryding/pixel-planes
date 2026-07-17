@@ -21,7 +21,7 @@ const { WebSocketServer } = require('ws');
 
 // Gameplay numbers come from the SAME file the browser game uses, so the world
 // never drifts out of sync with the client. Change a number there, restart.
-const CONFIG = require('../js/config.js');
+const CONFIG = require('../online/js/config.js');
 const World = require('./world.js');
 const { cleanPlayerName, plausibleMove } = require('./rules.js');
 
@@ -93,7 +93,7 @@ wss.on('connection', (ws) => {
         ws.joined = true;
         ws.player = player;
         console.log('player ' + ws.id + ' (' + name + ') joined (' + World.humanCount() + ' online)');
-        send(ws, { t: 'welcome', id: ws.id, target: World.world.targetPopulation, tickHz: World.world.tickHz });
+        send(ws, { t: 'welcome', id: ws.id, target: World.world.targetPopulation, tickHz: World.world.tickHz, mode: World.world.mode });
         break;
       }
 
@@ -127,6 +127,59 @@ wss.on('connection', (ws) => {
       case 'fire': {
         if (!ws.joined) break;
         broadcast({ t: 'fire', id: ws.id, kind: m.kind, x: m.x, y: m.y, heading: m.heading });
+        break;
+      }
+
+      // "@hidden" cheat commands. Anyone joined may use them; they change the
+      // shared world for everybody (add/remove bots).
+      case 'cheat': {
+        if (!ws.joined) break;
+        if (typeof m.cmd === 'string') World.cheat(m.cmd, m.n);
+        break;
+      }
+
+      // "@hidden" Mode Menu: change the world's mode for EVERYONE.
+      case 'setmode': {
+        if (!ws.joined) break;
+        const ALLOWED = ['classic', 'unicorn', 'badweather', 'ww2', 'night', 'nomod', 'blackhole'];
+        if (ALLOWED.indexOf(m.mode) >= 0) {
+          World.world.mode = m.mode;
+          broadcast({ t: 'mode', mode: m.mode });
+        }
+        break;
+      }
+
+      // Chat: a real player typed a message -> show it to EVERY real player.
+      case 'chat': {
+        if (!ws.joined || !ws.player) break;
+        const text = ('' + (m.text || '')).replace(/[\r\n\t]/g, ' ').slice(0, 120).trim();
+        if (!text) break;
+        // simple anti-spam: at most ~3 messages/sec per player
+        const now = Date.now();
+        if (now - (ws.chatWindow || 0) >= 1000) { ws.chatWindow = now; ws.chatCount = 0; }
+        if (++ws.chatCount > 3) break;
+        // send to EVERYONE ELSE (the sender already shows their own message)
+        wss.clients.forEach((c) => { if (c !== ws && c.readyState === 1) send(c, { t: 'chat', name: ws.player.name, text: text }); });
+        break;
+      }
+
+      // ---- Voice chat (WebRTC) signaling: we just pass the tiny setup messages;
+      // the actual voice goes peer-to-peer between players. ----
+      case 'voicehello': {   // "my mic is on" -> tell everyone (or one player, m.to)
+        if (!ws.joined) break;
+        wss.clients.forEach((c) => {
+          if (c !== ws && c.readyState === 1 && (m.to == null || c.id === m.to)) send(c, { t: 'voicehello', from: ws.id });
+        });
+        break;
+      }
+      case 'voicebye': {     // "my mic is off"
+        if (!ws.joined) break;
+        wss.clients.forEach((c) => { if (c !== ws && c.readyState === 1) send(c, { t: 'voicebye', from: ws.id }); });
+        break;
+      }
+      case 'rtc': {          // a WebRTC offer/answer/ice -> deliver to ONE player
+        if (!ws.joined) break;
+        wss.clients.forEach((c) => { if (c.readyState === 1 && c.id === m.to) send(c, { t: 'rtc', from: ws.id, payload: m.payload }); });
         break;
       }
 

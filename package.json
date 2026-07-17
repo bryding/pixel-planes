@@ -6,8 +6,7 @@
   "scripts": {
     "start": "node server/server.js",
     "test": "node server/checks.js",
-    "validate": "node server/validate-quickstart.js",
-    "smoke": "node tools/smoke-client.js"
+    "validate": "node server/validate-quickstart.js"
   },
   "dependencies": {
     "ws": "^8.18.0"

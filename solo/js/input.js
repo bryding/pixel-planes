@@ -72,3 +72,60 @@ window.addEventListener('keyup', function (e) {
   if (k === 'e') Input.missile2 = false;
   if (k === 'f') Input.eject2 = false;
 });
+
+// ===========================================================================
+//  MOUSE MODE  --  An OPTIONAL way to fly with the mouse instead of the arrows.
+//  When it's switched ON (from the Settings menu):
+//   • the plane's nose smoothly turns to POINT AT your mouse pointer
+//   • LEFT mouse button  = hold to fire the guns    (same as Space)
+//   • RIGHT mouse button = launch a homing missile  (same as X)
+//   • the mouse WHEEL    = throttle up / down (your speed)
+//  When it's OFF, the mouse does nothing special, so menus click normally.
+// ===========================================================================
+
+// Is mouse mode switched on right now? (game.js flips this from the button.)
+let mouseMode = false;
+
+// Where the mouse pointer is, measured in GAME pixels (the plane aims here).
+const Mouse = { x: CONFIG.GAME_W / 2, y: CONFIG.GAME_H / 2 };
+
+// Turn the pointer's spot on the web page into GAME-pixel coordinates. The
+// canvas is stretched to fill the window, so we scale the spot back down to
+// match the small internal picture the game is really drawn on.
+function updateMousePos(e) {
+  const cv = document.getElementById('game');
+  if (!cv) return;
+  const rect = cv.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  Mouse.x = (e.clientX - rect.left) * (cv.width  / rect.width);
+  Mouse.y = (e.clientY - rect.top)  * (cv.height / rect.height);
+}
+window.addEventListener('mousemove', updateMousePos);
+
+// Mouse buttons only DO something when mouse mode is ON, and only when you
+// click the game itself (not a menu button), so menus keep working normally.
+window.addEventListener('mousedown', function (e) {
+  if (!mouseMode) return;
+  if (e.target && e.target.id !== 'game') return;
+  if (e.button === 0) Input.fire = true;      // left button  -> guns
+  if (e.button === 2) Input.missile = true;   // right button -> missile
+});
+// Always let go on mouse-up so a button can never get "stuck" held down.
+window.addEventListener('mouseup', function (e) {
+  if (e.button === 0) Input.fire = false;
+  if (e.button === 2) Input.missile = false;
+});
+
+// Stop the right-click menu from popping up over the game while flying.
+window.addEventListener('contextmenu', function (e) {
+  if (mouseMode) e.preventDefault();
+});
+
+// Mouse WHEEL = throttle. Scroll up to speed up, scroll down to slow down.
+window.addEventListener('wheel', function (e) {
+  if (!mouseMode || typeof player === 'undefined' || !player) return;
+  // deltaY is negative when you scroll UP, positive when you scroll DOWN.
+  player.throttle -= Math.sign(e.deltaY) * 0.05;
+  player.throttle = Math.max(0, Math.min(1, player.throttle)); // keep it 0..1
+  e.preventDefault();
+}, { passive: false });

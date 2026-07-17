@@ -19,7 +19,8 @@ When the game opens you pick how to play:
   works even with no internet.
 - **🌍 Multiplayer Online** — type a name, press **JOIN GAME**, and fly with
   everyone else in the one shared world. Bots fill the empty spots so the sky is
-  never lonely. Share the link and friends join the same world.
+  never lonely. There's **text chat and live voice chat** too. Share the link
+  and friends join the same world.
 
 (Want to run it yourself for development or same-WiFi play? See
 [Online play](#-online-play--one-shared-world) below.)
@@ -32,13 +33,17 @@ When the game opens you pick how to play:
 - **Right arrow** = turn the nose right
 - **Space** = shoot your guns
 - **X** = fire a homing missile
+- 🖱️ Prefer the mouse? In single-player, turn on **Mouse Mode** in Settings:
+  the nose follows your pointer, left click = guns, right click = missile,
+  wheel = throttle.
 
 Try to keep flying without crashing into the ground! Gravity always pulls you
 down, so you need gas to stay up.
 
 ## Want to change something?
 
-Open the file **`js/config.js`**. It has all the numbers you can play with,
+Open the file **`solo/js/config.js`** (or `online/js/config.js` for the
+online game). It has all the numbers you can play with,
 like how fast the plane goes, how strong gravity is, and the colors.
 Change a number, save the file, and refresh your browser to see what happens.
 You can't break anything — just experiment and have fun!
@@ -82,8 +87,8 @@ The public game is **live** at
 the game *and* the live world over `wss://`). It's hosted on **Railway**, which is
 connected to this GitHub repo, so **every push to `main` auto-redeploys** — there's
 nothing to do but `git push`. The config (`railway.json` + the root `package.json`
-`start` script) and the client's `SERVER_URL` (in `js/config.js`) already point
-there. Setup notes for the account owner are in `FOR_BEN_PLEASE_READ.md`.
+`start` script) and the client's `SERVER_URL` (in `online/js/config.js`) already
+point there. Hosting details live in `doc/HOSTING.md`.
 
 > A page on **https** can ONLY use **wss://** (never `ws://`) — a browser rule on
 > every device. When you run the server yourself over `http://localhost`, the
@@ -91,8 +96,8 @@ there. Setup notes for the account owner are in `FOR_BEN_PLEASE_READ.md`.
 
 ### 🔧 Change the world
 
-Everything tweakable is in **`js/config.js`** — and the server reads that **same
-file**, so there's only one place to change things:
+Everything tweakable is in **`online/js/config.js`** — and the server reads that
+**same file**, so there's only one place to change things:
 
 - `TARGET_POPULATION` — how many planes fill the sky (default 10)
 - `NET_TICK_HZ` — how often the server updates everyone (default 18)
@@ -102,7 +107,6 @@ file**, so there's only one place to change things:
 There are quick self-checks (no browser needed):
 
 ```
-npm test        # server math: bot counts, name cleaning, anti-cheat (21 checks)
+npm test         # server math: bot counts, name cleaning, anti-cheat
 npm run validate # end-to-end protocol: join, see others, bots, combat, respawn
-npm run smoke   # loads the client + runs the whole play path under a fake DOM
 ```

@@ -40,14 +40,14 @@ html, body {
 }
 #modMenu {
   display: flex;
-  flex-flow: column wrap;   /* fill a column, then start a new one */
-  max-height: 290px;        /* about 7 buttons tall before it wraps */
+  flex-direction: column;          /* one tall column you can SCROLL through */
+  max-height: calc(100vh - 80px);  /* never taller than the screen */
   gap: 5px;
-  align-content: center;
 }
 #modeMenu {
   display: flex;
   flex-direction: column;
+  max-height: calc(100vh - 80px);
   gap: 5px;
 }
 #topBar button {
@@ -91,7 +91,20 @@ html, body {
   border: 2px solid rgba(255, 255, 255, 0.7);
   border-radius: 12px;
   padding: 28px 40px;
+  max-height: calc(100vh - 20px);  /* never taller than the screen... */
+  overflow-y: auto;                /* ...and scroll if there's more below */
 }
+
+/* Tall menus you can scroll with the wheel, a finger, or a mouse hold-and-drag
+   (the drag part lives in js/uiscroll.js). overscroll-behavior keeps the page
+   itself from scrolling when you reach the end of the menu. */
+.pauseInner, .startCenter, #modMenu, #modeMenu {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  cursor: grab;
+}
+.pauseInner.grabbing, .startCenter.grabbing,
+#modMenu.grabbing, #modeMenu.grabbing { cursor: grabbing; }
 #pauseMenu h1 {
   font-family: monospace;
   color: #ffffff;
@@ -390,6 +403,7 @@ html, body {
   gap: 18px;
   z-index: 32;
 }
+.startCenter { max-height: calc(100vh - 20px); padding: 10px; }
 .titleBanner {
   background: #e02a2a;
   color: #ffffff;
@@ -419,8 +433,6 @@ html, body {
   min-width: 300px;
 }
 .startBtn:hover { background: rgba(40, 80, 120, 0.97); }
-/* Some "buttons" are really links (e.g. Back to menu); make them match. */
-a.startBtn { display: inline-block; text-align: center; text-decoration: none; box-sizing: border-box; }
 .settingsModes { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 520px; }
 .settingsModes button {
   font-family: monospace; font-weight: bold; font-size: 15px; color: #fff;
@@ -484,7 +496,7 @@ a.startBtn { display: inline-block; text-align: center; text-decoration: none; b
 }
 .volSlider::-moz-range-thumb { width: 34px; height: 34px; border-radius: 50%; background: #f1c40f; border: 2px solid #fff; cursor: pointer; }
 
-/* ---- Name gate (shown first; type a name and JOIN the shared world) ---- */
+/* ---- Click-to-Play gate (shown first; nothing loads until you click) ---- */
 #clickGate {
   position: fixed;
   inset: 0;
@@ -492,29 +504,39 @@ a.startBtn { display: inline-block; text-align: center; text-decoration: none; b
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(11, 16, 32, 0.72);  /* see the live dogfights behind */
+  background: #0b1020;          /* solid, so nothing shows until you click */
+  cursor: pointer;
 }
 .gateInner {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
 }
-/* the "type your name" box on the gate */
-.nameInput {
-  font-family: monospace;
-  font-weight: bold;
-  font-size: 24px;
-  text-align: center;
-  color: #ffffff;
-  background: rgba(0, 0, 0, 0.45);
-  border: 3px solid #ffffff;
-  border-radius: 10px;
-  padding: 12px 18px;
-  width: 300px;
-  outline: none;
+
+/* "Multiplayer Online" button in the pause menu (Ben's live online game) */
+#pauseMenu .mpBtn { background: rgba(30, 120, 70, 0.92); border-color: #4fe09a; }
+#pauseMenu .mpBtn:hover { background: rgba(40, 150, 90, 0.97); }
+
+/* Secret command bar at the bottom of the ESC menu (type /hidden) */
+.cmdBar { display: flex; gap: 6px; width: 320px; margin-top: 6px; }
+.cmdInput {
+  flex: 1; min-width: 0;
+  font-family: monospace; font-size: 13px; color: #fff;
+  background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.5);
+  border-radius: 8px; padding: 8px 10px; outline: none;
 }
-.nameInput::placeholder { color: rgba(255, 255, 255, 0.5); }
-/* the smaller "Play offline / Settings" buttons under JOIN */
-.gateExtras { display: flex; gap: 12px; }
-.startBtn.small { font-size: 16px; padding: 9px 18px; min-width: 0; }
+.cmdBar button { min-width: 0 !important; padding: 8px 14px; }
+.cmdMsg { font-family: monospace; font-size: 12px; color: #7fe0a0; min-height: 14px; margin: 2px 0 0; text-align: center; }
+
+.cmdLabel { font-family: monospace; font-size: 12px; color: rgba(255,255,255,0.75); margin: 4px 0 0; text-align: center; }
+
+/* Multiplayer Online as a real link (works in itch's sandbox), styled like a button */
+#pauseMenu .mpLink {
+  display: flex; align-items: center; justify-content: center;
+  font-family: monospace; font-size: 18px; font-weight: bold;
+  color: #ffffff; text-decoration: none;
+  background: rgba(30,120,70,0.92); border: 2px solid #4fe09a; border-radius: 8px;
+  padding: 10px 22px; min-width: 320px; box-sizing: border-box; cursor: pointer;
+}
+#pauseMenu .mpLink:hover { background: rgba(40,150,90,0.97); }

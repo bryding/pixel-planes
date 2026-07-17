@@ -6,35 +6,15 @@
 
 const CONFIG = {
 
-  // ---- Online play (the one shared world) ----
-  // The public game link (https) can ONLY use a secure "wss://" server, so this
-  // points at the deployed server. Once it's deployed the public link works for
-  // everyone automatically. For LOCAL testing, just run the server yourself
-  // (`node server/server.js`) and open http://localhost:8080 — the game then
-  // connects to its own address, so you don't need to change this line.
+  // ---- Online play ----
+  // The whole game lives on ONE Railway address: it serves these game files
+  // AND runs the live multiplayer world. (Mostly unused here in single-player
+  // — the real online game is the ../online/ folder.)
   SERVER_URL: 'wss://pixel-planes-bryding-production.up.railway.app',
 
-  // How many planes we want flying in the shared world. If there aren't this
-  // many real people online, the server fills the empty spots with bots, so the
-  // sky is never lonely. Change this one number to make the world busier!
-  TARGET_POPULATION: 10,
-
-  // The most real people allowed in the world at once (bots don't count). This
-  // is just a safety limit so the little server never gets overwhelmed.
-  HARD_CAP: 32,
-
-  // How many times per second the server tells everyone where all the planes
-  // are. 18 is smooth enough (the game fills in the gaps), and easy on the
-  // network. Bigger = smoother but more data.
-  NET_TICK_HZ: 18,
-
-  // How long (in frames, 60 = 1 second) you wait after being shot down before
-  // you automatically pop back into the SAME world. No trip back to the menu!
-  RESPAWN_DELAY: 90,
-
-  // When you (re)spawn you get a few seconds of "shield" so you can't be shot
-  // the instant you fly in. A glowing bubble shows while it lasts.
-  SPAWN_PROTECT: 120,
+  // The ONLINE multiplayer game (chat + voice + everyone in one sky). The
+  // "Multiplayer Online" button opens the online/ folder next to this game.
+  MULTIPLAYER_URL: 'https://pixel-planes-bryding-production.up.railway.app',
 
   // ---- The size of the game picture (in pixels) ----
   // Small numbers make a chunky, retro pixel look. The picture is stretched
@@ -44,22 +24,11 @@ const CONFIG = {
   GAME_W: 2560,
   GAME_H: 1440,
 
-  // ---- How big the on-screen info (the "HUD") is ----
-  // The score, leaderboard, map, throttle/health bars and messages. The game
-  // picture is drawn big and then squeezed onto your screen, which can make
-  // the writing look tiny. Turn this UP to make ALL the info bigger, DOWN to
-  // make it smaller. 1 = original size. Try 1.6 for comfy, 2 for chunky.
-  HUD_SCALE: 1.6,
-
   // ---- How the plane flies ----
   // (These are the fun ones to experiment with!)
 
   THRUST: 0.13,        // How hard the engine pushes. Bigger = faster plane.
-  TURN_SPEED: 0.05,    // How fast the nose turns. Bigger = spins quicker.
-  TURN_EASE: 0.14,     // How quickly the nose eases INTO a turn (and back out).
-                       // Smaller = smoother & floatier; bigger = snappier turns.
-                       // This is the knob that makes flying feel gentle, not
-                       // twitchy. Try 0.1 (very smooth) up to 0.3 (sharp).
+  TURN_SPEED: 0.065,   // How fast the nose turns. Bigger = spins quicker.
   GRAVITY: 0.05,       // How hard the ground pulls the plane down.
   DRAG: 0.987,         // Air resistance. Tuned so your cruise speed scales with
                        // the throttle (about throttle x MAX_SPEED).
@@ -85,11 +54,6 @@ const CONFIG = {
   START_THROTTLE: 0.6, // How much gas the plane starts with.
 
   MAX_SPEED: 10,       // The fastest the plane is allowed to go.
-
-  // How BIG every plane is drawn. This also makes them bigger TARGETS (the
-  // "can I hit it?" circle grows with the plane), so a higher number means
-  // easier dogfights. 1 = original size, 1.2 = 20% bigger.
-  PLANE_SCALE: 1.2,
 
   // ---- The camera (the view that follows the plane) ----
   CAM_SMOOTH: 0.08,    // How smoothly the camera catches up. Smaller = lazier.
@@ -152,8 +116,8 @@ const CONFIG = {
   INF_MISSILE_RATE: 5,
   INF_MISSILE_CAP: 400,      // most missiles allowed flying at once (safety cap)
   MISSILE_SPEED: 11,         // a tiny bit faster than your top speed (MAX_SPEED)
-  MISSILE_TURN: 0.15,        // sharp turn: smallest turn circle ~3 biplanes wide
-  MISSILE_FUEL: 600,         // it chases for about 10 seconds, then flies straight
+  MISSILE_TURN: 0.17,        // how hard it can turn while hunting (heat-seeking)
+  MISSILE_FUEL: 720,         // seeks for its WHOLE flight = true heat-seeker
   MISSILE_LIFE: 720,         // frames before it fizzles out completely
   MISSILE_DAMAGE: 4,         // a missile takes off 4 health (so 3 missiles = dead)
 
@@ -271,9 +235,3 @@ const CONFIG = {
     treeLeafLt: '#5fae4a', // tree canopy highlight
   },
 };
-
-// In the browser, CONFIG is just a global the game uses. But our little Node
-// server ALSO needs these numbers (like TARGET_POPULATION) so the world stays
-// in sync. This one line lets the server do `require('../js/config.js')` and
-// get the exact same CONFIG — one file, one source of truth, no drift.
-if (typeof module !== 'undefined') module.exports = CONFIG;

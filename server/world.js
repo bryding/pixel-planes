@@ -10,8 +10,8 @@
 //  the bots think with the SAME brain (js/bot-ai.js) the offline enemies use.
 // ===========================================================================
 
-const CONFIG = require('../js/config.js');
-const BotAI = require('../js/bot-ai.js');
+const CONFIG = require('../online/js/config.js');
+const BotAI = require('../online/js/bot-ai.js');
 const { desiredBots } = require('./rules.js');
 
 // The single world. There are no rooms or lobbies any more — connect, pick a
@@ -20,6 +20,7 @@ const world = {
   targetPopulation: CONFIG.TARGET_POPULATION, // how many planes we want flying
   hardCap: CONFIG.HARD_CAP,                    // most real people allowed at once
   tickHz: CONFIG.NET_TICK_HZ,                  // snapshots per second
+  mode: 'classic',     // the world's look/mode (changed by the @hidden Mode Menu)
   players: new Map(),  // id -> { id, name, ws, lastState, alive, score, lastHitBy }
   bots: new Map(),     // id -> bot plane (we add/remove these to fill the world)
   botBullets: [],      // bullets the bots have fired (server-simulated)
@@ -121,6 +122,24 @@ function removePlayer(id) {
   syncBotCount();
 }
 
+// CHEATS (the "@hidden" menu). Anyone may use them — this is your sandbox world,
+// so they change the world for EVERYONE by adjusting the bot target + re-syncing.
+function cheat(cmd, n) {
+  if (cmd === 'addbots') {
+    const add = Math.max(1, Math.min(50, n || 5));
+    world.targetPopulation = Math.min(100, world.targetPopulation + add);  // cap so the free server stays happy
+    syncBotCount();
+  } else if (cmd === 'clearbots') {
+    world.targetPopulation = 0;
+    syncBotCount();
+  } else if (cmd === 'resetbots') {
+    world.targetPopulation = CONFIG.TARGET_POPULATION;
+    syncBotCount();
+  } else if (cmd === 'killbots') {
+    for (const id of [...world.bots.keys()]) damageBot(id, 99999);   // blow them all up (they respawn)
+  }
+}
+
 // A bot pulls the trigger: spawn its bullet and tell everyone to draw the shot.
 function botShoot(bot) {
   const nx = bot.x + Math.cos(bot.angle) * 17, ny = bot.y + Math.sin(bot.angle) * 17;
@@ -183,11 +202,10 @@ function stepBotBullets(planes) {
   for (const b of world.botBullets) {
     b.x = wrapX(b.x + b.vx); b.y += b.vy; b.life -= 1;
     if (b.life <= 0 || b.y > CONFIG.GROUND_Y) { b.dead = true; continue; }
-    const hitR = 16 * CONFIG.PLANE_SCALE;   // bigger planes are bigger targets
     for (const p of planes) {
       if (!p.alive || p.team === b.team) continue;            // not itself / its own bullet
       const dx = gapX(p.x, b.x), dy = p.y - b.y;
-      if (dx * dx + dy * dy < hitR * hitR) {
+      if (dx * dx + dy * dy < 16 * 16) {
         b.dead = true;
         if (world.bots.has(p.id)) {
           if (damageBot(p.id, 1)) {
@@ -257,6 +275,7 @@ module.exports = {
   addPlayer,
   removePlayer,
   syncBotCount,
+  cheat,
   damageBot,
   tick,
   startSnapshotLoop,

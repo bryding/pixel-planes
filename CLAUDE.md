@@ -19,6 +19,15 @@ A browser-based 2D pixel-art airplane combat game, inspired by **BitPlanes**
 - **Use git and commit often.** Make a commit after each working change/stage so
   there's always a safe point to go back to. Keep commit messages short and clear
   (this also teaches the nephew good habits).
+- **Delegate mechanical work to the cheap `grunt` agent** (defined in
+  `.claude/agents/grunt.md`, runs on Haiku). Anything that doesn't need the main
+  model's judgment — verification grep sweeps, find-and-replace checks, file
+  copies, cache-version bumps, drafting docs from a detailed outline — should go
+  to `grunt` via the Agent tool (give it a precise brief, then review its work).
+  Keep design decisions, tricky game code, and anything touching git history
+  with the main model.
+- **Read `doc/` first.** The `doc/` folder documents the codebase, hosting, and
+  past decisions — reading it saves re-deriving everything from the code.
 
 ## What the game is
 
@@ -27,36 +36,16 @@ A browser-based 2D pixel-art airplane combat game, inspired by **BitPlanes**
   carries momentum. NOT a fixed Mario-style runner.
 - Pixel-art look, side-scrolling camera, dogfights against enemy planes.
 
-## Tech choices (simple by default)
+## Tech choices (kept deliberately simple)
 
-- The game in the browser is plain HTML5 Canvas + vanilla JavaScript — no
-  frameworks, and no build step. You can still open `index.html` to play.
+- Plain HTML5 Canvas + vanilla JavaScript. No build step, no frameworks.
+- Runs by opening `index.html` in a browser (or via a tiny local server).
 - Renders to a low internal resolution (480×270) scaled up for a crisp,
   chunky pixel look.
-- We add bigger tools (like a **server**) *only* when a feature truly needs
-  one. Multiplayer needs a server so players can share one world — that part
-  runs online (on Railway), while the browser game stays simple to read.
 
 ## File layout
 
-The game now has TWO separate playable apps behind one menu, so single-player
-and multiplayer can't break each other:
-
-- `index.html` — the **chooser**: pick 🤖 Single Player or 🌍 Multiplayer.
-- `online.html` + `server/` — the **multiplayer** shared-world client (deployed
-  on Railway).
-- root `js/`, `css/` — the **shared engine** both games use: `config`, `audio`,
-  `physics`, `bullet`, `explosion`, `sprites`, `scenery`, `plane`, `bot-ai`. A
-  tweak here (flight feel, art, gravity) helps BOTH single-player and multiplayer.
-- `solo/` — the **single-player-only** parts: its own `index.html`, `css/`, and a
-  small `js/` with just `game.js` (offline game loop), `input.js` (two-player
-  keys), `missile.js`, `enemy.js` (AI bots), `powerup.js`, `pilot.js`. It loads
-  the shared engine from `../js/`. This is the classic offline game with all the
-  modes (Classic/Unicorn/WW2/Alien/Night/Black Hole/Bad Weather), the
-  Modifier/Cheat menu, power-ups, eject + parachute, and 2-player split-screen.
-
-Inside each app the key files are the same idea:
-
+- `index.html` — the page; loads the scripts.
 - `css/style.css` — page styling, makes pixels crisp.
 - `js/config.js` — all the tweakable numbers (speed, gravity, colors). Start here.
 - `js/input.js` — reads the keyboard.
@@ -84,9 +73,3 @@ Prioritize **game feel** — flying should feel satisfying before adding more.
 Easiest: double-click `index.html`. If sounds/scripts get blocked, run a tiny
 server from the project folder: `python3 -m http.server` then open
 http://localhost:8000 .
-
-<!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
-at specs/002-multiplayer-world/plan.md
-<!-- SPECKIT END -->
