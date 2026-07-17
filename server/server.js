@@ -39,7 +39,10 @@ const MIME = {
 };
 const httpServer = http.createServer((req, res) => {
   let urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
-  if (urlPath === '/' || urlPath === '') urlPath = '/index.html';
+  if (urlPath === '') urlPath = '/';
+  // A folder address (ends in /) means "give me that folder's index.html" --
+  // so /, /solo/ and /online/ all serve their own game page.
+  if (urlPath.endsWith('/')) urlPath += 'index.html';
   const filePath = path.normalize(path.join(ROOT, urlPath));
   if (!filePath.startsWith(ROOT)) { res.writeHead(403); res.end('Forbidden'); return; } // no peeking outside
   fs.readFile(filePath, (err, data) => {
