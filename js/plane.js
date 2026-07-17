@@ -92,6 +92,26 @@ class Plane {
       this.throttle = Math.max(0, Math.min(1, this.throttle));
 
       const tm = (mode === 'ww2') ? CONFIG.WW2_TURN_MULT : 1; // WW2 planes turn slowly
+      // MOUSE MODE (a Settings option): the nose chases the mouse pointer.
+      // Only for player 1's plane in normal flight (not split-screen, not UFO).
+      const mouseSteer = (typeof mouseMode !== 'undefined') && mouseMode &&
+                         this.isPlayer && this.keymap !== 'p2' &&
+                         !splitScreen && !this.isUfo;
+      if (mouseSteer) {
+        // Where is the plane ON SCREEN? The pointer is in screen pixels too,
+        // so we aim in screen space and don't worry about the looping world.
+        const sx = worldToScreenX(this.x), sy = this.y - camera.y;
+        const want = Math.atan2(Mouse.y - sy, Mouse.x - sx);
+        // Find the SMALLEST turn that faces the pointer (wrap into -PI..PI).
+        let diff = want - this.angle;
+        while (diff >  Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        // Turn at most TURN_SPEED per frame -- the same limit the arrows have,
+        // so mouse mode is easier to aim but never unfairly faster.
+        const maxTurn = CONFIG.TURN_SPEED * tm;
+        this.angle += Math.max(-maxTurn, Math.min(maxTurn, diff));
+      }
+      // Arrow keys always work (even in mouse mode, as a backup).
       if (kLeft)  this.angle -= CONFIG.TURN_SPEED * tm;
       if (kRight) this.angle += CONFIG.TURN_SPEED * tm;
     }

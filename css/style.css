@@ -40,14 +40,14 @@ html, body {
 }
 #modMenu {
   display: flex;
-  flex-flow: column wrap;   /* fill a column, then start a new one */
-  max-height: 290px;        /* about 7 buttons tall before it wraps */
+  flex-direction: column;          /* one tall column you can SCROLL through */
+  max-height: calc(100vh - 80px);  /* never taller than the screen */
   gap: 5px;
-  align-content: center;
 }
 #modeMenu {
   display: flex;
   flex-direction: column;
+  max-height: calc(100vh - 80px);
   gap: 5px;
 }
 #topBar button {
@@ -91,7 +91,20 @@ html, body {
   border: 2px solid rgba(255, 255, 255, 0.7);
   border-radius: 12px;
   padding: 28px 40px;
+  max-height: calc(100vh - 20px);  /* never taller than the screen... */
+  overflow-y: auto;                /* ...and scroll if there's more below */
 }
+
+/* Tall menus you can scroll with the wheel, a finger, or a mouse hold-and-drag
+   (the drag part lives in js/uiscroll.js). overscroll-behavior keeps the page
+   itself from scrolling when you reach the end of the menu. */
+.pauseInner, .startCenter, #modMenu, #modeMenu {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  cursor: grab;
+}
+.pauseInner.grabbing, .startCenter.grabbing,
+#modMenu.grabbing, #modeMenu.grabbing { cursor: grabbing; }
 #pauseMenu h1 {
   font-family: monospace;
   color: #ffffff;
@@ -390,6 +403,7 @@ html, body {
   gap: 18px;
   z-index: 32;
 }
+.startCenter { max-height: calc(100vh - 20px); padding: 10px; }
 .titleBanner {
   background: #e02a2a;
   color: #ffffff;

@@ -836,6 +836,18 @@ if (typeof navigator !== 'undefined' && (navigator.maxTouchPoints > 0 || 'ontouc
   toggleMobile();
 }
 
+// ---- Mouse mode (a Settings option): fly by pointing the mouse ----
+// The nose chases the pointer, left button = guns, right button = missile,
+// and the wheel is the throttle. The mouse reading lives in js/input.js.
+function toggleMouseMode() {
+  mouseMode = !mouseMode;
+  try { localStorage.setItem('pp_mousemode', mouseMode ? '1' : '0'); } catch (e) {}
+  const btn = document.getElementById('mouseBtn');
+  if (btn) btn.textContent = '🖱️ Mouse Mode: ' + (mouseMode ? 'ON' : 'OFF');
+}
+// Remember the choice between visits.
+try { if (localStorage.getItem('pp_mousemode') === '1') toggleMouseMode(); } catch (e) {}
+
 // Turn split-screen 2-player ON or OFF.
 function setSplitScreen(on) {
   if (on === splitScreen) return;
