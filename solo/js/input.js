@@ -28,8 +28,23 @@ const Input = {
   eject2: false,  // F held?
 };
 
+// If you're typing in a text box (like the command bar), the keys should
+// type letters -- NOT fly the plane. This checks for that, so pressing W or
+// A while typing doesn't make your plane lurch around.
+function typingInABox(e) {
+  const el = e.target;
+  return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+}
+
+// Outside split-screen, WASD is a comfy ALTERNATIVE way to fly YOUR plane
+// (both schemes work at once). In split-screen WASD belongs to player 2.
+function wasdIsPlayer1() {
+  return (typeof splitScreen === 'undefined' || !splitScreen);
+}
+
 // When a key is pressed DOWN, turn the matching switch on.
 window.addEventListener('keydown', function (e) {
+  if (typingInABox(e)) return;
   const k = e.key.toLowerCase();
   // Player 1 — arrows + Space/X/C, plus M (gun) and N (missile) for split-screen.
   if (e.key === 'ArrowUp')    Input.up = true;
@@ -39,6 +54,14 @@ window.addEventListener('keydown', function (e) {
   if (e.key === ' ' || k === 'b') Input.fire = true;
   if (k === 'x' || k === 'n')     Input.missile = true;
   if (k === 'c' || k === 'm')     Input.eject = true;
+
+  // WASD also flies player 1 whenever we're NOT in split-screen.
+  if (wasdIsPlayer1()) {
+    if (k === 'w') Input.up = true;
+    if (k === 's') Input.down = true;
+    if (k === 'a') Input.left = true;
+    if (k === 'd') Input.right = true;
+  }
 
   // Player 2 — WASD + Q (gun) + E (missile) + F (eject).
   if (k === 'w') Input.up2 = true;
@@ -63,6 +86,14 @@ window.addEventListener('keyup', function (e) {
   if (e.key === ' ' || k === 'b') Input.fire = false;
   if (k === 'x' || k === 'n')     Input.missile = false;
   if (k === 'c' || k === 'm')     Input.eject = false;
+
+  // Letting go of WASD also releases player 1 (outside split-screen).
+  if (wasdIsPlayer1()) {
+    if (k === 'w') Input.up = false;
+    if (k === 's') Input.down = false;
+    if (k === 'a') Input.left = false;
+    if (k === 'd') Input.right = false;
+  }
 
   if (k === 'w') Input.up2 = false;
   if (k === 's') Input.down2 = false;

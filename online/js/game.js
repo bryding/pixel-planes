@@ -375,7 +375,7 @@ function nearestRemotePlane() {
 // Did one of MY shots reach a remote plane? If so, tell the server.
 function onlineHitCheck(proj, kind) {
   if (proj.dead) return;
-  const radius = (kind === 'missile') ? 16 : 14;
+  const radius = ((kind === 'missile') ? 16 : 14) * CONFIG.PLANE_SCALE; // bigger planes = bigger targets
   for (const id in remotePlayers) {
     const r = remotePlayers[id];
     if (!r || r.alive === false || r.x === undefined) continue;

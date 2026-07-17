@@ -258,6 +258,9 @@ function drawPlaneSprite(ctx, set, x, y, angle, spin, flashing) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle);
+  // Make every plane bigger (or smaller) -- see CONFIG.PLANE_SCALE.
+  const ps = (typeof CONFIG !== 'undefined' && CONFIG.PLANE_SCALE) || 1;
+  ctx.scale(ps, ps);
 
   // The plane picture (drawn centered on its spin point).
   ctx.drawImage(spr.canvas, -spr.cx, -spr.cy);

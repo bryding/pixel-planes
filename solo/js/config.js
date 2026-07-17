@@ -29,6 +29,10 @@ const CONFIG = {
 
   THRUST: 0.13,        // How hard the engine pushes. Bigger = faster plane.
   TURN_SPEED: 0.065,   // How fast the nose turns. Bigger = spins quicker.
+  TURN_EASE: 0.14,     // How quickly the nose eases INTO a turn (and back out).
+                       // Smaller = smoother & floatier; bigger = snappier turns.
+                       // This is the knob that makes flying feel gentle, not
+                       // twitchy. Try 0.1 (very smooth) up to 0.3 (sharp).
   GRAVITY: 0.05,       // How hard the ground pulls the plane down.
   DRAG: 0.987,         // Air resistance. Tuned so your cruise speed scales with
                        // the throttle (about throttle x MAX_SPEED).

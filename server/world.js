@@ -205,7 +205,8 @@ function stepBotBullets(planes) {
     for (const p of planes) {
       if (!p.alive || p.team === b.team) continue;            // not itself / its own bullet
       const dx = gapX(p.x, b.x), dy = p.y - b.y;
-      if (dx * dx + dy * dy < 16 * 16) {
+      const hitR = 16 * (CONFIG.PLANE_SCALE || 1);   // bigger planes are bigger targets
+      if (dx * dx + dy * dy < hitR * hitR) {
         b.dead = true;
         if (world.bots.has(p.id)) {
           if (damageBot(p.id, 1)) {

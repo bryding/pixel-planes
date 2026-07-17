@@ -51,6 +51,11 @@ const CONFIG = {
   // make it smaller. 1 = original size. Try 1.6 for comfy, 2 for chunky.
   HUD_SCALE: 1.6,
 
+  // How BIG every plane is drawn. This also makes them bigger TARGETS (the
+  // "can I hit it?" circle grows with the plane), so a higher number means
+  // easier dogfights. 1 = original size, 1.2 = 20% bigger.
+  PLANE_SCALE: 1.2,
+
   // ---- How the plane flies ----
   // (These are the fun ones to experiment with!)
 
